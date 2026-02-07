@@ -28,12 +28,14 @@ namespace PersonnelManagementApp
         private Panel pnlDatabaseContent;
         private Panel pnlPhotosContent;
         private Panel pnlFontContent;
+        private Panel pnlMissingPhotosContent;
         private Panel pnlCurrentContent;
 
         // دکمه‌منوها
         private Panel btnMenuDatabase;
         private Panel btnMenuPhotos;
         private Panel btnMenuFont;
+        private Panel btnMenuMissingPhotos;
         private Panel selectedMenuButton;
 
         // رنگ‌های مدرن
@@ -101,16 +103,19 @@ namespace PersonnelManagementApp
             pnlDatabaseContent = CreateDatabaseContent();
             pnlPhotosContent = CreatePhotosContent();
             pnlFontContent = CreateFontContent();
+            pnlMissingPhotosContent = CreateMissingPhotosContent();
 
             // اضافه کردن به contentArea بدون Dock
             contentArea.Controls.Add(pnlDatabaseContent);
             contentArea.Controls.Add(pnlPhotosContent);
             contentArea.Controls.Add(pnlFontContent);
+            contentArea.Controls.Add(pnlMissingPhotosContent);
 
             // همه بخش‌ها را نمایان نگه‌دار (برای جلوگیری از مشکلات رندر هنگام نمایش مجدد)
             pnlDatabaseContent.Visible = true;
             pnlPhotosContent.Visible = true;
             pnlFontContent.Visible = true;
+            pnlMissingPhotosContent.Visible = true;
 
             // ========== Sidebar (منوی سمت راست) ==========
             Panel sidebarPanel = CreateSidebar();
@@ -194,6 +199,11 @@ namespace PersonnelManagementApp
             // دکمه فونت
             btnMenuFont = CreateMenuButton("🔤 تنظیمات فونت", yPos, pnlFontContent);
             sidebar.Controls.Add(btnMenuFont);
+            yPos += 55;
+
+            // دکمه پرسنل بدون عکس
+            btnMenuMissingPhotos = CreateMenuButton("📸 پرسنل بدون عکس", yPos, pnlMissingPhotosContent);
+            sidebar.Controls.Add(btnMenuMissingPhotos);
 
             return sidebar;
         }
@@ -264,6 +274,10 @@ namespace PersonnelManagementApp
             {
                 pnlFontContent.Visible = false;
             }
+            if (pnlMissingPhotosContent != null)
+            {
+                pnlMissingPhotosContent.Visible = false;
+            }
 
             // نمایش محتوای انتخابی
             if (contentPanel != null)
@@ -296,6 +310,92 @@ namespace PersonnelManagementApp
                         lbl.ForeColor = Color.White;
                 }
                 selectedMenuButton = menuButton;
+            }
+        }
+
+        private Panel CreateMissingPhotosContent()
+        {
+            Panel content = new Panel
+            {
+                Location = new Point(0, 0),
+                Size = new Size(720, 490),
+                BackColor = Color.Transparent,
+                AutoScroll = false
+            };
+
+            Panel card = new Panel
+            {
+                Location = new Point(10, 10),
+                Size = new Size(690, 220),
+                BackColor = CardBackground
+            };
+            ApplyRoundedCorners(card, 10);
+            ApplyCardShadow(card);
+
+            // عنوان
+            Label lblTitle = new Label
+            {
+                Text = "📸 بررسی پرسنل بدون عکس",
+                Font = GetSafeFont(FontSettings.LabelFont?.FontFamily.Name ?? "Tahoma", 14, FontStyle.Bold),
+                ForeColor = TextPrimary,
+                Location = new Point(420, 20),
+                Size = new Size(250, 35),
+                TextAlign = ContentAlignment.MiddleRight
+            };
+            card.Controls.Add(lblTitle);
+
+            Label lblDesc = new Label
+            {
+                Text = "لیست پرسنلی که عکس پرسنلی ندارند را مشاهده کنید\nو اقدامات لازم را انجام دهید.",
+                Font = GetSafeFont(FontSettings.BodyFont?.FontFamily.Name ?? "Tahoma", 9),
+                ForeColor = TextSecondary,
+                Location = new Point(380, 55),
+                Size = new Size(290, 40),
+                TextAlign = ContentAlignment.TopRight
+            };
+            card.Controls.Add(lblDesc);
+
+            // توضیحات قابلیت‌ها
+            Label lblFeatures = new Label
+            {
+                Text = "✅ مشاهده لیست کامل پرسنل بدون عکس\n" +
+                       "✅ خروجی اکسل برای گزارش‌گیری\n" +
+                       "✅ امکان ویرایش و حذف مستقیم\n" +
+                       "✅ بروزرسانی لحظه‌ای اطلاعات",
+                Font = GetSafeFont(FontSettings.BodyFont?.FontFamily.Name ?? "Tahoma", 9),
+                ForeColor = TextSecondary,
+                Location = new Point(30, 105),
+                Size = new Size(640, 80),
+                TextAlign = ContentAlignment.TopRight
+            };
+            card.Controls.Add(lblFeatures);
+
+            // دکمه باز کردن فرم
+            Button btnOpenMissingPhotos = CreateModernButton("📋 مشاهده لیست پرسنل بدون عکس", AccentColor, 280, 40);
+            btnOpenMissingPhotos.Location = new Point(205, 105);
+            btnOpenMissingPhotos.Font = GetSafeFont(FontSettings.ButtonFont?.FontFamily.Name ?? "Tahoma", 10, FontStyle.Bold);
+            btnOpenMissingPhotos.Click += BtnOpenMissingPhotos_Click;
+            card.Controls.Add(btnOpenMissingPhotos);
+
+            content.Controls.Add(card);
+            return content;
+        }
+
+        private void BtnOpenMissingPhotos_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                FormMissingPhotos missingPhotosForm = new FormMissingPhotos();
+                missingPhotosForm.ShowDialog(this);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"❌ خطا در باز کردن فرم:\n\n{ex.Message}",
+                    "خطا",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
             }
         }
 
