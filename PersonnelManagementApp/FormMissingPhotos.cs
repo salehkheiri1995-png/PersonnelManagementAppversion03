@@ -166,6 +166,7 @@ namespace PersonnelManagementApp
 
                 // کوئری برای گرفتن پرسنلی که عکس ندارند (PhotoPath NULL یا خالی)
                 // نکته: در Access برای چند JOIN پشت سر هم، پرانتزگذاری لازم است.
+                // نکته: طبق ساختار دیتابیس شما، کلید ارتباطی پست در جدول Personnel = PostNameID است.
                 string query = @"SELECT 
                                Personnel.PersonnelID, Personnel.FirstName, Personnel.LastName, 
                                Personnel.PersonnelNumber, Personnel.NationalID, Personnel.MobileNumber,
@@ -174,7 +175,7 @@ namespace PersonnelManagementApp
                                ContractType.ContractTypeName, JobLevel.JobLevelName,
                                Personnel.HireDate, Personnel.PhotoPath
                                FROM ((((((Personnel
-                               INNER JOIN PostsNames ON Personnel.PostsNameID = PostsNames.PostsNameID)
+                               INNER JOIN PostsNames ON Personnel.PostNameID = PostsNames.PostNameID)
                                INNER JOIN OperationDepartments ON Personnel.DeptID = OperationDepartments.DeptID)
                                INNER JOIN Provinces ON Personnel.ProvinceID = Provinces.ProvinceID)
                                INNER JOIN Cities ON Personnel.CityID = Cities.CityID)
