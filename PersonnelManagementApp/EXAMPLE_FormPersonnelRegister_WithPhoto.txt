@@ -1,0 +1,274 @@
+// =============================================================================
+// نمونه کد کامل FormPersonnelRegister با قابلیت مدیریت عکس
+// فقط بخش‌های تغییر یافته نشان داده شده است
+// =============================================================================
+
+// 1. اضافه کردن فیلدهای جدید در ابتدای کلاس:
+
+public partial class FormPersonnelRegister : Form
+{
+    private DbHelper db = new DbHelper();
+
+    // ... سایر فیلدها ...
+
+    // ⭐ فیلدهای جدید برای مدیریت عکس
+    private PictureBox pbPhoto;
+    private string selectedPhotoPath = string.Empty;
+
+    // ... بقیه کدها ...
+}
+
+// =============================================================================
+
+// 2. اضافه کردن بخش عکس در InitializeComponent() بعد از سرتیتر:
+
+private void InitializeComponent()
+{
+    // ... کدهای قبلی سرتیتر ...
+
+    // ⭐ بخش عکس - بعد از سرتیتر
+    int photoBoxSize = 200;
+    pbPhoto = new PictureBox
+    {
+        Location = new Point((formWidth - photoBoxSize) / 2, yHeader),
+        Size = new Size(photoBoxSize, photoBoxSize),
+        BorderStyle = BorderStyle.FixedSingle,
+        SizeMode = PictureBoxSizeMode.Zoom,
+        BackColor = Color.White
+    };
+    pbPhoto.Image = ImageHelper.CreateDefaultImage(photoBoxSize, photoBoxSize);
+    ApplyRoundedCorners(pbPhoto, 15);
+    this.Controls.Add(pbPhoto);
+    yHeader += photoBoxSize + 10;
+
+    // دکمه‌های مدیریت عکس
+    int btnPhotoWidth = 95;
+    int btnPhotoSpacing = 5;
+    int totalPhotoButtonWidth = (btnPhotoWidth * 2) + btnPhotoSpacing;
+    int xPhotoButtonStart = (formWidth - totalPhotoButtonWidth) / 2;
+
+    Button btnSelectPhoto = new Button
+    {
+        Text = "انتخاب عکس",
+        Location = new Point(xPhotoButtonStart, yHeader),
+        Size = new Size(btnPhotoWidth, 35),
+        Font = FontSettings.ButtonFont,
+        BackColor = Color.LightBlue,
+        ForeColor = Color.White
+    };
+    ApplyRoundedCorners(btnSelectPhoto, 10);
+    btnSelectPhoto.Click += BtnSelectPhoto_Click;
+    this.Controls.Add(btnSelectPhoto);
+
+    Button btnRemovePhoto = new Button
+    {
+        Text = "حذف عکس",
+        Location = new Point(xPhotoButtonStart + btnPhotoWidth + btnPhotoSpacing, yHeader),
+        Size = new Size(btnPhotoWidth, 35),
+        Font = FontSettings.ButtonFont,
+        BackColor = Color.LightCoral,
+        ForeColor = Color.White
+    };
+    ApplyRoundedCorners(btnRemovePhoto, 10);
+    btnRemovePhoto.Click += BtnRemovePhoto_Click;
+    this.Controls.Add(btnRemovePhoto);
+    yHeader += 45;
+
+    // تنظیم مجدد yRight و yLeft
+    int yRight = yHeader + 10;
+    int yLeft = yHeader + 10;
+
+    // ... بقیه کدهای فرم ...
+}
+
+// =============================================================================
+
+// 3. اضافه کردن Event Handlers برای دکمه‌های عکس:
+
+private void BtnSelectPhoto_Click(object sender, EventArgs e)
+{
+    try
+    {
+        string photoPath = ImageHelper.OpenImageDialog();
+        if (!string.IsNullOrEmpty(photoPath))
+        {
+            selectedPhotoPath = photoPath;
+            Image img = Image.FromFile(photoPath);
+            ImageHelper.DrawImageInPictureBox(pbPhoto, img);
+        }
+    }
+    catch (Exception ex)
+    {
+        MessageBox.Show($"خطا در انتخاب عکس: {ex.Message}", "خطا", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+    }
+}
+
+private void BtnRemovePhoto_Click(object sender, EventArgs e)
+{
+    try
+    {
+        selectedPhotoPath = string.Empty;
+        pbPhoto.Image = ImageHelper.CreateDefaultImage(pbPhoto.Width, pbPhoto.Height);
+    }
+    catch (Exception ex)
+    {
+        MessageBox.Show($"خطا در حذف عکس: {ex.Message}", "خطا", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+    }
+}
+
+// =============================================================================
+
+// 4. اصلاح ClearForm() - اضافه کردن پاک کردن عکس:
+
+private void ClearForm()
+{
+    try
+    {
+        // ... کدهای قبلی پاک کردن فیلدها ...
+
+        // ⭐ پاک کردن عکس
+        selectedPhotoPath = string.Empty;
+        pbPhoto.Image = ImageHelper.CreateDefaultImage(pbPhoto.Width, pbPhoto.Height);
+    }
+    catch (Exception ex)
+    {
+        MessageBox.Show($"خطا در پاک کردن فرم: {ex.Message}", "خطا", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+    }
+}
+
+// =============================================================================
+
+// 5. اصلاح BtnSave_Click() - ذخیره عکس بعد از ثبت موفق:
+
+private void BtnSave_Click(object sender, EventArgs e)
+{
+    try
+    {
+        // اعتبارسنجی
+        ValidationResult validationResult = ValidateFormData();
+        if (!validationResult.IsValid)
+        {
+            MessageBox.Show(validationResult.Message, "خطای اعتبارسنجی", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        // تهیه پرس‌وجو
+        string query = @"INSERT INTO Personnel 
+            (ProvinceID, CityID, AffairID, DeptID, DistrictID, PostNameID, 
+             VoltageID, WorkShiftID, GenderID, FirstName, LastName, FatherName, 
+             PersonnelNumber, NationalID, MobileNumber, BirthDate, HireDate, 
+             StartDateOperation, ContractTypeID, JobLevelID, CompanyID, 
+             DegreeID, DegreeFieldID, MainJobTitle, CurrentActivity, 
+             Inconsistency, Description, StatusID) 
+            VALUES 
+            (@ProvinceID, @CityID, @AffairID, @DeptID, @DistrictID, @PostNameID, 
+             @VoltageID, @WorkShiftID, @GenderID, @FirstName, @LastName, @FatherName, 
+             @PersonnelNumber, @NationalID, @MobileNumber, @BirthDate, @HireDate, 
+             @StartDateOperation, @ContractTypeID, @JobLevelID, @CompanyID, 
+             @DegreeID, @DegreeFieldID, @MainJobTitle, @CurrentActivity, 
+             @Inconsistency, @Description, @StatusID)";
+
+        // ... تنظیم پارامترها ...
+
+        // اجرای دستور
+        db.ExecuteNonQuery(query, parameters);
+
+        // ⭐ ذخیره عکس اگر انتخاب شده است
+        if (!string.IsNullOrEmpty(selectedPhotoPath))
+        {
+            string nationalID = txtNationalID.Text.Trim();
+            bool photoSaved = ImageHelper.SaveImage(selectedPhotoPath, nationalID);
+            
+            if (!photoSaved)
+            {
+                MessageBox.Show("پرسنل ثبت شد اما عکس ذخیره نشد.", "اخطار", 
+                                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        MessageBox.Show("پرسنل با موفقیت ثبت شد!", "موفقیت", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+        ClearForm();
+    }
+    catch (Exception ex)
+    {
+        MessageBox.Show($"خطا در ثبت پرسنل: {ex.Message}", "خطا", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+    }
+}
+
+// =============================================================================
+// پایان تغییرات FormPersonnelRegister
+// =============================================================================
+
+
+
+// =============================================================================
+// برای FormPersonnelEdit نیز مشابه عمل می‌کنیم با تفاوت‌های زیر:
+// =============================================================================
+
+// در FormPersonnelEdit فیلد اضافی برای ذخیره کد ملی فعلی:
+private string currentNationalID = string.Empty;
+
+// در BtnLoad_Click بعد از بارگذاری داده‌ها:
+currentNationalID = row["NationalID"] != DBNull.Value ? row["NationalID"].ToString() : "";
+txtNationalID.Text = currentNationalID;
+
+// بارگذاری عکس اگر وجود دارد
+Image photo = ImageHelper.LoadImage(currentNationalID);
+if (photo != null)
+{
+    ImageHelper.DrawImageInPictureBox(pbPhoto, photo);
+    selectedPhotoPath = ImageHelper.GetImageFilePath(currentNationalID);
+}
+else
+{
+    pbPhoto.Image = ImageHelper.CreateDefaultImage(pbPhoto.Width, pbPhoto.Height);
+    selectedPhotoPath = string.Empty;
+}
+
+// در BtnUpdate_Click قبل از اجرای UPDATE:
+string oldNationalID = currentNationalID;
+string newNationalID = txtNationalID.Text.Trim();
+bool nationalIDChanged = oldNationalID != newNationalID;
+
+try
+{
+    db.ExecuteNonQuery(query, parameters);
+
+    // مدیریت تصویر
+    if (!string.IsNullOrEmpty(selectedPhotoPath))
+    {
+        if (selectedPhotoPath.StartsWith(ImageHelper.ImagesFolderPath))
+        {
+            // عکس از سیستم است - اگر کد ملی تغییر کرده، نام عکس را تغییر بده
+            if (nationalIDChanged)
+            {
+                ImageHelper.RenameImage(oldNationalID, newNationalID);
+            }
+        }
+        else
+        {
+            // عکس جدید انتخاب شده - ذخیره کن
+            ImageHelper.SaveImage(selectedPhotoPath, newNationalID);
+        }
+    }
+
+    MessageBox.Show("رکورد پرسنل با موفقیت به‌روزرسانی شد!", "موفقیت", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+    this.Close();
+}
+catch (Exception ex)
+{
+    MessageBox.Show($"خطا در به‌روزرسانی رکورد: {ex.Message}", "خطا", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+}
+
+// =============================================================================
+// پایان نمونه کدها
+// =============================================================================

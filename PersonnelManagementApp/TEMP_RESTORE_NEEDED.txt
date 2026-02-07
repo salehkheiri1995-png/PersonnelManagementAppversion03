@@ -1,0 +1,9 @@
+IMPORTANT: FormPersonnelAnalytics.cs was partially uploaded and needs to be restored from commit de3326de7ef7432e1ac28fb2d952f2954985cac4
+
+To restore:
+1. Revert the file to the previous commit
+2. Then apply font changes manually
+
+OR
+
+Restore from local backup if available.
