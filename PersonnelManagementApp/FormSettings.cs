@@ -326,7 +326,7 @@ namespace PersonnelManagementApp
             Panel card = new Panel
             {
                 Location = new Point(10, 10),
-                Size = new Size(690, 220),
+                Size = new Size(690, 280),
                 BackColor = CardBackground
             };
             ApplyRoundedCorners(card, 10);
@@ -362,18 +362,18 @@ namespace PersonnelManagementApp
                        "✅ خروجی اکسل برای گزارش‌گیری\n" +
                        "✅ امکان ویرایش و حذف مستقیم\n" +
                        "✅ بروزرسانی لحظه‌ای اطلاعات",
-                Font = GetSafeFont(FontSettings.BodyFont?.FontFamily.Name ?? "Tahoma", 9),
+                Font = GetSafeFont(FontSettings.BodyFont?.FontFamily.Name ?? "Tahoma", 9.5f),
                 ForeColor = TextSecondary,
-                Location = new Point(30, 105),
-                Size = new Size(640, 80),
+                Location = new Point(380, 105),
+                Size = new Size(290, 90),
                 TextAlign = ContentAlignment.TopRight
             };
             card.Controls.Add(lblFeatures);
 
             // دکمه باز کردن فرم
-            Button btnOpenMissingPhotos = CreateModernButton("📋 مشاهده لیست پرسنل بدون عکس", AccentColor, 280, 40);
-            btnOpenMissingPhotos.Location = new Point(205, 105);
-            btnOpenMissingPhotos.Font = GetSafeFont(FontSettings.ButtonFont?.FontFamily.Name ?? "Tahoma", 10, FontStyle.Bold);
+            Button btnOpenMissingPhotos = CreateModernButton("📋 مشاهده لیست پرسنل بدون عکس", AccentColor, 320, 50);
+            btnOpenMissingPhotos.Location = new Point(185, 210);
+            btnOpenMissingPhotos.Font = GetSafeFont(FontSettings.ButtonFont?.FontFamily.Name ?? "Tahoma", 11, FontStyle.Bold);
             btnOpenMissingPhotos.Click += BtnOpenMissingPhotos_Click;
             card.Controls.Add(btnOpenMissingPhotos);
 
@@ -391,7 +391,7 @@ namespace PersonnelManagementApp
             catch (Exception ex)
             {
                 MessageBox.Show(
-                    $"❌ خطا در باز کردن فرم:\n\n{ex.Message}",
+                    $"❌ خطا در باز کردن فرم:\n\n{ex.Message}\n\n{ex.StackTrace}",
                     "خطا",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error
