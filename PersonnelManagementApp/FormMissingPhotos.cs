@@ -164,23 +164,36 @@ namespace PersonnelManagementApp
             {
                 this.Cursor = Cursors.WaitCursor;
 
-                // کوئری برای گرفتن پرسنلی که عکس ندارند (PhotoPath NULL یا خالی)
-                // نکته: در Access برای چند JOIN پشت سر هم، پرانتزگذاری لازم است.
-                // نکته: طبق ساختار دیتابیس شما، کلید ارتباطی پست در جدول Personnel = PostNameID است.
-                string query = @"SELECT 
-                               Personnel.PersonnelID, Personnel.FirstName, Personnel.LastName, 
-                               Personnel.PersonnelNumber, Personnel.NationalID, Personnel.MobileNumber,
-                               PostsNames.PostName, OperationDepartments.DeptName, 
-                               Provinces.ProvinceName, Cities.CityName,
-                               ContractType.ContractTypeName, JobLevel.JobLevelName,
-                               Personnel.HireDate, Personnel.PhotoPath
-                               FROM ((((((Personnel
-                               INNER JOIN PostsNames ON Personnel.PostNameID = PostsNames.PostNameID)
-                               INNER JOIN OperationDepartments ON Personnel.DeptID = OperationDepartments.DeptID)
+                // برای اینکه دقیقاً مثل بقیه بخش‌های برنامه (SearchByPersonnel و ...) با دیتابیس شما کار کند،
+                // همین JOIN-chain را از DbHelper.SearchByPersonnel برداشتیم و فقط شرط PhotoPath را اضافه کردیم.
+                // این کار هم مشکل "No value given..." ناشی از اختلاف نام ستون‌ها/جدول‌ها را حذف می‌کند.
+                string query = @"SELECT Personnel.*, 
+                               Provinces.ProvinceName, Cities.CityName, TransferAffairs.AffairName, 
+                               OperationDepartments.DeptName, Districts.DistrictName, PostsNames.PostName, 
+                               VoltageLevels.VoltageName, WorkShift.WorkShiftName, Gender.GenderName, 
+                               ContractType.ContractTypeName, JobLevel.JobLevelName, Company.CompanyName, 
+                               Degree.DegreeName, DegreeField.DegreeFieldName, 
+                               ChartAffairs1.ChartName AS MainJobTitle, 
+                               ChartAffairs2.ChartName AS CurrentActivity, 
+                               StatusPresence.StatusName
+                               FROM (((((((((((((((((Personnel
                                INNER JOIN Provinces ON Personnel.ProvinceID = Provinces.ProvinceID)
                                INNER JOIN Cities ON Personnel.CityID = Cities.CityID)
+                               INNER JOIN TransferAffairs ON Personnel.AffairID = TransferAffairs.AffairID)
+                               INNER JOIN OperationDepartments ON Personnel.DeptID = OperationDepartments.DeptID)
+                               INNER JOIN Districts ON Personnel.DistrictID = Districts.DistrictID)
+                               INNER JOIN PostsNames ON Personnel.PostNameID = PostsNames.PostNameID)
+                               INNER JOIN VoltageLevels ON Personnel.VoltageID = VoltageLevels.VoltageID)
+                               INNER JOIN WorkShift ON Personnel.WorkShiftID = WorkShift.WorkShiftID)
+                               INNER JOIN Gender ON Personnel.GenderID = Gender.GenderID)
                                INNER JOIN ContractType ON Personnel.ContractTypeID = ContractType.ContractTypeID)
                                INNER JOIN JobLevel ON Personnel.JobLevelID = JobLevel.JobLevelID)
+                               INNER JOIN Company ON Personnel.CompanyID = Company.CompanyID)
+                               INNER JOIN Degree ON Personnel.DegreeID = Degree.DegreeID)
+                               INNER JOIN DegreeField ON Personnel.DegreeFieldID = DegreeField.DegreeFieldID)
+                               INNER JOIN ChartAffairs AS ChartAffairs1 ON Personnel.MainJobTitle = ChartAffairs1.ChartID)
+                               INNER JOIN ChartAffairs AS ChartAffairs2 ON Personnel.CurrentActivity = ChartAffairs2.ChartID)
+                               INNER JOIN StatusPresence ON Personnel.StatusID = StatusPresence.StatusID)
                                WHERE (Personnel.PhotoPath IS NULL) OR (Personnel.PhotoPath = '')
                                ORDER BY Personnel.LastName, Personnel.FirstName";
 
@@ -222,7 +235,7 @@ namespace PersonnelManagementApp
                 Visible = false
             });
 
-            // ستون‌های قابل نمایش
+            // ستون‌های قابل نمایش (حداقل‌های کاربردی؛ بقیه از Personnel.* هم داخل currentData هست)
             dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "RowNumber",
@@ -363,25 +376,25 @@ namespace PersonnelManagementApp
             int rowNumber = 1;
             foreach (DataRow row in currentData.Rows)
             {
-                string hireDate = row["HireDate"] != DBNull.Value
+                string hireDate = row.Table.Columns.Contains("HireDate") && row["HireDate"] != DBNull.Value
                     ? Convert.ToDateTime(row["HireDate"]).ToString("yyyy/MM/dd")
                     : "";
 
                 dgvMissingPhotos.Rows.Add(
                     row["PersonnelID"],
                     rowNumber++,
-                    row["FirstName"],
-                    row["LastName"],
-                    row["PersonnelNumber"],
-                    row["NationalID"],
-                    row["PostName"],
-                    row["DeptName"],
-                    row["ProvinceName"],
-                    row["CityName"],
-                    row["ContractTypeName"],
-                    row["JobLevelName"],
+                    row.Table.Columns.Contains("FirstName") ? row["FirstName"] : "",
+                    row.Table.Columns.Contains("LastName") ? row["LastName"] : "",
+                    row.Table.Columns.Contains("PersonnelNumber") ? row["PersonnelNumber"] : "",
+                    row.Table.Columns.Contains("NationalID") ? row["NationalID"] : "",
+                    row.Table.Columns.Contains("PostName") ? row["PostName"] : "",
+                    row.Table.Columns.Contains("DeptName") ? row["DeptName"] : "",
+                    row.Table.Columns.Contains("ProvinceName") ? row["ProvinceName"] : "",
+                    row.Table.Columns.Contains("CityName") ? row["CityName"] : "",
+                    row.Table.Columns.Contains("ContractTypeName") ? row["ContractTypeName"] : "",
+                    row.Table.Columns.Contains("JobLevelName") ? row["JobLevelName"] : "",
                     hireDate,
-                    row["MobileNumber"],
+                    row.Table.Columns.Contains("MobileNumber") ? row["MobileNumber"] : "",
                     "ویرایش",
                     "حذف"
                 );
@@ -420,7 +433,7 @@ namespace PersonnelManagementApp
                 FormPersonnelEdit editForm = new FormPersonnelEdit();
                 editForm.txtPersonnelID.Text = personnelID.ToString();
                 editForm.BtnLoad_Click(null, EventArgs.Empty);
-                
+
                 if (editForm.ShowDialog(this) == DialogResult.OK)
                 {
                     // بعد از ویرایش، لیست رو به‌روز کن
@@ -453,13 +466,13 @@ namespace PersonnelManagementApp
                     if (affectedRows > 0)
                     {
                         MessageBox.Show("✅ پرسنل با موفقیت حذف شد.", "موفق", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        
+
                         // حذف سطر از جدول
                         dgvMissingPhotos.Rows.RemoveAt(rowIndex);
-                        
+
                         // به‌روزرسانی شماره ردیف‌ها
                         UpdateRowNumbers();
-                        
+
                         // به‌روزرسانی تعداد
                         lblCount.Text = $"📊 تعداد پرسنل بدون عکس: {dgvMissingPhotos.Rows.Count} نفر";
 
@@ -559,12 +572,12 @@ namespace PersonnelManagementApp
                             worksheet.Cell(excelRow, 9).Value = row["CityName"]?.ToString() ?? "";
                             worksheet.Cell(excelRow, 10).Value = row["ContractTypeName"]?.ToString() ?? "";
                             worksheet.Cell(excelRow, 11).Value = row["JobLevelName"]?.ToString() ?? "";
-                            
+
                             string hireDate = row["HireDate"] != DBNull.Value
                                 ? Convert.ToDateTime(row["HireDate"]).ToString("yyyy/MM/dd")
                                 : "";
                             worksheet.Cell(excelRow, 12).Value = hireDate;
-                            
+
                             worksheet.Cell(excelRow, 13).Value = row["MobileNumber"]?.ToString() ?? "";
 
                             // استایل سطرهای زوج
