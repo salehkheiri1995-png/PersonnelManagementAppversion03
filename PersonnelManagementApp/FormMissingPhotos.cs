@@ -164,42 +164,53 @@ namespace PersonnelManagementApp
             {
                 this.Cursor = Cursors.WaitCursor;
 
-                // برای اینکه دقیقاً مثل بقیه بخش‌های برنامه (SearchByPersonnel و ...) با دیتابیس شما کار کند،
-                // همین JOIN-chain را از DbHelper.SearchByPersonnel برداشتیم و فقط شرط PhotoPath را اضافه کردیم.
-                // این کار هم مشکل "No value given..." ناشی از اختلاف نام ستون‌ها/جدول‌ها را حذف می‌کند.
-                string query = @"SELECT Personnel.*, 
-                               Provinces.ProvinceName, Cities.CityName, TransferAffairs.AffairName, 
-                               OperationDepartments.DeptName, Districts.DistrictName, PostsNames.PostName, 
-                               VoltageLevels.VoltageName, WorkShift.WorkShiftName, Gender.GenderName, 
-                               ContractType.ContractTypeName, JobLevel.JobLevelName, Company.CompanyName, 
-                               Degree.DegreeName, DegreeField.DegreeFieldName, 
-                               ChartAffairs1.ChartName AS MainJobTitle, 
-                               ChartAffairs2.ChartName AS CurrentActivity, 
-                               StatusPresence.StatusName
-                               FROM (((((((((((((((((Personnel
-                               INNER JOIN Provinces ON Personnel.ProvinceID = Provinces.ProvinceID)
-                               INNER JOIN Cities ON Personnel.CityID = Cities.CityID)
-                               INNER JOIN TransferAffairs ON Personnel.AffairID = TransferAffairs.AffairID)
-                               INNER JOIN OperationDepartments ON Personnel.DeptID = OperationDepartments.DeptID)
-                               INNER JOIN Districts ON Personnel.DistrictID = Districts.DistrictID)
-                               INNER JOIN PostsNames ON Personnel.PostNameID = PostsNames.PostNameID)
-                               INNER JOIN VoltageLevels ON Personnel.VoltageID = VoltageLevels.VoltageID)
-                               INNER JOIN WorkShift ON Personnel.WorkShiftID = WorkShift.WorkShiftID)
-                               INNER JOIN Gender ON Personnel.GenderID = Gender.GenderID)
-                               INNER JOIN ContractType ON Personnel.ContractTypeID = ContractType.ContractTypeID)
-                               INNER JOIN JobLevel ON Personnel.JobLevelID = JobLevel.JobLevelID)
-                               INNER JOIN Company ON Personnel.CompanyID = Company.CompanyID)
-                               INNER JOIN Degree ON Personnel.DegreeID = Degree.DegreeID)
-                               INNER JOIN DegreeField ON Personnel.DegreeFieldID = DegreeField.DegreeFieldID)
-                               INNER JOIN ChartAffairs AS ChartAffairs1 ON Personnel.MainJobTitle = ChartAffairs1.ChartID)
-                               INNER JOIN ChartAffairs AS ChartAffairs2 ON Personnel.CurrentActivity = ChartAffairs2.ChartID)
-                               INNER JOIN StatusPresence ON Personnel.StatusID = StatusPresence.StatusID)
-                               WHERE (Personnel.PhotoPath IS NULL) OR (Personnel.PhotoPath = '')
+                // 1) فقط اطلاعات پایه از دیتابیس (بدون JOIN سنگین، برای جلوگیری از خطاهای Access)
+                // 2) عکس‌ها را از روی فولدر تنظیمات و نام فایل = کد ملی (NationalID) بررسی می‌کنیم
+                //    (طبق ImageHelper: مسیر از AppSettings.PhotosFolder و نام فایل {NationalID}.jpg)
+                // 3) هر پرسنلی که عکس ندارد در لیست نمایش داده می‌شود.
+                string query = @"SELECT Personnel.PersonnelID, Personnel.FirstName, Personnel.LastName,
+                               Personnel.PersonnelNumber, Personnel.NationalID, Personnel.MobileNumber,
+                               Personnel.HireDate
+                               FROM Personnel
                                ORDER BY Personnel.LastName, Personnel.FirstName";
 
-                currentData = dbHelper.ExecuteQuery(query);
+                DataTable dt = dbHelper.ExecuteQuery(query);
+                if (dt == null || dt.Rows.Count == 0)
+                {
+                    dgvMissingPhotos.Columns.Clear();
+                    dgvMissingPhotos.Rows.Clear();
+                    lblCount.Text = "ℹ️ هیچ داده‌ای یافت نشد.";
+                    return;
+                }
 
-                if (currentData != null && currentData.Rows.Count > 0)
+                // بررسی مسیر عکس‌ها
+                string imagesFolder = ImageHelper.ImagesFolderPath;
+                if (string.IsNullOrWhiteSpace(imagesFolder) || !Directory.Exists(imagesFolder))
+                {
+                    MessageBox.Show(
+                        $"❌ مسیر پوشه عکس‌ها معتبر نیست یا وجود ندارد:\n\n{imagesFolder}\n\nلطفاً از تنظیمات، مسیر پوشه عکس‌ها را درست کنید.",
+                        "خطا",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                    return;
+                }
+
+                // فیلتر کردن پرسنل‌هایی که عکس ندارند
+                DataTable missing = dt.Clone();
+                foreach (DataRow row in dt.Rows)
+                {
+                    string nationalId = row["NationalID"]?.ToString() ?? string.Empty;
+
+                    // اگر کد ملی خالی است، به عنوان "بدون عکس" گزارش شود
+                    if (string.IsNullOrWhiteSpace(nationalId) || !ImageHelper.ImageExists(nationalId))
+                    {
+                        missing.ImportRow(row);
+                    }
+                }
+
+                currentData = missing;
+
+                if (currentData.Rows.Count > 0)
                 {
                     SetupDataGridView();
                     PopulateDataGridView();
@@ -235,7 +246,6 @@ namespace PersonnelManagementApp
                 Visible = false
             });
 
-            // ستون‌های قابل نمایش (حداقل‌های کاربردی؛ بقیه از Personnel.* هم داخل currentData هست)
             dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "RowNumber",
@@ -268,48 +278,6 @@ namespace PersonnelManagementApp
             {
                 Name = "NationalID",
                 HeaderText = "کد ملی",
-                Width = 120
-            });
-
-            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "PostName",
-                HeaderText = "پست",
-                Width = 180
-            });
-
-            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "DeptName",
-                HeaderText = "اداره",
-                Width = 180
-            });
-
-            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "ProvinceName",
-                HeaderText = "استان",
-                Width = 100
-            });
-
-            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "CityName",
-                HeaderText = "شهر",
-                Width = 100
-            });
-
-            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "ContractTypeName",
-                HeaderText = "نوع قرارداد",
-                Width = 120
-            });
-
-            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "JobLevelName",
-                HeaderText = "سطح شغلی",
                 Width = 120
             });
 
@@ -365,7 +333,6 @@ namespace PersonnelManagementApp
             };
             dgvMissingPhotos.Columns.Add(deleteColumn);
 
-            // Event handler برای کلیک روی دکمه‌ها
             dgvMissingPhotos.CellClick += DgvMissingPhotos_CellClick;
         }
 
@@ -376,25 +343,19 @@ namespace PersonnelManagementApp
             int rowNumber = 1;
             foreach (DataRow row in currentData.Rows)
             {
-                string hireDate = row.Table.Columns.Contains("HireDate") && row["HireDate"] != DBNull.Value
+                string hireDate = row["HireDate"] != DBNull.Value
                     ? Convert.ToDateTime(row["HireDate"]).ToString("yyyy/MM/dd")
                     : "";
 
                 dgvMissingPhotos.Rows.Add(
                     row["PersonnelID"],
                     rowNumber++,
-                    row.Table.Columns.Contains("FirstName") ? row["FirstName"] : "",
-                    row.Table.Columns.Contains("LastName") ? row["LastName"] : "",
-                    row.Table.Columns.Contains("PersonnelNumber") ? row["PersonnelNumber"] : "",
-                    row.Table.Columns.Contains("NationalID") ? row["NationalID"] : "",
-                    row.Table.Columns.Contains("PostName") ? row["PostName"] : "",
-                    row.Table.Columns.Contains("DeptName") ? row["DeptName"] : "",
-                    row.Table.Columns.Contains("ProvinceName") ? row["ProvinceName"] : "",
-                    row.Table.Columns.Contains("CityName") ? row["CityName"] : "",
-                    row.Table.Columns.Contains("ContractTypeName") ? row["ContractTypeName"] : "",
-                    row.Table.Columns.Contains("JobLevelName") ? row["JobLevelName"] : "",
+                    row["FirstName"],
+                    row["LastName"],
+                    row["PersonnelNumber"],
+                    row["NationalID"],
                     hireDate,
-                    row.Table.Columns.Contains("MobileNumber") ? row["MobileNumber"] : "",
+                    row["MobileNumber"],
                     "ویرایش",
                     "حذف"
                 );
@@ -409,12 +370,10 @@ namespace PersonnelManagementApp
             {
                 int personnelID = Convert.ToInt32(dgvMissingPhotos.Rows[e.RowIndex].Cells["PersonnelID"].Value);
 
-                // کلیک روی دکمه ویرایش
                 if (e.ColumnIndex == dgvMissingPhotos.Columns["Edit"].Index)
                 {
                     OpenEditForm(personnelID);
                 }
-                // کلیک روی دکمه حذف
                 else if (e.ColumnIndex == dgvMissingPhotos.Columns["Delete"].Index)
                 {
                     DeletePersonnel(personnelID, e.RowIndex);
@@ -436,7 +395,6 @@ namespace PersonnelManagementApp
 
                 if (editForm.ShowDialog(this) == DialogResult.OK)
                 {
-                    // بعد از ویرایش، لیست رو به‌روز کن
                     LoadMissingPhotos();
                 }
             }
@@ -467,16 +425,10 @@ namespace PersonnelManagementApp
                     {
                         MessageBox.Show("✅ پرسنل با موفقیت حذف شد.", "موفق", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                        // حذف سطر از جدول
                         dgvMissingPhotos.Rows.RemoveAt(rowIndex);
-
-                        // به‌روزرسانی شماره ردیف‌ها
                         UpdateRowNumbers();
-
-                        // به‌روزرسانی تعداد
                         lblCount.Text = $"📊 تعداد پرسنل بدون عکس: {dgvMissingPhotos.Rows.Count} نفر";
 
-                        // اگر لیست خالی شد
                         if (dgvMissingPhotos.Rows.Count == 0)
                         {
                             lblCount.Text = "✅ همه پرسنل دارای عکس هستند!";
@@ -533,30 +485,24 @@ namespace PersonnelManagementApp
                     {
                         var worksheet = workbook.Worksheets.Add("پرسنل بدون عکس");
 
-                        // هدرها
                         worksheet.Cell(1, 1).Value = "ردیف";
                         worksheet.Cell(1, 2).Value = "نام";
                         worksheet.Cell(1, 3).Value = "نام‌خانوادگی";
                         worksheet.Cell(1, 4).Value = "شماره پرسنلی";
                         worksheet.Cell(1, 5).Value = "کد ملی";
-                        worksheet.Cell(1, 6).Value = "پست";
-                        worksheet.Cell(1, 7).Value = "اداره";
-                        worksheet.Cell(1, 8).Value = "استان";
-                        worksheet.Cell(1, 9).Value = "شهر";
-                        worksheet.Cell(1, 10).Value = "نوع قرارداد";
-                        worksheet.Cell(1, 11).Value = "سطح شغلی";
-                        worksheet.Cell(1, 12).Value = "تاریخ استخدام";
-                        worksheet.Cell(1, 13).Value = "تلفن همراه";
+                        worksheet.Cell(1, 6).Value = "تاریخ استخدام";
+                        worksheet.Cell(1, 7).Value = "تلفن همراه";
+                        worksheet.Cell(1, 8).Value = "مسیر پوشه عکس‌ها";
 
-                        // استایل هدر
-                        var headerRange = worksheet.Range(1, 1, 1, 13);
+                        var headerRange = worksheet.Range(1, 1, 1, 8);
                         headerRange.Style.Font.Bold = true;
                         headerRange.Style.Fill.BackgroundColor = XLColor.FromArgb(0, 102, 204);
                         headerRange.Style.Font.FontColor = XLColor.White;
                         headerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                         headerRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
 
-                        // داده‌ها
+                        string imagesFolder = ImageHelper.ImagesFolderPath;
+
                         int rowNumber = 1;
                         int excelRow = 2;
                         foreach (DataRow row in currentData.Rows)
@@ -566,42 +512,31 @@ namespace PersonnelManagementApp
                             worksheet.Cell(excelRow, 3).Value = row["LastName"]?.ToString() ?? "";
                             worksheet.Cell(excelRow, 4).Value = row["PersonnelNumber"]?.ToString() ?? "";
                             worksheet.Cell(excelRow, 5).Value = row["NationalID"]?.ToString() ?? "";
-                            worksheet.Cell(excelRow, 6).Value = row["PostName"]?.ToString() ?? "";
-                            worksheet.Cell(excelRow, 7).Value = row["DeptName"]?.ToString() ?? "";
-                            worksheet.Cell(excelRow, 8).Value = row["ProvinceName"]?.ToString() ?? "";
-                            worksheet.Cell(excelRow, 9).Value = row["CityName"]?.ToString() ?? "";
-                            worksheet.Cell(excelRow, 10).Value = row["ContractTypeName"]?.ToString() ?? "";
-                            worksheet.Cell(excelRow, 11).Value = row["JobLevelName"]?.ToString() ?? "";
 
                             string hireDate = row["HireDate"] != DBNull.Value
                                 ? Convert.ToDateTime(row["HireDate"]).ToString("yyyy/MM/dd")
                                 : "";
-                            worksheet.Cell(excelRow, 12).Value = hireDate;
+                            worksheet.Cell(excelRow, 6).Value = hireDate;
 
-                            worksheet.Cell(excelRow, 13).Value = row["MobileNumber"]?.ToString() ?? "";
+                            worksheet.Cell(excelRow, 7).Value = row["MobileNumber"]?.ToString() ?? "";
+                            worksheet.Cell(excelRow, 8).Value = imagesFolder;
 
-                            // استایل سطرهای زوج
                             if (excelRow % 2 == 0)
                             {
-                                worksheet.Range(excelRow, 1, excelRow, 13).Style.Fill.BackgroundColor = XLColor.FromArgb(240, 248, 255);
+                                worksheet.Range(excelRow, 1, excelRow, 8).Style.Fill.BackgroundColor = XLColor.FromArgb(240, 248, 255);
                             }
 
                             excelRow++;
                         }
 
-                        // تنظیم عرض ستون‌ها
                         worksheet.Columns().AdjustToContents();
-
-                        // Right to Left
                         worksheet.RightToLeft = true;
 
-                        // ذخیره
                         workbook.SaveAs(sfd.FileName);
                     }
 
                     MessageBox.Show($"✅ فایل اکسل با موفقیت ذخیره شد:\n\n{sfd.FileName}", "موفقیت", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                    // پرسش برای باز کردن فایل
                     DialogResult openResult = MessageBox.Show("آیا می‌خواهید فایل را باز کنید؟", "باز کردن فایل", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
                     if (openResult == DialogResult.Yes)
                     {
