@@ -172,7 +172,7 @@ namespace PersonnelManagementApp
                                ContractType.ContractTypeName, JobLevel.JobLevelName,
                                Personnel.HireDate, Personnel.PhotoPath
                                FROM Personnel 
-                               INNER JOIN PostsNames ON Personnel.PostNameID = PostsNames.PostNameID
+                               INNER JOIN PostsNames ON Personnel.PostsNameID = PostsNames.PostsNameID
                                INNER JOIN OperationDepartments ON Personnel.DeptID = OperationDepartments.DeptID
                                INNER JOIN Provinces ON Personnel.ProvinceID = Provinces.ProvinceID
                                INNER JOIN Cities ON Personnel.CityID = Cities.CityID
