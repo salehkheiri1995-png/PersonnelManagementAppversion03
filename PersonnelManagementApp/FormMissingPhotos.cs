@@ -165,20 +165,22 @@ namespace PersonnelManagementApp
                 this.Cursor = Cursors.WaitCursor;
 
                 // کوئری برای گرفتن پرسنلی که عکس ندارند (PhotoPath NULL یا خالی)
-                string query = @"SELECT Personnel.PersonnelID, Personnel.FirstName, Personnel.LastName, 
+                // نکته: در Access برای چند JOIN پشت سر هم، پرانتزگذاری لازم است.
+                string query = @"SELECT 
+                               Personnel.PersonnelID, Personnel.FirstName, Personnel.LastName, 
                                Personnel.PersonnelNumber, Personnel.NationalID, Personnel.MobileNumber,
                                PostsNames.PostName, OperationDepartments.DeptName, 
                                Provinces.ProvinceName, Cities.CityName,
                                ContractType.ContractTypeName, JobLevel.JobLevelName,
                                Personnel.HireDate, Personnel.PhotoPath
-                               FROM Personnel 
-                               INNER JOIN PostsNames ON Personnel.PostsNameID = PostsNames.PostsNameID
-                               INNER JOIN OperationDepartments ON Personnel.DeptID = OperationDepartments.DeptID
-                               INNER JOIN Provinces ON Personnel.ProvinceID = Provinces.ProvinceID
-                               INNER JOIN Cities ON Personnel.CityID = Cities.CityID
-                               INNER JOIN ContractType ON Personnel.ContractTypeID = ContractType.ContractTypeID
-                               INNER JOIN JobLevel ON Personnel.JobLevelID = JobLevel.JobLevelID
-                               WHERE Personnel.PhotoPath IS NULL OR Personnel.PhotoPath = ''
+                               FROM ((((((Personnel
+                               INNER JOIN PostsNames ON Personnel.PostsNameID = PostsNames.PostsNameID)
+                               INNER JOIN OperationDepartments ON Personnel.DeptID = OperationDepartments.DeptID)
+                               INNER JOIN Provinces ON Personnel.ProvinceID = Provinces.ProvinceID)
+                               INNER JOIN Cities ON Personnel.CityID = Cities.CityID)
+                               INNER JOIN ContractType ON Personnel.ContractTypeID = ContractType.ContractTypeID)
+                               INNER JOIN JobLevel ON Personnel.JobLevelID = JobLevel.JobLevelID)
+                               WHERE (Personnel.PhotoPath IS NULL) OR (Personnel.PhotoPath = '')
                                ORDER BY Personnel.LastName, Personnel.FirstName";
 
                 currentData = dbHelper.ExecuteQuery(query);
