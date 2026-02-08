@@ -13,15 +13,15 @@ namespace PersonnelManagementApp
     public partial class FormMissingPhotos : Form
     {
         private readonly DbHelper dbHelper;
-        private DataGridView dgvMissingPhotos;
-        private Label lblTitle;
-        private Label lblCount;
-        private Button btnExportExcel;
-        private Button btnRefresh;
-        private Button btnClose;
-        private TableLayoutPanel mainLayout; // استفاده از TableLayoutPanel برای چیدمان دقیق
-        private FlowLayoutPanel buttonPanel; // استفاده از FlowLayoutPanel برای دکمه‌ها
-        private DataTable currentData;
+        private DataGridView dgvMissingPhotos = null!;
+        private Label lblTitle = null!;
+        private Label lblCount = null!;
+        private Button btnExportExcel = null!;
+        private Button btnRefresh = null!;
+        private Button btnClose = null!;
+        private TableLayoutPanel mainLayout = null!;
+        private FlowLayoutPanel buttonPanel = null!;
+        private DataTable currentData = null!;
 
         // رنگ‌های مدرن
         private readonly Color PrimaryColor = Color.FromArgb(33, 150, 243);
@@ -131,9 +131,14 @@ namespace PersonnelManagementApp
                 BackColor = Color.White,
                 FlowDirection = FlowDirection.RightToLeft, // چیدمان از راست به چپ
                 WrapContents = false,
-                Alignment = FlowDirection.TopCenter, // وسط‌چین کردن دکمه‌ها
                 Padding = new Padding(0, 20, 0, 0) // فاصله از بالا
             };
+
+            // حذف خط اشتباه و استفاده از ContentAlignment
+            buttonPanel.AutoScroll = false;
+            
+            // برای مرکز کردن دکمه‌ها، از Anchor استفاده می‌کنیم
+            buttonPanel.Anchor = AnchorStyles.None;
 
             int buttonWidth = 160;
             int buttonHeight = 45;
@@ -197,7 +202,7 @@ namespace PersonnelManagementApp
                                LEFT JOIN PostsNames ON Personnel.PostNameID = PostsNames.PostNameID)
                                ORDER BY Personnel.LastName, Personnel.FirstName";
 
-                DataTable dt = dbHelper.ExecuteQuery(query);
+                DataTable? dt = dbHelper.ExecuteQuery(query);
                 if (dt == null || dt.Rows.Count == 0)
                 {
                     dgvMissingPhotos.Columns.Clear();
@@ -333,7 +338,7 @@ namespace PersonnelManagementApp
             }
         }
 
-        private void DgvMissingPhotos_CellClick(object sender, DataGridViewCellEventArgs e)
+        private void DgvMissingPhotos_CellClick(object? sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0) return;
 
@@ -371,12 +376,12 @@ namespace PersonnelManagementApp
             }
         }
 
-        private void BtnRefresh_Click(object sender, EventArgs e)
+        private void BtnRefresh_Click(object? sender, EventArgs e)
         {
             LoadMissingPhotos();
         }
 
-        private void BtnExportExcel_Click(object sender, EventArgs e)
+        private void BtnExportExcel_Click(object? sender, EventArgs e)
         {
             try
             {
