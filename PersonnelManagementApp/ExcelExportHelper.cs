@@ -39,14 +39,18 @@ namespace PersonnelManagementApp
             { "Address", "آدرس" }
         };
 
+        // تنظیم License برای EPPlus 8+
+        static ExcelExportHelper()
+        {
+            // این خط برای EPPlus 8 و بالاتر است
+            ExcelPackage.License.Context = LicenseContext.NonCommercial;
+        }
+
         /// <summary>
         /// Export DataGridView to Excel with selected columns
         /// </summary>
         public static void ExportToExcel(DataGridView dgv, List<string> selectedColumns, string defaultFileName = "PersonnelData")
         {
-            // Set EPPlus license context FIRST
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-
             try
             {
                 using (SaveFileDialog saveDialog = new SaveFileDialog())
@@ -88,9 +92,6 @@ namespace PersonnelManagementApp
         /// </summary>
         public static void ExportToExcel(List<PersonnelDetail> personnelList, List<string> selectedColumns, string defaultFileName = "PersonnelData")
         {
-            // Set EPPlus license context FIRST
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-
             try
             {
                 using (SaveFileDialog saveDialog = new SaveFileDialog())
