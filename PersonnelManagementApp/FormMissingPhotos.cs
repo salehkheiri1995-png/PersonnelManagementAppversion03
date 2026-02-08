@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using ClosedXML.Excel;
+using System.Data.OleDb;
 
 namespace PersonnelManagementApp
 {
@@ -53,7 +54,8 @@ namespace PersonnelManagementApp
             {
                 Dock = DockStyle.Top,
                 Height = 100,
-                BackColor = HeaderColor
+                BackColor = HeaderColor,
+                Padding = new Padding(0, 0, 0, 10)
             };
 
             lblTitle = new Label
@@ -63,7 +65,8 @@ namespace PersonnelManagementApp
                 ForeColor = Color.White,
                 Location = new Point(20, 15),
                 Size = new Size(600, 40),
-                TextAlign = ContentAlignment.MiddleRight
+                TextAlign = ContentAlignment.MiddleRight,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
             panelHeader.Controls.Add(lblTitle);
 
@@ -74,11 +77,46 @@ namespace PersonnelManagementApp
                 ForeColor = Color.FromArgb(230, 240, 255),
                 Location = new Point(20, 55),
                 Size = new Size(600, 30),
-                TextAlign = ContentAlignment.MiddleRight
+                TextAlign = ContentAlignment.MiddleRight,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
             panelHeader.Controls.Add(lblCount);
 
             this.Controls.Add(panelHeader);
+
+            // ========== پنل دکمه‌ها ==========
+            panelButtons = new Panel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 80,
+                BackColor = Color.White,
+                Padding = new Padding(20)
+            };
+
+            int buttonWidth = 180;
+            int buttonHeight = 45;
+            int buttonSpacing = 15;
+            int startX = (this.Width - (3 * buttonWidth + 2 * buttonSpacing)) / 2;
+
+            btnExportExcel = CreateStyledButton("📊 خروجی اکسل", AccentColor, buttonWidth, buttonHeight);
+            btnExportExcel.Anchor = AnchorStyles.Top; 
+            btnExportExcel.Location = new Point(startX, 17);
+            btnExportExcel.Click += BtnExportExcel_Click;
+            panelButtons.Controls.Add(btnExportExcel);
+
+            btnRefresh = CreateStyledButton("🔄 بروزرسانی", PrimaryColor, buttonWidth, buttonHeight);
+            btnRefresh.Anchor = AnchorStyles.Top;
+            btnRefresh.Location = new Point(startX + buttonWidth + buttonSpacing, 17);
+            btnRefresh.Click += BtnRefresh_Click;
+            panelButtons.Controls.Add(btnRefresh);
+
+            btnClose = CreateStyledButton("❌ بستن", DangerColor, buttonWidth, buttonHeight);
+            btnClose.Anchor = AnchorStyles.Top;
+            btnClose.Location = new Point(startX + 2 * (buttonWidth + buttonSpacing), 17);
+            btnClose.Click += (s, e) => this.Close();
+            panelButtons.Controls.Add(btnClose);
+
+            this.Controls.Add(panelButtons);
 
             // ========== DataGridView ==========
             dgvMissingPhotos = new DataGridView
@@ -105,36 +143,10 @@ namespace PersonnelManagementApp
 
             this.Controls.Add(dgvMissingPhotos);
 
-            // ========== پنل دکمه‌ها ==========
-            panelButtons = new Panel
-            {
-                Dock = DockStyle.Bottom,
-                Height = 80,
-                BackColor = Color.White,
-                Padding = new Padding(20)
-            };
-
-            int buttonWidth = 180;
-            int buttonHeight = 45;
-            int buttonSpacing = 15;
-            int startX = (this.Width - (3 * buttonWidth + 2 * buttonSpacing)) / 2;
-
-            btnExportExcel = CreateStyledButton("📊 خروجی اکسل", AccentColor, buttonWidth, buttonHeight);
-            btnExportExcel.Location = new Point(startX, 17);
-            btnExportExcel.Click += BtnExportExcel_Click;
-            panelButtons.Controls.Add(btnExportExcel);
-
-            btnRefresh = CreateStyledButton("🔄 بروزرسانی", PrimaryColor, buttonWidth, buttonHeight);
-            btnRefresh.Location = new Point(startX + buttonWidth + buttonSpacing, 17);
-            btnRefresh.Click += BtnRefresh_Click;
-            panelButtons.Controls.Add(btnRefresh);
-
-            btnClose = CreateStyledButton("❌ بستن", DangerColor, buttonWidth, buttonHeight);
-            btnClose.Location = new Point(startX + 2 * (buttonWidth + buttonSpacing), 17);
-            btnClose.Click += (s, e) => this.Close();
-            panelButtons.Controls.Add(btnClose);
-
-            this.Controls.Add(panelButtons);
+            // ⭐ اصلاح ترتیب نمایش برای جلوگیری از رفتن لیست زیر هدر
+            panelHeader.BringToFront();
+            panelButtons.BringToFront();
+            dgvMissingPhotos.SendToBack();
         }
 
         private Button CreateStyledButton(string text, Color backColor, int width, int height)
@@ -164,14 +176,17 @@ namespace PersonnelManagementApp
             {
                 this.Cursor = Cursors.WaitCursor;
 
-                // 1) فقط اطلاعات پایه از دیتابیس (بدون JOIN سنگین، برای جلوگیری از خطاهای Access)
-                // 2) عکس‌ها را از روی فولدر تنظیمات و نام فایل = کد ملی (NationalID) بررسی می‌کنیم
-                //    (طبق ImageHelper: مسیر از AppSettings.PhotosFolder و نام فایل {NationalID}.jpg)
-                // 3) هر پرسنلی که عکس ندارد در لیست نمایش داده می‌شود.
+                // ⭐ کوئری اصلاح شده با JOIN برای دریافت نام اداره، ناحیه و پست
                 string query = @"SELECT Personnel.PersonnelID, Personnel.FirstName, Personnel.LastName,
                                Personnel.PersonnelNumber, Personnel.NationalID, Personnel.MobileNumber,
-                               Personnel.HireDate
-                               FROM Personnel
+                               Personnel.HireDate,
+                               OperationDepartments.DeptName,
+                               Districts.DistrictName,
+                               PostsNames.PostName
+                               FROM (((Personnel
+                               LEFT JOIN OperationDepartments ON Personnel.DeptID = OperationDepartments.DeptID)
+                               LEFT JOIN Districts ON Personnel.DistrictID = Districts.DistrictID)
+                               LEFT JOIN PostsNames ON Personnel.PostNameID = PostsNames.PostNameID)
                                ORDER BY Personnel.LastName, Personnel.FirstName";
 
                 DataTable dt = dbHelper.ExecuteQuery(query);
@@ -281,6 +296,29 @@ namespace PersonnelManagementApp
                 Width = 120
             });
 
+            // ⭐ ستون‌های جدید ادارات
+            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "DeptName",
+                HeaderText = "اداره بهره‌برداری",
+                Width = 150
+            });
+
+            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "DistrictName",
+                HeaderText = "ناحیه",
+                Width = 150
+            });
+
+            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "PostName",
+                HeaderText = "نام پست",
+                Width = 150
+            });
+            // ⭐ پایان ستون‌های جدید
+
             dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "HireDate",
@@ -354,6 +392,11 @@ namespace PersonnelManagementApp
                     row["LastName"],
                     row["PersonnelNumber"],
                     row["NationalID"],
+                    // ⭐ داده‌های جدید
+                    row["DeptName"],
+                    row["DistrictName"],
+                    row["PostName"],
+                    //
                     hireDate,
                     row["MobileNumber"],
                     "ویرایش",
@@ -485,16 +528,23 @@ namespace PersonnelManagementApp
                     {
                         var worksheet = workbook.Worksheets.Add("پرسنل بدون عکس");
 
+                        // ⭐ هدرهای اکسل
                         worksheet.Cell(1, 1).Value = "ردیف";
                         worksheet.Cell(1, 2).Value = "نام";
                         worksheet.Cell(1, 3).Value = "نام‌خانوادگی";
                         worksheet.Cell(1, 4).Value = "شماره پرسنلی";
                         worksheet.Cell(1, 5).Value = "کد ملی";
-                        worksheet.Cell(1, 6).Value = "تاریخ استخدام";
-                        worksheet.Cell(1, 7).Value = "تلفن همراه";
-                        worksheet.Cell(1, 8).Value = "مسیر پوشه عکس‌ها";
+                        
+                        // ستون‌های جدید در اکسل
+                        worksheet.Cell(1, 6).Value = "اداره";
+                        worksheet.Cell(1, 7).Value = "ناحیه";
+                        worksheet.Cell(1, 8).Value = "پست";
 
-                        var headerRange = worksheet.Range(1, 1, 1, 8);
+                        worksheet.Cell(1, 9).Value = "تاریخ استخدام";
+                        worksheet.Cell(1, 10).Value = "تلفن همراه";
+                        worksheet.Cell(1, 11).Value = "مسیر پوشه عکس‌ها";
+
+                        var headerRange = worksheet.Range(1, 1, 1, 11);
                         headerRange.Style.Font.Bold = true;
                         headerRange.Style.Fill.BackgroundColor = XLColor.FromArgb(0, 102, 204);
                         headerRange.Style.Font.FontColor = XLColor.White;
@@ -512,18 +562,23 @@ namespace PersonnelManagementApp
                             worksheet.Cell(excelRow, 3).Value = row["LastName"]?.ToString() ?? "";
                             worksheet.Cell(excelRow, 4).Value = row["PersonnelNumber"]?.ToString() ?? "";
                             worksheet.Cell(excelRow, 5).Value = row["NationalID"]?.ToString() ?? "";
+                            
+                            // داده‌های جدید در اکسل
+                            worksheet.Cell(excelRow, 6).Value = row["DeptName"]?.ToString() ?? "";
+                            worksheet.Cell(excelRow, 7).Value = row["DistrictName"]?.ToString() ?? "";
+                            worksheet.Cell(excelRow, 8).Value = row["PostName"]?.ToString() ?? "";
 
                             string hireDate = row["HireDate"] != DBNull.Value
                                 ? Convert.ToDateTime(row["HireDate"]).ToString("yyyy/MM/dd")
                                 : "";
-                            worksheet.Cell(excelRow, 6).Value = hireDate;
+                            worksheet.Cell(excelRow, 9).Value = hireDate;
 
-                            worksheet.Cell(excelRow, 7).Value = row["MobileNumber"]?.ToString() ?? "";
-                            worksheet.Cell(excelRow, 8).Value = imagesFolder;
+                            worksheet.Cell(excelRow, 10).Value = row["MobileNumber"]?.ToString() ?? "";
+                            worksheet.Cell(excelRow, 11).Value = imagesFolder;
 
                             if (excelRow % 2 == 0)
                             {
-                                worksheet.Range(excelRow, 1, excelRow, 8).Style.Fill.BackgroundColor = XLColor.FromArgb(240, 248, 255);
+                                worksheet.Range(excelRow, 1, excelRow, 11).Style.Fill.BackgroundColor = XLColor.FromArgb(240, 248, 255);
                             }
 
                             excelRow++;
