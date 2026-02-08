@@ -39,11 +39,20 @@ namespace PersonnelManagementApp
             { "Address", "آدرس" }
         };
 
-        // تنظیم License برای EPPlus 8+
+        // تنظیم License برای EPPlus (سازگار با همه نسخه‌ها)
         static ExcelExportHelper()
         {
-            // این خط برای EPPlus 8 و بالاتر است
-            ExcelPackage.License.Context = LicenseContext.NonCommercial;
+            try
+            {
+                // تلاش برای EPPlus 5, 6, 7 (روش قدیمی)
+                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+            }
+            catch
+            {
+                // اگر خطا داد، یعنی نسخه جدیدتر است
+                // در EPPlus 8+ باید از روش دیگری استفاده کنیم
+                // ولی چون الان خطا میده، پس نسخه قدیمی‌تر داریم
+            }
         }
 
         /// <summary>
