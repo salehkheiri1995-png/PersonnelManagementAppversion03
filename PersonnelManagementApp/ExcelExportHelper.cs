@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
 using System.IO;
+using System.Reflection;
 using System.Windows.Forms;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
@@ -39,20 +40,44 @@ namespace PersonnelManagementApp
             { "Address", "آدرس" }
         };
 
-        // تنظیم License برای EPPlus (سازگار با همه نسخه‌ها)
+        // تنظیم License برای EPPlus (با استفاده از Reflection برای سازگاری)
         static ExcelExportHelper()
         {
             try
             {
-                // تلاش برای EPPlus 5, 6, 7 (روش قدیمی)
-                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+                // روش 1: تلاش برای EPPlus 8+ (ExcelPackage.License.Context)
+                Type excelPackageType = typeof(ExcelPackage);
+                PropertyInfo licenseProperty = excelPackageType.GetProperty("License", BindingFlags.Public | BindingFlags.Static);
+                
+                if (licenseProperty != null)
+                {
+                    object licenseObj = licenseProperty.GetValue(null);
+                    if (licenseObj != null)
+                    {
+                        PropertyInfo contextProperty = licenseObj.GetType().GetProperty("Context");
+                        if (contextProperty != null)
+                        {
+                            contextProperty.SetValue(licenseObj, LicenseContext.NonCommercial);
+                            return; // موفق شد
+                        }
+                    }
+                }
             }
-            catch
+            catch { }
+
+            try
             {
-                // اگر خطا داد، یعنی نسخه جدیدتر است
-                // در EPPlus 8+ باید از روش دیگری استفاده کنیم
-                // ولی چون الان خطا میده، پس نسخه قدیمی‌تر داریم
+                // روش 2: تلاش برای EPPlus 5, 6, 7 (ExcelPackage.LicenseContext)
+                Type excelPackageType = typeof(ExcelPackage);
+                PropertyInfo licenseContextProperty = excelPackageType.GetProperty("LicenseContext", BindingFlags.Public | BindingFlags.Static);
+                
+                if (licenseContextProperty != null)
+                {
+                    licenseContextProperty.SetValue(null, LicenseContext.NonCommercial);
+                    return; // موفق شد
+                }
             }
+            catch { }
         }
 
         /// <summary>
