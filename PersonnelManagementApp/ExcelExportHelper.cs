@@ -44,11 +44,11 @@ namespace PersonnelManagementApp
         /// </summary>
         public static void ExportToExcel(DataGridView dgv, List<string> selectedColumns, string defaultFileName = "PersonnelData")
         {
+            // Set EPPlus license context FIRST
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
             try
             {
-                // Set EPPlus license
-                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-
                 using (SaveFileDialog saveDialog = new SaveFileDialog())
                 {
                     saveDialog.Filter = "Excel Files|*.xlsx";
@@ -88,11 +88,11 @@ namespace PersonnelManagementApp
         /// </summary>
         public static void ExportToExcel(List<PersonnelDetail> personnelList, List<string> selectedColumns, string defaultFileName = "PersonnelData")
         {
+            // Set EPPlus license context FIRST
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
             try
             {
-                // Set EPPlus license
-                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-
                 using (SaveFileDialog saveDialog = new SaveFileDialog())
                 {
                     saveDialog.Filter = "Excel Files|*.xlsx";

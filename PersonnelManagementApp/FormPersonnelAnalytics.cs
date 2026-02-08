@@ -1037,45 +1037,6 @@ namespace PersonnelManagementApp
                 Font = FontSettings.BodyFont
             };
 
-            // =============== پنل دکمه‌های بالا ===============
-            Panel topPanel = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = 60,
-                BackColor = Color.FromArgb(230, 240, 250)
-            };
-
-            Button btnExportExcel = new Button
-            {
-                Text = "📊 خروجی اکسل",
-                Location = new Point(20, 10),
-                Size = new Size(200, 40),
-                BackColor = Color.FromArgb(40, 167, 69),
-                ForeColor = Color.White,
-                Font = FontSettings.ButtonFont,
-                FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand
-            };
-            btnExportExcel.FlatAppearance.BorderSize = 0;
-            btnExportExcel.Click += (s, ev) =>
-            {
-                // باز کردن فرم انتخاب ستون‌ها
-                using (ExportColumnsForm exportForm = new ExportColumnsForm())
-                {
-                    if (exportForm.ShowDialog() == DialogResult.OK)
-                    {
-                        var selectedColumns = exportForm.SelectedColumns;
-                        if (selectedColumns != null && selectedColumns.Count > 0)
-                        {
-                            ExcelExportHelper.ExportToExcel(personnel, selectedColumns, $"Personnel_{category}");
-                        }
-                    }
-                }
-            };
-            topPanel.Controls.Add(btnExportExcel);
-
-            detailsForm.Controls.Add(topPanel);
-
             // =============== DataGridView ===============
             DataGridView dgv = new DataGridView
             {
@@ -1169,7 +1130,45 @@ namespace PersonnelManagementApp
                 }
             };
 
+            // =============== پنل دکمه‌های پایین ===============
+            Panel bottomPanel = new Panel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 70,
+                BackColor = Color.FromArgb(230, 240, 250)
+            };
+
+            Button btnExportExcel = new Button
+            {
+                Text = "📊 خروجی اکسل",
+                Location = new Point(20, 15),
+                Size = new Size(200, 40),
+                BackColor = Color.FromArgb(40, 167, 69),
+                ForeColor = Color.White,
+                Font = FontSettings.ButtonFont,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            btnExportExcel.FlatAppearance.BorderSize = 0;
+            btnExportExcel.Click += (s, ev) =>
+            {
+                // باز کردن فرم انتخاب ستون‌ها
+                using (ExportColumnsForm exportForm = new ExportColumnsForm())
+                {
+                    if (exportForm.ShowDialog() == DialogResult.OK)
+                    {
+                        var selectedColumns = exportForm.SelectedColumns;
+                        if (selectedColumns != null && selectedColumns.Count > 0)
+                        {
+                            ExcelExportHelper.ExportToExcel(personnel, selectedColumns, $"Personnel_{category}");
+                        }
+                    }
+                }
+            };
+            bottomPanel.Controls.Add(btnExportExcel);
+
             detailsForm.Controls.Add(dgv);
+            detailsForm.Controls.Add(bottomPanel);
             detailsForm.ShowDialog();
         }
 
