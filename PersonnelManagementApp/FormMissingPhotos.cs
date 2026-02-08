@@ -20,7 +20,7 @@ namespace PersonnelManagementApp
         private Button btnRefresh = null!;
         private Button btnClose = null!;
         private TableLayoutPanel mainLayout = null!;
-        private Panel buttonPanel = null!; // تغییر از FlowLayoutPanel به Panel
+        private Panel buttonPanel = null!;
         private DataTable currentData = null!;
 
         // رنگ‌های مدرن
@@ -282,7 +282,7 @@ namespace PersonnelManagementApp
                 Name = "FirstName", 
                 DataPropertyName = "FirstName",
                 HeaderText = "نام", 
-                FillWeight = 15,
+                FillWeight = 12,
                 ReadOnly = true
             });
 
@@ -292,7 +292,7 @@ namespace PersonnelManagementApp
                 Name = "LastName", 
                 DataPropertyName = "LastName",
                 HeaderText = "نام خانوادگی", 
-                FillWeight = 20,
+                FillWeight = 15,
                 ReadOnly = true
             });
 
@@ -302,7 +302,7 @@ namespace PersonnelManagementApp
                 Name = "PersonnelNumber", 
                 DataPropertyName = "PersonnelNumber",
                 HeaderText = "ش.پرسنلی", 
-                Width = 90,
+                Width = 85,
                 AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
                 ReadOnly = true
             });
@@ -313,7 +313,7 @@ namespace PersonnelManagementApp
                 Name = "NationalID", 
                 DataPropertyName = "NationalID",
                 HeaderText = "کد ملی", 
-                Width = 110,
+                Width = 105,
                 AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
                 ReadOnly = true
             });
@@ -324,7 +324,7 @@ namespace PersonnelManagementApp
                 Name = "DeptName", 
                 DataPropertyName = "DeptName",
                 HeaderText = "اداره", 
-                FillWeight = 20,
+                FillWeight = 18,
                 ReadOnly = true
             });
 
@@ -334,7 +334,7 @@ namespace PersonnelManagementApp
                 Name = "DistrictName", 
                 DataPropertyName = "DistrictName",
                 HeaderText = "ناحیه", 
-                FillWeight = 15,
+                FillWeight = 13,
                 ReadOnly = true
             });
 
@@ -344,7 +344,7 @@ namespace PersonnelManagementApp
                 Name = "PostName", 
                 DataPropertyName = "PostName",
                 HeaderText = "پست", 
-                FillWeight = 20,
+                FillWeight = 15,
                 ReadOnly = true
             });
 
@@ -354,7 +354,7 @@ namespace PersonnelManagementApp
                 Name = "MobileNumber", 
                 DataPropertyName = "MobileNumber",
                 HeaderText = "موبایل", 
-                Width = 110,
+                Width = 105,
                 AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
                 ReadOnly = true
             });
@@ -366,7 +366,7 @@ namespace PersonnelManagementApp
                 HeaderText = "ویرایش",
                 Text = "✏️ ویرایش",
                 UseColumnTextForButtonValue = true,
-                Width = 90,
+                Width = 85,
                 AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
                 DefaultCellStyle = new DataGridViewCellStyle 
                 { 
@@ -377,6 +377,25 @@ namespace PersonnelManagementApp
                 }
             };
             dgvMissingPhotos.Columns.Add(editColumn);
+
+            // 12. دکمه حذف
+            DataGridViewButtonColumn deleteColumn = new DataGridViewButtonColumn
+            {
+                Name = "Delete",
+                HeaderText = "حذف",
+                Text = "🗑️ حذف",
+                UseColumnTextForButtonValue = true,
+                Width = 75,
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
+                DefaultCellStyle = new DataGridViewCellStyle 
+                { 
+                    BackColor = Color.FromArgb(220, 53, 69), 
+                    ForeColor = Color.White,
+                    SelectionBackColor = Color.FromArgb(180, 40, 55),
+                    SelectionForeColor = Color.White
+                }
+            };
+            dgvMissingPhotos.Columns.Add(deleteColumn);
 
             dgvMissingPhotos.CellClick += DgvMissingPhotos_CellClick;
         }
@@ -413,15 +432,20 @@ namespace PersonnelManagementApp
 
             try
             {
-                // بررسی اینکه آیا روی دکمه ویرایش کلیک شده
+                var cellValue = dgvMissingPhotos.Rows[e.RowIndex].Cells["PersonnelID"].Value;
+                if (cellValue == null) return;
+
+                int personnelID = Convert.ToInt32(cellValue);
+
+                // بررسی اینکه روی دکمه ویرایش کلیک شده
                 if (e.ColumnIndex == dgvMissingPhotos.Columns["Edit"].Index)
                 {
-                    var cellValue = dgvMissingPhotos.Rows[e.RowIndex].Cells["PersonnelID"].Value;
-                    if (cellValue != null)
-                    {
-                        int personnelID = Convert.ToInt32(cellValue);
-                        OpenEditForm(personnelID);
-                    }
+                    OpenEditForm(personnelID);
+                }
+                // بررسی اینکه روی دکمه حذف کلیک شده
+                else if (e.ColumnIndex == dgvMissingPhotos.Columns["Delete"].Index)
+                {
+                    DeletePersonnel(personnelID, e.RowIndex);
                 }
             }
             catch (Exception ex)
@@ -446,6 +470,55 @@ namespace PersonnelManagementApp
             catch (Exception ex)
             {
                 MessageBox.Show($"❌ خطا در باز کردن فرم ویرایش:\n\n{ex.Message}", "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void DeletePersonnel(int personnelID, int rowIndex)
+        {
+            try
+            {
+                // دریافت نام و نام خانوادگی برای نمایش در پیام تأیید
+                string firstName = dgvMissingPhotos.Rows[rowIndex].Cells["FirstName"].Value?.ToString() ?? "";
+                string lastName = dgvMissingPhotos.Rows[rowIndex].Cells["LastName"].Value?.ToString() ?? "";
+                string fullName = $"{firstName} {lastName}";
+
+                DialogResult result = MessageBox.Show(
+                    $"آیا از حذف پرسنل '{fullName}' اطمینان دارید؟\n\n⚠️ این عملیات قابل بازگشت نیست!",
+                    "تأیید حذف",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning
+                );
+
+                if (result == DialogResult.Yes)
+                {
+                    string deleteQuery = $"DELETE FROM Personnel WHERE PersonnelID = {personnelID}";
+                    int rowsAffected = dbHelper.ExecuteNonQuery(deleteQuery);
+
+                    if (rowsAffected > 0)
+                    {
+                        MessageBox.Show(
+                            $"✅ پرسنل '{fullName}' با موفقیت حذف شد.",
+                            "حذف موفق",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information
+                        );
+
+                        LoadMissingPhotos();
+                    }
+                    else
+                    {
+                        MessageBox.Show(
+                            "❌ خطا در حذف پرسنل. لطفاً دوباره تلاش کنید.",
+                            "خطا",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"❌ خطا در حذف پرسنل:\n\n{ex.Message}", "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
