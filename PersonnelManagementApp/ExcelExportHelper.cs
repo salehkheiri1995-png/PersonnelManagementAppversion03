@@ -123,7 +123,6 @@ namespace PersonnelManagementApp
 
         private static void ExportToExcelFile(DataGridView dgv, List<string> selectedColumns, string filePath)
         {
-            // استفاده از FileInfo constructor - این روش License نمیخواد!
             FileInfo excelFile = new FileInfo(filePath);
             
             using (var package = new ExcelPackage(excelFile))
@@ -204,7 +203,6 @@ namespace PersonnelManagementApp
 
         private static void ExportToExcelFile(List<PersonnelDetail> personnelList, List<string> selectedColumns, string filePath)
         {
-            // استفاده از FileInfo constructor - این روش License نمیخواد!
             FileInfo excelFile = new FileInfo(filePath);
             
             using (var package = new ExcelPackage(excelFile))
