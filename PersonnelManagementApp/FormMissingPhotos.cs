@@ -483,7 +483,7 @@ namespace PersonnelManagementApp
                 string fullName = $"{firstName} {lastName}";
 
                 DialogResult result = MessageBox.Show(
-                    $"آیا از حذف پرسنل '{fullName}' اطمینان دارید؟\n\n⚠️ این عملیات قابل بازگشت نیست!",
+                    $"آیا از حذف پرسنل '{fullName}' اطمینان دارید?\n\n⚠️ این عملیات قابل بازگشت نیست!",
                     "تأیید حذف",
                     MessageBoxButtons.YesNo,
                     MessageBoxIcon.Warning
@@ -537,6 +537,180 @@ namespace PersonnelManagementApp
                     return;
                 }
 
+                // نمایش فرم انتخاب ستون‌ها
+                ShowColumnSelectionDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"❌ خطا: {ex.Message}", "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void ShowColumnSelectionDialog()
+        {
+            // ایجاد فرم دیالوگ برای انتخاب ستون‌ها
+            Form selectionForm = new Form
+            {
+                Text = "انتخاب ستون‌های خروجی اکسل",
+                Size = new Size(500, 550),
+                StartPosition = FormStartPosition.CenterParent,
+                RightToLeft = RightToLeft.Yes,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false,
+                MinimizeBox = false
+            };
+
+            // پنل اصلی
+            Panel mainPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(20),
+                BackColor = Color.White
+            };
+            selectionForm.Controls.Add(mainPanel);
+
+            // عنوان
+            Label lblHeader = new Label
+            {
+                Text = "📋 لطفاً ستون‌هایی که می‌خواهید در فایل اکسل باشند را انتخاب کنید:",
+                Font = new Font(FontSettings.SubtitleFont.FontFamily, 11, FontStyle.Bold),
+                AutoSize = false,
+                Size = new Size(440, 50),
+                Location = new Point(10, 10),
+                TextAlign = ContentAlignment.MiddleRight
+            };
+            mainPanel.Controls.Add(lblHeader);
+
+            // لیست چک‌باکس‌ها
+            CheckedListBox checkedListBox = new CheckedListBox
+            {
+                Location = new Point(10, 70),
+                Size = new Size(440, 300),
+                Font = FontSettings.BodyFont,
+                CheckOnClick = true,
+                BorderStyle = BorderStyle.FixedSingle
+            };
+
+            // اضافه کردن ستون‌ها به چک‌لیست
+            var columns = new Dictionary<string, string>
+            {
+                { "RowNumber", "ردیف" },
+                { "FirstName", "نام" },
+                { "LastName", "نام خانوادگی" },
+                { "PersonnelNumber", "شماره پرسنلی" },
+                { "NationalID", "کد ملی" },
+                { "DeptName", "اداره" },
+                { "DistrictName", "ناحیه" },
+                { "PostName", "پست" },
+                { "MobileNumber", "تلفن همراه" }
+            };
+
+            foreach (var col in columns)
+            {
+                checkedListBox.Items.Add(col.Value, true); // همه به صورت پیش‌فرض انتخاب شده
+            }
+
+            mainPanel.Controls.Add(checkedListBox);
+
+            // دکمه‌های انتخاب همه و حذف همه
+            Button btnSelectAll = new Button
+            {
+                Text = "✓ انتخاب همه",
+                Location = new Point(270, 380),
+                Size = new Size(100, 35),
+                BackColor = Color.FromArgb(33, 150, 243),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                Font = FontSettings.ButtonFont
+            };
+            btnSelectAll.FlatAppearance.BorderSize = 0;
+            btnSelectAll.Click += (s, e) =>
+            {
+                for (int i = 0; i < checkedListBox.Items.Count; i++)
+                    checkedListBox.SetItemChecked(i, true);
+            };
+            mainPanel.Controls.Add(btnSelectAll);
+
+            Button btnDeselectAll = new Button
+            {
+                Text = "✗ حذف همه",
+                Location = new Point(160, 380),
+                Size = new Size(100, 35),
+                BackColor = Color.FromArgb(108, 117, 125),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                Font = FontSettings.ButtonFont
+            };
+            btnDeselectAll.FlatAppearance.BorderSize = 0;
+            btnDeselectAll.Click += (s, e) =>
+            {
+                for (int i = 0; i < checkedListBox.Items.Count; i++)
+                    checkedListBox.SetItemChecked(i, false);
+            };
+            mainPanel.Controls.Add(btnDeselectAll);
+
+            // دکمه‌های تأیید و لغو
+            Button btnOK = new Button
+            {
+                Text = "✓ تأیید و خروجی",
+                Location = new Point(230, 430),
+                Size = new Size(140, 45),
+                BackColor = Color.FromArgb(76, 175, 80),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                Font = FontSettings.ButtonFont,
+                DialogResult = DialogResult.OK
+            };
+            btnOK.FlatAppearance.BorderSize = 0;
+            mainPanel.Controls.Add(btnOK);
+
+            Button btnCancel = new Button
+            {
+                Text = "✗ انصراف",
+                Location = new Point(80, 430),
+                Size = new Size(140, 45),
+                BackColor = Color.FromArgb(220, 53, 69),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                Font = FontSettings.ButtonFont,
+                DialogResult = DialogResult.Cancel
+            };
+            btnCancel.FlatAppearance.BorderSize = 0;
+            mainPanel.Controls.Add(btnCancel);
+
+            selectionForm.AcceptButton = btnOK;
+            selectionForm.CancelButton = btnCancel;
+
+            // نمایش دیالوگ
+            if (selectionForm.ShowDialog(this) == DialogResult.OK)
+            {
+                // بررسی اینکه حداقل یک ستون انتخاب شده باشد
+                if (checkedListBox.CheckedItems.Count == 0)
+                {
+                    MessageBox.Show("⚠️ لطفاً حداقل یک ستون را انتخاب کنید.", "هشدار", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                // دریافت ستون‌های انتخاب شده
+                List<string> selectedColumns = new List<string>();
+                foreach (int index in checkedListBox.CheckedIndices)
+                {
+                    selectedColumns.Add(columns.ElementAt(index).Key);
+                }
+
+                // خروجی اکسل با ستون‌های انتخاب شده
+                ExportToExcel(selectedColumns, columns);
+            }
+        }
+
+        private void ExportToExcel(List<string> selectedColumns, Dictionary<string, string> columnHeaders)
+        {
+            try
+            {
                 SaveFileDialog sfd = new SaveFileDialog
                 {
                     Filter = "Excel Files (*.xlsx)|*.xlsx",
@@ -552,34 +726,41 @@ namespace PersonnelManagementApp
                     {
                         var worksheet = workbook.Worksheets.Add("پرسنل بدون عکس");
 
-                        worksheet.Cell(1, 1).Value = "ردیف";
-                        worksheet.Cell(1, 2).Value = "نام";
-                        worksheet.Cell(1, 3).Value = "نام خانوادگی";
-                        worksheet.Cell(1, 4).Value = "شماره پرسنلی";
-                        worksheet.Cell(1, 5).Value = "کد ملی";
-                        worksheet.Cell(1, 6).Value = "اداره";
-                        worksheet.Cell(1, 7).Value = "ناحیه";
-                        worksheet.Cell(1, 8).Value = "پست";
-                        worksheet.Cell(1, 9).Value = "تلفن همراه";
+                        // اضافه کردن هدرها
+                        int colIndex = 1;
+                        foreach (string columnKey in selectedColumns)
+                        {
+                            worksheet.Cell(1, colIndex).Value = columnHeaders[columnKey];
+                            colIndex++;
+                        }
 
-                        var headerRange = worksheet.Range(1, 1, 1, 9);
+                        // استایل هدر
+                        var headerRange = worksheet.Range(1, 1, 1, selectedColumns.Count);
                         headerRange.Style.Font.Bold = true;
                         headerRange.Style.Fill.BackgroundColor = XLColor.FromArgb(0, 102, 204);
                         headerRange.Style.Font.FontColor = XLColor.White;
                         headerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
 
+                        // اضافه کردن داده‌ها
                         int excelRow = 2;
-                        foreach (DataRow row in currentData.Rows)
+                        int rowNumber = 1;
+                        foreach (DataRow dataRow in currentData.Rows)
                         {
-                            worksheet.Cell(excelRow, 1).Value = excelRow - 1;
-                            worksheet.Cell(excelRow, 2).Value = row["FirstName"]?.ToString();
-                            worksheet.Cell(excelRow, 3).Value = row["LastName"]?.ToString();
-                            worksheet.Cell(excelRow, 4).Value = row["PersonnelNumber"]?.ToString();
-                            worksheet.Cell(excelRow, 5).Value = row["NationalID"]?.ToString();
-                            worksheet.Cell(excelRow, 6).Value = row["DeptName"]?.ToString();
-                            worksheet.Cell(excelRow, 7).Value = row["DistrictName"]?.ToString();
-                            worksheet.Cell(excelRow, 8).Value = row["PostName"]?.ToString();
-                            worksheet.Cell(excelRow, 9).Value = row["MobileNumber"]?.ToString();
+                            colIndex = 1;
+                            foreach (string columnKey in selectedColumns)
+                            {
+                                if (columnKey == "RowNumber")
+                                {
+                                    worksheet.Cell(excelRow, colIndex).Value = rowNumber;
+                                }
+                                else
+                                {
+                                    string? value = dataRow[columnKey]?.ToString();
+                                    worksheet.Cell(excelRow, colIndex).Value = value ?? "";
+                                }
+                                colIndex++;
+                            }
+                            rowNumber++;
                             excelRow++;
                         }
 
@@ -587,12 +768,17 @@ namespace PersonnelManagementApp
                         workbook.SaveAs(sfd.FileName);
                     }
 
-                    MessageBox.Show("✅ فایل اکسل ذخیره شد.", "موفقیت", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(
+                        $"✅ فایل اکسل با {selectedColumns.Count} ستون انتخابی ذخیره شد.\n\n📁 مسیر: {sfd.FileName}",
+                        "موفقیت",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information
+                    );
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"❌ خطا: {ex.Message}", "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"❌ خطا در ایجاد فایل اکسل:\n\n{ex.Message}", "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
