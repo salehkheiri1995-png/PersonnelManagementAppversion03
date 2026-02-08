@@ -20,7 +20,7 @@ namespace PersonnelManagementApp
         private Button btnRefresh = null!;
         private Button btnClose = null!;
         private TableLayoutPanel mainLayout = null!;
-        private FlowLayoutPanel buttonPanel = null!;
+        private Panel buttonPanel = null!; // تغییر از FlowLayoutPanel به Panel
         private DataTable currentData = null!;
 
         // رنگ‌های مدرن
@@ -49,17 +49,18 @@ namespace PersonnelManagementApp
             this.WindowState = FormWindowState.Maximized;
             this.MinimumSize = new Size(1000, 600);
 
-            // ایجاد ساختار اصلی صفحه با TableLayoutPanel برای جلوگیری از بهم‌ریختگی
+            // ایجاد ساختار اصلی صفحه با TableLayoutPanel
             mainLayout = new TableLayoutPanel();
             mainLayout.Dock = DockStyle.Fill;
             mainLayout.ColumnCount = 1;
             mainLayout.RowCount = 3;
+            mainLayout.Padding = new Padding(10);
             // ردیف اول: هدر (ثابت)
             mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 110F));
             // ردیف دوم: لیست (پر کردن فضا)
             mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
             // ردیف سوم: دکمه‌ها (ثابت)
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 90F));
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 80F));
             this.Controls.Add(mainLayout);
 
             // ========== 1. پنل هدر (ردیف اول) ==========
@@ -67,7 +68,7 @@ namespace PersonnelManagementApp
             {
                 Dock = DockStyle.Fill,
                 BackColor = HeaderColor,
-                Margin = new Padding(0)
+                Margin = new Padding(0, 0, 0, 10)
             };
 
             lblTitle = new Label
@@ -98,18 +99,19 @@ namespace PersonnelManagementApp
             dgvMissingPhotos = new DataGridView
             {
                 Dock = DockStyle.Fill,
-                // استفاده از Fill برای پر کردن عرض صفحه و جلوگیری از اسکرول افقی غیرضروری
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, 
                 ReadOnly = false,
+                AllowUserToDeleteRows = false,
                 RightToLeft = RightToLeft.Yes,
                 BackgroundColor = Color.White,
                 EnableHeadersVisualStyles = false,
                 AllowUserToAddRows = false,
-                ColumnHeadersHeight = 50, // ارتفاع هدر بیشتر
-                RowTemplate = { Height = 45 }, // ارتفاع ردیف‌ها بیشتر
+                ColumnHeadersHeight = 50,
+                RowTemplate = { Height = 45 },
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 MultiSelect = false,
-                BorderStyle = BorderStyle.None
+                BorderStyle = BorderStyle.FixedSingle,
+                Margin = new Padding(0, 0, 0, 10)
             };
 
             dgvMissingPhotos.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 102, 204);
@@ -124,36 +126,37 @@ namespace PersonnelManagementApp
             mainLayout.Controls.Add(dgvMissingPhotos, 0, 1);
 
             // ========== 3. دکمه‌ها (ردیف سوم) ==========
-            // استفاده از FlowLayoutPanel برای چیدمان منظم دکمه‌ها کنار هم
-            buttonPanel = new FlowLayoutPanel
+            buttonPanel = new Panel
             {
                 Dock = DockStyle.Fill,
                 BackColor = Color.White,
-                FlowDirection = FlowDirection.RightToLeft, // چیدمان از راست به چپ
-                WrapContents = false,
-                Padding = new Padding(0, 20, 0, 0) // فاصله از بالا
+                Padding = new Padding(0)
             };
-
-            // حذف خط اشتباه و استفاده از ContentAlignment
-            buttonPanel.AutoScroll = false;
-            
-            // برای مرکز کردن دکمه‌ها، از Anchor استفاده می‌کنیم
-            buttonPanel.Anchor = AnchorStyles.None;
 
             int buttonWidth = 160;
             int buttonHeight = 45;
+            int spacing = 15;
 
             btnExportExcel = CreateStyledButton("📊 خروجی اکسل", AccentColor, buttonWidth, buttonHeight);
-            btnExportExcel.Margin = new Padding(10, 0, 10, 0);
             btnExportExcel.Click += BtnExportExcel_Click;
 
             btnRefresh = CreateStyledButton("🔄 بروزرسانی", PrimaryColor, buttonWidth, buttonHeight);
-            btnRefresh.Margin = new Padding(10, 0, 10, 0);
             btnRefresh.Click += BtnRefresh_Click;
 
             btnClose = CreateStyledButton("❌ بستن", DangerColor, buttonWidth, buttonHeight);
-            btnClose.Margin = new Padding(10, 0, 10, 0);
             btnClose.Click += (s, e) => this.Close();
+
+            // محاسبه موقعیت مرکز برای دکمه‌ها
+            buttonPanel.Resize += (s, e) =>
+            {
+                int totalWidth = (buttonWidth * 3) + (spacing * 2);
+                int startX = (buttonPanel.Width - totalWidth) / 2;
+                int y = (buttonPanel.Height - buttonHeight) / 2;
+
+                btnExportExcel.Location = new Point(startX, y);
+                btnRefresh.Location = new Point(startX + buttonWidth + spacing, y);
+                btnClose.Location = new Point(startX + (buttonWidth + spacing) * 2, y);
+            };
 
             buttonPanel.Controls.Add(btnExportExcel);
             buttonPanel.Controls.Add(btnRefresh);
@@ -253,63 +256,125 @@ namespace PersonnelManagementApp
         private void SetupDataGridView()
         {
             dgvMissingPhotos.Columns.Clear();
+            dgvMissingPhotos.AutoGenerateColumns = false;
 
-            // 1. ستون‌های پنهان (ID)
-            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn { Name = "PersonnelID", Visible = false });
+            // 1. ستون پنهان (ID)
+            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn 
+            { 
+                Name = "PersonnelID", 
+                DataPropertyName = "PersonnelID",
+                Visible = false 
+            });
 
-            // 2. ردیف (عرض ثابت)
+            // 2. ردیف
             dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn 
             { 
                 Name = "RowNumber", 
                 HeaderText = "ردیف", 
-                Width = 50,
-                AutoSizeMode = DataGridViewAutoSizeColumnMode.None 
+                Width = 60,
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
+                ReadOnly = true
             });
 
-            // 3. نام و نام خانوادگی (عرض درصدی)
-            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn { Name = "FirstName", HeaderText = "نام", FillWeight = 80 });
-            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn { Name = "LastName", HeaderText = "نام خانوادگی", FillWeight = 100 });
+            // 3. نام
+            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn 
+            { 
+                Name = "FirstName", 
+                DataPropertyName = "FirstName",
+                HeaderText = "نام", 
+                FillWeight = 15,
+                ReadOnly = true
+            });
 
-            // 4. شماره پرسنلی و ملی (عرض ثابت)
+            // 4. نام خانوادگی
+            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn 
+            { 
+                Name = "LastName", 
+                DataPropertyName = "LastName",
+                HeaderText = "نام خانوادگی", 
+                FillWeight = 20,
+                ReadOnly = true
+            });
+
+            // 5. شماره پرسنلی
             dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn 
             { 
                 Name = "PersonnelNumber", 
+                DataPropertyName = "PersonnelNumber",
                 HeaderText = "ش.پرسنلی", 
                 Width = 90,
-                AutoSizeMode = DataGridViewAutoSizeColumnMode.None
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
+                ReadOnly = true
             });
+
+            // 6. کد ملی
             dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn 
             { 
                 Name = "NationalID", 
+                DataPropertyName = "NationalID",
                 HeaderText = "کد ملی", 
-                Width = 100,
-                AutoSizeMode = DataGridViewAutoSizeColumnMode.None
+                Width = 110,
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
+                ReadOnly = true
             });
 
-            // 5. مشخصات اداری (مهم - عرض درصدی)
-            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn { Name = "DeptName", HeaderText = "اداره", FillWeight = 120 });
-            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn { Name = "DistrictName", HeaderText = "ناحیه", FillWeight = 100 });
-            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn { Name = "PostName", HeaderText = "پست", FillWeight = 100 });
+            // 7. اداره
+            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn 
+            { 
+                Name = "DeptName", 
+                DataPropertyName = "DeptName",
+                HeaderText = "اداره", 
+                FillWeight = 20,
+                ReadOnly = true
+            });
 
-            // 6. سایر اطلاعات (عرض ثابت)
+            // 8. ناحیه
+            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn 
+            { 
+                Name = "DistrictName", 
+                DataPropertyName = "DistrictName",
+                HeaderText = "ناحیه", 
+                FillWeight = 15,
+                ReadOnly = true
+            });
+
+            // 9. پست
+            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn 
+            { 
+                Name = "PostName", 
+                DataPropertyName = "PostName",
+                HeaderText = "پست", 
+                FillWeight = 20,
+                ReadOnly = true
+            });
+
+            // 10. موبایل
             dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn 
             { 
                 Name = "MobileNumber", 
+                DataPropertyName = "MobileNumber",
                 HeaderText = "موبایل", 
-                Width = 100,
-                AutoSizeMode = DataGridViewAutoSizeColumnMode.None
+                Width = 110,
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
+                ReadOnly = true
             });
 
-            // 7. دکمه‌ها
+            // 11. دکمه ویرایش
             DataGridViewButtonColumn editColumn = new DataGridViewButtonColumn
             {
                 Name = "Edit",
-                HeaderText = "",
-                Text = "✏️",
+                HeaderText = "ویرایش",
+                Text = "✏️ ویرایش",
                 UseColumnTextForButtonValue = true,
-                Width = 40,
+                Width = 90,
                 AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
-                DefaultCellStyle = new DataGridViewCellStyle { BackColor = Color.FromArgb(40, 167, 69), ForeColor = Color.White }
+                DefaultCellStyle = new DataGridViewCellStyle 
+                { 
+                    BackColor = Color.FromArgb(40, 167, 69), 
+                    ForeColor = Color.White,
+                    SelectionBackColor = Color.FromArgb(30, 140, 50),
+                    SelectionForeColor = Color.White
+                }
             };
             dgvMissingPhotos.Columns.Add(editColumn);
 
@@ -319,22 +384,26 @@ namespace PersonnelManagementApp
         private void PopulateDataGridView()
         {
             dgvMissingPhotos.Rows.Clear();
+            
+            if (currentData == null || currentData.Rows.Count == 0)
+                return;
+
             int rowNumber = 1;
-            foreach (DataRow row in currentData.Rows)
+            foreach (DataRow dataRow in currentData.Rows)
             {
-                dgvMissingPhotos.Rows.Add(
-                    row["PersonnelID"],
-                    rowNumber++,
-                    row["FirstName"],
-                    row["LastName"],
-                    row["PersonnelNumber"],
-                    row["NationalID"],
-                    row["DeptName"],    // نام اداره
-                    row["DistrictName"], // نام ناحیه
-                    row["PostName"],    // نام پست
-                    row["MobileNumber"],
-                    "✏️"
-                );
+                int rowIndex = dgvMissingPhotos.Rows.Add();
+                DataGridViewRow gridRow = dgvMissingPhotos.Rows[rowIndex];
+
+                gridRow.Cells["PersonnelID"].Value = dataRow["PersonnelID"];
+                gridRow.Cells["RowNumber"].Value = rowNumber++;
+                gridRow.Cells["FirstName"].Value = dataRow["FirstName"]?.ToString() ?? "";
+                gridRow.Cells["LastName"].Value = dataRow["LastName"]?.ToString() ?? "";
+                gridRow.Cells["PersonnelNumber"].Value = dataRow["PersonnelNumber"]?.ToString() ?? "";
+                gridRow.Cells["NationalID"].Value = dataRow["NationalID"]?.ToString() ?? "";
+                gridRow.Cells["DeptName"].Value = dataRow["DeptName"]?.ToString() ?? "";
+                gridRow.Cells["DistrictName"].Value = dataRow["DistrictName"]?.ToString() ?? "";
+                gridRow.Cells["PostName"].Value = dataRow["PostName"]?.ToString() ?? "";
+                gridRow.Cells["MobileNumber"].Value = dataRow["MobileNumber"]?.ToString() ?? "";
             }
         }
 
@@ -344,11 +413,15 @@ namespace PersonnelManagementApp
 
             try
             {
-                int personnelID = Convert.ToInt32(dgvMissingPhotos.Rows[e.RowIndex].Cells["PersonnelID"].Value);
-
+                // بررسی اینکه آیا روی دکمه ویرایش کلیک شده
                 if (e.ColumnIndex == dgvMissingPhotos.Columns["Edit"].Index)
                 {
-                    OpenEditForm(personnelID);
+                    var cellValue = dgvMissingPhotos.Rows[e.RowIndex].Cells["PersonnelID"].Value;
+                    if (cellValue != null)
+                    {
+                        int personnelID = Convert.ToInt32(cellValue);
+                        OpenEditForm(personnelID);
+                    }
                 }
             }
             catch (Exception ex)
