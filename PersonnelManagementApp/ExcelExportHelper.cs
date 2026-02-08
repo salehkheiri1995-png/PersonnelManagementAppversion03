@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
 using System.IO;
-using System.Reflection;
 using System.Windows.Forms;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
@@ -39,46 +38,6 @@ namespace PersonnelManagementApp
             { "BirthDate", "تاریخ تولد" },
             { "Address", "آدرس" }
         };
-
-        // تنظیم License برای EPPlus (با استفاده از Reflection برای سازگاری)
-        static ExcelExportHelper()
-        {
-            try
-            {
-                // روش 1: تلاش برای EPPlus 8+ (ExcelPackage.License.Context)
-                Type excelPackageType = typeof(ExcelPackage);
-                PropertyInfo licenseProperty = excelPackageType.GetProperty("License", BindingFlags.Public | BindingFlags.Static);
-                
-                if (licenseProperty != null)
-                {
-                    object licenseObj = licenseProperty.GetValue(null);
-                    if (licenseObj != null)
-                    {
-                        PropertyInfo contextProperty = licenseObj.GetType().GetProperty("Context");
-                        if (contextProperty != null)
-                        {
-                            contextProperty.SetValue(licenseObj, LicenseContext.NonCommercial);
-                            return; // موفق شد
-                        }
-                    }
-                }
-            }
-            catch { }
-
-            try
-            {
-                // روش 2: تلاش برای EPPlus 5, 6, 7 (ExcelPackage.LicenseContext)
-                Type excelPackageType = typeof(ExcelPackage);
-                PropertyInfo licenseContextProperty = excelPackageType.GetProperty("LicenseContext", BindingFlags.Public | BindingFlags.Static);
-                
-                if (licenseContextProperty != null)
-                {
-                    licenseContextProperty.SetValue(null, LicenseContext.NonCommercial);
-                    return; // موفق شد
-                }
-            }
-            catch { }
-        }
 
         /// <summary>
         /// Export DataGridView to Excel with selected columns
@@ -164,6 +123,9 @@ namespace PersonnelManagementApp
 
         private static void ExportToExcelFile(DataGridView dgv, List<string> selectedColumns, string filePath)
         {
+            // برای EPPlus 8+: License رو در هنگام ساخت ExcelPackage مشخص می‌کنیم
+            ExcelPackage.License.LicenseType = LicenseType.NonCommercial;
+            
             using (var package = new ExcelPackage())
             {
                 var worksheet = package.Workbook.Worksheets.Add("Personnel");
@@ -226,11 +188,14 @@ namespace PersonnelManagementApp
                 worksheet.View.RightToLeft = true;
 
                 // افزودن border
-                var dataRange = worksheet.Cells[1, 1, row - 1, selectedColumns.Count];
-                dataRange.Style.Border.Top.Style = ExcelBorderStyle.Thin;
-                dataRange.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
-                dataRange.Style.Border.Left.Style = ExcelBorderStyle.Thin;
-                dataRange.Style.Border.Right.Style = ExcelBorderStyle.Thin;
+                if (selectedColumns.Count > 0 && row > 1)
+                {
+                    var dataRange = worksheet.Cells[1, 1, row - 1, selectedColumns.Count];
+                    dataRange.Style.Border.Top.Style = ExcelBorderStyle.Thin;
+                    dataRange.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
+                    dataRange.Style.Border.Left.Style = ExcelBorderStyle.Thin;
+                    dataRange.Style.Border.Right.Style = ExcelBorderStyle.Thin;
+                }
 
                 // ذخیره فایل
                 FileInfo excelFile = new FileInfo(filePath);
@@ -240,6 +205,9 @@ namespace PersonnelManagementApp
 
         private static void ExportToExcelFile(List<PersonnelDetail> personnelList, List<string> selectedColumns, string filePath)
         {
+            // برای EPPlus 8+: License رو در هنگام ساخت ExcelPackage مشخص می‌کنیم
+            ExcelPackage.License.LicenseType = LicenseType.NonCommercial;
+            
             using (var package = new ExcelPackage())
             {
                 var worksheet = package.Workbook.Worksheets.Add("Personnel");
@@ -270,7 +238,7 @@ namespace PersonnelManagementApp
                     col = 1;
                     foreach (var columnName in selectedColumns)
                     {
-                        object value = GetPropertyValue(person, columnName);
+                        object? value = GetPropertyValue(person, columnName);
                         if (value != null)
                         {
                             if (value is DateTime dateValue)
@@ -297,11 +265,14 @@ namespace PersonnelManagementApp
                 worksheet.View.RightToLeft = true;
 
                 // افزودن border
-                var dataRange = worksheet.Cells[1, 1, row - 1, selectedColumns.Count];
-                dataRange.Style.Border.Top.Style = ExcelBorderStyle.Thin;
-                dataRange.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
-                dataRange.Style.Border.Left.Style = ExcelBorderStyle.Thin;
-                dataRange.Style.Border.Right.Style = ExcelBorderStyle.Thin;
+                if (selectedColumns.Count > 0 && row > 1)
+                {
+                    var dataRange = worksheet.Cells[1, 1, row - 1, selectedColumns.Count];
+                    dataRange.Style.Border.Top.Style = ExcelBorderStyle.Thin;
+                    dataRange.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
+                    dataRange.Style.Border.Left.Style = ExcelBorderStyle.Thin;
+                    dataRange.Style.Border.Right.Style = ExcelBorderStyle.Thin;
+                }
 
                 // ذخیره فایل
                 FileInfo excelFile = new FileInfo(filePath);
@@ -309,7 +280,7 @@ namespace PersonnelManagementApp
             }
         }
 
-        private static object GetPropertyValue(PersonnelDetail person, string propertyName)
+        private static object? GetPropertyValue(PersonnelDetail person, string propertyName)
         {
             var property = typeof(PersonnelDetail).GetProperty(propertyName);
             return property?.GetValue(person);
