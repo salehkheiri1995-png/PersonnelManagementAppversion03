@@ -39,20 +39,6 @@ namespace PersonnelManagementApp
             { "Address", "آدرس" }
         };
 
-        // تنظیم License برای EPPlus 8+
-        static ExcelExportHelper()
-        {
-            try
-            {
-                // روش صحیح برای EPPlus 8+
-                ExcelPackage.License.SetLicenseInformation("NonCommercial");
-            }
-            catch
-            {
-                // اگر خطا داد، سعی می‌کنیم بدون License هم کار کنه
-            }
-        }
-
         /// <summary>
         /// Export DataGridView to Excel with selected columns
         /// </summary>
@@ -89,7 +75,7 @@ namespace PersonnelManagementApp
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"❌ خطا در ذخیره فایل اکسل:\n{ex.Message}",
+                MessageBox.Show($"❌ خطا در ذخیره فایل اکسل:\n{ex.Message}\n\nجزئیات:\n{ex.InnerException?.Message}",
                     "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -130,14 +116,17 @@ namespace PersonnelManagementApp
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"❌ خطا در ذخیره فایل اکسل:\n{ex.Message}",
+                MessageBox.Show($"❌ خطا در ذخیره فایل اکسل:\n{ex.Message}\n\nجزئیات:\n{ex.InnerException?.Message}",
                     "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
         private static void ExportToExcelFile(DataGridView dgv, List<string> selectedColumns, string filePath)
         {
-            using (var package = new ExcelPackage())
+            // استفاده از FileInfo constructor - این روش License نمیخواد!
+            FileInfo excelFile = new FileInfo(filePath);
+            
+            using (var package = new ExcelPackage(excelFile))
             {
                 var worksheet = package.Workbook.Worksheets.Add("Personnel");
 
@@ -209,14 +198,16 @@ namespace PersonnelManagementApp
                 }
 
                 // ذخیره فایل
-                FileInfo excelFile = new FileInfo(filePath);
-                package.SaveAs(excelFile);
+                package.Save();
             }
         }
 
         private static void ExportToExcelFile(List<PersonnelDetail> personnelList, List<string> selectedColumns, string filePath)
         {
-            using (var package = new ExcelPackage())
+            // استفاده از FileInfo constructor - این روش License نمیخواد!
+            FileInfo excelFile = new FileInfo(filePath);
+            
+            using (var package = new ExcelPackage(excelFile))
             {
                 var worksheet = package.Workbook.Worksheets.Add("Personnel");
 
@@ -283,8 +274,7 @@ namespace PersonnelManagementApp
                 }
 
                 // ذخیره فایل
-                FileInfo excelFile = new FileInfo(filePath);
-                package.SaveAs(excelFile);
+                package.Save();
             }
         }
 
