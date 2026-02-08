@@ -4,8 +4,7 @@ using System.Data;
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
-using OfficeOpenXml;
-using OfficeOpenXml.Style;
+using ClosedXML.Excel;
 
 namespace PersonnelManagementApp
 {
@@ -40,7 +39,7 @@ namespace PersonnelManagementApp
         };
 
         /// <summary>
-        /// Export DataGridView to Excel with selected columns
+        /// Export DataGridView to Excel with selected columns using ClosedXML
         /// </summary>
         public static void ExportToExcel(DataGridView dgv, List<string> selectedColumns, string defaultFileName = "PersonnelData")
         {
@@ -75,13 +74,13 @@ namespace PersonnelManagementApp
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"❌ خطا در ذخیره فایل اکسل:\n{ex.Message}\n\nجزئیات:\n{ex.InnerException?.Message}",
+                MessageBox.Show($"❌ خطا در ذخیره فایل اکسل:\n{ex.Message}",
                     "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
         /// <summary>
-        /// Export List of PersonnelDetail to Excel
+        /// Export List of PersonnelDetail to Excel using ClosedXML
         /// </summary>
         public static void ExportToExcel(List<PersonnelDetail> personnelList, List<string> selectedColumns, string defaultFileName = "PersonnelData")
         {
@@ -116,37 +115,35 @@ namespace PersonnelManagementApp
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"❌ خطا در ذخیره فایل اکسل:\n{ex.Message}\n\nجزئیات:\n{ex.InnerException?.Message}",
+                MessageBox.Show($"❌ خطا در ذخیره فایل اکسل:\n{ex.Message}",
                     "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
         private static void ExportToExcelFile(DataGridView dgv, List<string> selectedColumns, string filePath)
         {
-            FileInfo excelFile = new FileInfo(filePath);
-            
-            using (var package = new ExcelPackage(excelFile))
+            using (var workbook = new XLWorkbook())
             {
-                var worksheet = package.Workbook.Worksheets.Add("Personnel");
+                var worksheet = workbook.Worksheets.Add("Personnel");
+                worksheet.RightToLeft = true;
 
                 // نوشتن هدرها
                 int col = 1;
                 foreach (var columnName in selectedColumns)
                 {
                     string header = PersianHeaders.ContainsKey(columnName) ? PersianHeaders[columnName] : columnName;
-                    worksheet.Cells[1, col].Value = header;
-
-                    // استایل هدر
-                    worksheet.Cells[1, col].Style.Font.Bold = true;
-                    worksheet.Cells[1, col].Style.Font.Size = 12;
-                    worksheet.Cells[1, col].Style.Fill.PatternType = ExcelFillStyle.Solid;
-                    worksheet.Cells[1, col].Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 102, 204));
-                    worksheet.Cells[1, col].Style.Font.Color.SetColor(Color.White);
-                    worksheet.Cells[1, col].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                    worksheet.Cells[1, col].Style.VerticalAlignment = ExcelVerticalAlignment.Center;
-
+                    worksheet.Cell(1, col).Value = header;
                     col++;
                 }
+
+                // استایل هدر
+                var headerRange = worksheet.Range(1, 1, 1, selectedColumns.Count);
+                headerRange.Style.Font.Bold = true;
+                headerRange.Style.Font.FontSize = 12;
+                headerRange.Style.Fill.BackgroundColor = XLColor.FromArgb(0, 102, 204);
+                headerRange.Style.Font.FontColor = XLColor.White;
+                headerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                headerRange.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
 
                 // نوشتن داده‌ها
                 int row = 2;
@@ -164,16 +161,16 @@ namespace PersonnelManagementApp
                             {
                                 if (cellValue is DateTime dateValue)
                                 {
-                                    worksheet.Cells[row, col].Value = dateValue.ToString("yyyy/MM/dd");
+                                    worksheet.Cell(row, col).Value = dateValue.ToString("yyyy/MM/dd");
                                 }
                                 else if (columnName == "Salary" && decimal.TryParse(cellValue.ToString(), out decimal salary))
                                 {
-                                    worksheet.Cells[row, col].Value = salary;
-                                    worksheet.Cells[row, col].Style.Numberformat.Format = "#,##0";
+                                    worksheet.Cell(row, col).Value = salary;
+                                    worksheet.Cell(row, col).Style.NumberFormat.Format = "#,##0";
                                 }
                                 else
                                 {
-                                    worksheet.Cells[row, col].Value = cellValue.ToString();
+                                    worksheet.Cell(row, col).Value = cellValue.ToString();
                                 }
                             }
                         }
@@ -183,50 +180,46 @@ namespace PersonnelManagementApp
                 }
 
                 // تنظیمات ظاهری
-                worksheet.Cells.AutoFitColumns();
-                worksheet.View.RightToLeft = true;
-
+                worksheet.Columns().AdjustToContents();
+                
                 // افزودن border
                 if (selectedColumns.Count > 0 && row > 1)
                 {
-                    var dataRange = worksheet.Cells[1, 1, row - 1, selectedColumns.Count];
-                    dataRange.Style.Border.Top.Style = ExcelBorderStyle.Thin;
-                    dataRange.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
-                    dataRange.Style.Border.Left.Style = ExcelBorderStyle.Thin;
-                    dataRange.Style.Border.Right.Style = ExcelBorderStyle.Thin;
+                    var dataRange = worksheet.Range(1, 1, row - 1, selectedColumns.Count);
+                    dataRange.Style.Border.TopBorder = XLBorderStyleValues.Thin;
+                    dataRange.Style.Border.BottomBorder = XLBorderStyleValues.Thin;
+                    dataRange.Style.Border.LeftBorder = XLBorderStyleValues.Thin;
+                    dataRange.Style.Border.RightBorder = XLBorderStyleValues.Thin;
                 }
 
-                // ذخیره فایل
-                package.Save();
+                workbook.SaveAs(filePath);
             }
         }
 
         private static void ExportToExcelFile(List<PersonnelDetail> personnelList, List<string> selectedColumns, string filePath)
         {
-            FileInfo excelFile = new FileInfo(filePath);
-            
-            using (var package = new ExcelPackage(excelFile))
+            using (var workbook = new XLWorkbook())
             {
-                var worksheet = package.Workbook.Worksheets.Add("Personnel");
+                var worksheet = workbook.Worksheets.Add("Personnel");
+                worksheet.RightToLeft = true;
 
                 // نوشتن هدرها
                 int col = 1;
                 foreach (var columnName in selectedColumns)
                 {
                     string header = PersianHeaders.ContainsKey(columnName) ? PersianHeaders[columnName] : columnName;
-                    worksheet.Cells[1, col].Value = header;
-
-                    // استایل هدر
-                    worksheet.Cells[1, col].Style.Font.Bold = true;
-                    worksheet.Cells[1, col].Style.Font.Size = 12;
-                    worksheet.Cells[1, col].Style.Fill.PatternType = ExcelFillStyle.Solid;
-                    worksheet.Cells[1, col].Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 102, 204));
-                    worksheet.Cells[1, col].Style.Font.Color.SetColor(Color.White);
-                    worksheet.Cells[1, col].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                    worksheet.Cells[1, col].Style.VerticalAlignment = ExcelVerticalAlignment.Center;
-
+                    worksheet.Cell(1, col).Value = header;
                     col++;
                 }
+
+                // استایل هدر
+                var headerRange = worksheet.Range(1, 1, 1, selectedColumns.Count);
+                headerRange.Style.Font.Bold = true;
+                headerRange.Style.Font.FontSize = 12;
+                headerRange.Style.Fill.BackgroundColor = XLColor.FromArgb(0, 102, 204);
+                headerRange.Style.Font.FontColor = XLColor.White;
+                headerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                headerRange.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
 
                 // نوشتن داده‌ها
                 int row = 2;
@@ -240,16 +233,16 @@ namespace PersonnelManagementApp
                         {
                             if (value is DateTime dateValue)
                             {
-                                worksheet.Cells[row, col].Value = dateValue.ToString("yyyy/MM/dd");
+                                worksheet.Cell(row, col).Value = dateValue.ToString("yyyy/MM/dd");
                             }
                             else if (columnName == "Salary" && decimal.TryParse(value.ToString(), out decimal salary))
                             {
-                                worksheet.Cells[row, col].Value = salary;
-                                worksheet.Cells[row, col].Style.Numberformat.Format = "#,##0";
+                                worksheet.Cell(row, col).Value = salary;
+                                worksheet.Cell(row, col).Style.NumberFormat.Format = "#,##0";
                             }
                             else
                             {
-                                worksheet.Cells[row, col].Value = value.ToString();
+                                worksheet.Cell(row, col).Value = value.ToString();
                             }
                         }
                         col++;
@@ -258,21 +251,19 @@ namespace PersonnelManagementApp
                 }
 
                 // تنظیمات ظاهری
-                worksheet.Cells.AutoFitColumns();
-                worksheet.View.RightToLeft = true;
+                worksheet.Columns().AdjustToContents();
 
                 // افزودن border
                 if (selectedColumns.Count > 0 && row > 1)
                 {
-                    var dataRange = worksheet.Cells[1, 1, row - 1, selectedColumns.Count];
-                    dataRange.Style.Border.Top.Style = ExcelBorderStyle.Thin;
-                    dataRange.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
-                    dataRange.Style.Border.Left.Style = ExcelBorderStyle.Thin;
-                    dataRange.Style.Border.Right.Style = ExcelBorderStyle.Thin;
+                    var dataRange = worksheet.Range(1, 1, row - 1, selectedColumns.Count);
+                    dataRange.Style.Border.TopBorder = XLBorderStyleValues.Thin;
+                    dataRange.Style.Border.BottomBorder = XLBorderStyleValues.Thin;
+                    dataRange.Style.Border.LeftBorder = XLBorderStyleValues.Thin;
+                    dataRange.Style.Border.RightBorder = XLBorderStyleValues.Thin;
                 }
 
-                // ذخیره فایل
-                package.Save();
+                workbook.SaveAs(filePath);
             }
         }
 

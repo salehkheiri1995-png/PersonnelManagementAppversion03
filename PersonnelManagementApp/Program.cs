@@ -11,9 +11,6 @@ namespace PersonnelManagementApp
         [STAThread]
         static void Main()
         {
-            // مقداردهی اولیه EPPlus License - حتماً در ابتدای برنامه!
-            EPPlusLicenseInitializer.Initialize();
-
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             Application.Run(new Form1());
