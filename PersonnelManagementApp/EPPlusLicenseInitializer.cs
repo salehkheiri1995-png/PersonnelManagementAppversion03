@@ -18,15 +18,17 @@ namespace PersonnelManagementApp
 
             try
             {
-                // روش 1: برای EPPlus 4.5 تا 7.x
+#pragma warning disable CS0618 // Type or member is obsolete
+                // روش برای EPPlus 4.5 تا 7.x
                 ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+#pragma warning restore CS0618 // Type or member is obsolete
                 _initialized = true;
-                return;
             }
-            catch { }
-
-            // اگر هیچ روشی کار نکرد، فرض می‌کنیم EPPlus نسخه جدیدتر است
-            _initialized = true;
+            catch
+            {
+                // اگر خطا داد، نسخه جدیدتر است - مشکلی نیست
+                _initialized = true;
+            }
         }
     }
 }
