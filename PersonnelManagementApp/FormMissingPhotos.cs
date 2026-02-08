@@ -19,8 +19,8 @@ namespace PersonnelManagementApp
         private Button btnExportExcel;
         private Button btnRefresh;
         private Button btnClose;
-        private Panel panelHeader;
-        private Panel panelButtons;
+        private TableLayoutPanel mainLayout; // استفاده از TableLayoutPanel برای چیدمان دقیق
+        private FlowLayoutPanel buttonPanel; // استفاده از FlowLayoutPanel برای دکمه‌ها
         private DataTable currentData;
 
         // رنگ‌های مدرن
@@ -47,15 +47,27 @@ namespace PersonnelManagementApp
             this.RightToLeft = RightToLeft.Yes;
             this.BackColor = BackgroundColor;
             this.WindowState = FormWindowState.Maximized;
-            this.MinimumSize = new Size(1200, 600);
+            this.MinimumSize = new Size(1000, 600);
 
-            // ========== پنل هدر ==========
-            panelHeader = new Panel
+            // ایجاد ساختار اصلی صفحه با TableLayoutPanel برای جلوگیری از بهم‌ریختگی
+            mainLayout = new TableLayoutPanel();
+            mainLayout.Dock = DockStyle.Fill;
+            mainLayout.ColumnCount = 1;
+            mainLayout.RowCount = 3;
+            // ردیف اول: هدر (ثابت)
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 110F));
+            // ردیف دوم: لیست (پر کردن فضا)
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            // ردیف سوم: دکمه‌ها (ثابت)
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 90F));
+            this.Controls.Add(mainLayout);
+
+            // ========== 1. پنل هدر (ردیف اول) ==========
+            Panel headerPanel = new Panel
             {
-                Dock = DockStyle.Top,
-                Height = 100,
+                Dock = DockStyle.Fill,
                 BackColor = HeaderColor,
-                Padding = new Padding(0, 0, 0, 10)
+                Margin = new Padding(0)
             };
 
             lblTitle = new Label
@@ -63,90 +75,86 @@ namespace PersonnelManagementApp
                 Text = "📸 لیست پرسنل بدون عکس",
                 Font = new Font(FontSettings.TitleFont?.FontFamily ?? FontFamily.GenericSansSerif, 18, FontStyle.Bold),
                 ForeColor = Color.White,
-                Location = new Point(20, 15),
-                Size = new Size(600, 40),
-                TextAlign = ContentAlignment.MiddleRight,
+                AutoSize = true,
+                Location = new Point(20, 20),
                 Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
-            panelHeader.Controls.Add(lblTitle);
+            headerPanel.Controls.Add(lblTitle);
 
             lblCount = new Label
             {
                 Text = "🔍 در حال بارگذاری...",
                 Font = FontSettings.SubtitleFont,
                 ForeColor = Color.FromArgb(230, 240, 255),
-                Location = new Point(20, 55),
-                Size = new Size(600, 30),
-                TextAlign = ContentAlignment.MiddleRight,
+                AutoSize = true,
+                Location = new Point(20, 65),
                 Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
-            panelHeader.Controls.Add(lblCount);
+            headerPanel.Controls.Add(lblCount);
+            
+            mainLayout.Controls.Add(headerPanel, 0, 0);
 
-            this.Controls.Add(panelHeader);
-
-            // ========== پنل دکمه‌ها ==========
-            panelButtons = new Panel
-            {
-                Dock = DockStyle.Bottom,
-                Height = 80,
-                BackColor = Color.White,
-                Padding = new Padding(20)
-            };
-
-            int buttonWidth = 180;
-            int buttonHeight = 45;
-            int buttonSpacing = 15;
-            int startX = (this.Width - (3 * buttonWidth + 2 * buttonSpacing)) / 2;
-
-            btnExportExcel = CreateStyledButton("📊 خروجی اکسل", AccentColor, buttonWidth, buttonHeight);
-            btnExportExcel.Anchor = AnchorStyles.Top; 
-            btnExportExcel.Location = new Point(startX, 17);
-            btnExportExcel.Click += BtnExportExcel_Click;
-            panelButtons.Controls.Add(btnExportExcel);
-
-            btnRefresh = CreateStyledButton("🔄 بروزرسانی", PrimaryColor, buttonWidth, buttonHeight);
-            btnRefresh.Anchor = AnchorStyles.Top;
-            btnRefresh.Location = new Point(startX + buttonWidth + buttonSpacing, 17);
-            btnRefresh.Click += BtnRefresh_Click;
-            panelButtons.Controls.Add(btnRefresh);
-
-            btnClose = CreateStyledButton("❌ بستن", DangerColor, buttonWidth, buttonHeight);
-            btnClose.Anchor = AnchorStyles.Top;
-            btnClose.Location = new Point(startX + 2 * (buttonWidth + buttonSpacing), 17);
-            btnClose.Click += (s, e) => this.Close();
-            panelButtons.Controls.Add(btnClose);
-
-            this.Controls.Add(panelButtons);
-
-            // ========== DataGridView ==========
+            // ========== 2. لیست داده‌ها (ردیف دوم) ==========
             dgvMissingPhotos = new DataGridView
             {
                 Dock = DockStyle.Fill,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells,
+                // استفاده از Fill برای پر کردن عرض صفحه و جلوگیری از اسکرول افقی غیرضروری
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, 
                 ReadOnly = false,
                 RightToLeft = RightToLeft.Yes,
                 BackgroundColor = Color.White,
                 EnableHeadersVisualStyles = false,
                 AllowUserToAddRows = false,
-                ColumnHeadersHeight = 45,
-                RowTemplate = { Height = 40 },
+                ColumnHeadersHeight = 50, // ارتفاع هدر بیشتر
+                RowTemplate = { Height = 45 }, // ارتفاع ردیف‌ها بیشتر
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                MultiSelect = false
+                MultiSelect = false,
+                BorderStyle = BorderStyle.None
             };
 
             dgvMissingPhotos.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 102, 204);
             dgvMissingPhotos.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            dgvMissingPhotos.ColumnHeadersDefaultCellStyle.Font = FontSettings.SubtitleFont;
+            dgvMissingPhotos.ColumnHeadersDefaultCellStyle.Font = new Font(FontSettings.SubtitleFont.FontFamily, 11, FontStyle.Bold);
             dgvMissingPhotos.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            
             dgvMissingPhotos.DefaultCellStyle.Font = FontSettings.BodyFont;
+            dgvMissingPhotos.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
             dgvMissingPhotos.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(240, 248, 255);
 
-            this.Controls.Add(dgvMissingPhotos);
+            mainLayout.Controls.Add(dgvMissingPhotos, 0, 1);
 
-            // ⭐ اصلاح ترتیب نمایش برای جلوگیری از رفتن لیست زیر هدر
-            panelHeader.BringToFront();
-            panelButtons.BringToFront();
-            dgvMissingPhotos.SendToBack();
+            // ========== 3. دکمه‌ها (ردیف سوم) ==========
+            // استفاده از FlowLayoutPanel برای چیدمان منظم دکمه‌ها کنار هم
+            buttonPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
+                FlowDirection = FlowDirection.RightToLeft, // چیدمان از راست به چپ
+                WrapContents = false,
+                Alignment = FlowDirection.TopCenter, // وسط‌چین کردن دکمه‌ها
+                Padding = new Padding(0, 20, 0, 0) // فاصله از بالا
+            };
+
+            int buttonWidth = 160;
+            int buttonHeight = 45;
+
+            btnExportExcel = CreateStyledButton("📊 خروجی اکسل", AccentColor, buttonWidth, buttonHeight);
+            btnExportExcel.Margin = new Padding(10, 0, 10, 0);
+            btnExportExcel.Click += BtnExportExcel_Click;
+
+            btnRefresh = CreateStyledButton("🔄 بروزرسانی", PrimaryColor, buttonWidth, buttonHeight);
+            btnRefresh.Margin = new Padding(10, 0, 10, 0);
+            btnRefresh.Click += BtnRefresh_Click;
+
+            btnClose = CreateStyledButton("❌ بستن", DangerColor, buttonWidth, buttonHeight);
+            btnClose.Margin = new Padding(10, 0, 10, 0);
+            btnClose.Click += (s, e) => this.Close();
+
+            buttonPanel.Controls.Add(btnExportExcel);
+            buttonPanel.Controls.Add(btnRefresh);
+            buttonPanel.Controls.Add(btnClose);
+
+            mainLayout.Controls.Add(buttonPanel, 0, 2);
         }
 
         private Button CreateStyledButton(string text, Color backColor, int width, int height)
@@ -176,7 +184,7 @@ namespace PersonnelManagementApp
             {
                 this.Cursor = Cursors.WaitCursor;
 
-                // ⭐ کوئری اصلاح شده با JOIN برای دریافت نام اداره، ناحیه و پست
+                // کوئری برای دریافت اطلاعات کامل پرسنل و مشخصات اداری
                 string query = @"SELECT Personnel.PersonnelID, Personnel.FirstName, Personnel.LastName,
                                Personnel.PersonnelNumber, Personnel.NationalID, Personnel.MobileNumber,
                                Personnel.HireDate,
@@ -198,25 +206,13 @@ namespace PersonnelManagementApp
                     return;
                 }
 
-                // بررسی مسیر عکس‌ها
-                string imagesFolder = ImageHelper.ImagesFolderPath;
-                if (string.IsNullOrWhiteSpace(imagesFolder) || !Directory.Exists(imagesFolder))
-                {
-                    MessageBox.Show(
-                        $"❌ مسیر پوشه عکس‌ها معتبر نیست یا وجود ندارد:\n\n{imagesFolder}\n\nلطفاً از تنظیمات، مسیر پوشه عکس‌ها را درست کنید.",
-                        "خطا",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Error);
-                    return;
-                }
-
                 // فیلتر کردن پرسنل‌هایی که عکس ندارند
                 DataTable missing = dt.Clone();
                 foreach (DataRow row in dt.Rows)
                 {
                     string nationalId = row["NationalID"]?.ToString() ?? string.Empty;
 
-                    // اگر کد ملی خالی است، به عنوان "بدون عکس" گزارش شود
+                    // اگر کد ملی خالی است یا عکس ندارد
                     if (string.IsNullOrWhiteSpace(nationalId) || !ImageHelper.ImageExists(nationalId))
                     {
                         missing.ImportRow(row);
@@ -253,123 +249,64 @@ namespace PersonnelManagementApp
         {
             dgvMissingPhotos.Columns.Clear();
 
-            // ستون‌های پنهان
-            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "PersonnelID",
-                HeaderText = "ID",
-                Visible = false
+            // 1. ستون‌های پنهان (ID)
+            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn { Name = "PersonnelID", Visible = false });
+
+            // 2. ردیف (عرض ثابت)
+            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn 
+            { 
+                Name = "RowNumber", 
+                HeaderText = "ردیف", 
+                Width = 50,
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.None 
             });
 
-            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "RowNumber",
-                HeaderText = "ردیف",
-                Width = 60
+            // 3. نام و نام خانوادگی (عرض درصدی)
+            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn { Name = "FirstName", HeaderText = "نام", FillWeight = 80 });
+            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn { Name = "LastName", HeaderText = "نام خانوادگی", FillWeight = 100 });
+
+            // 4. شماره پرسنلی و ملی (عرض ثابت)
+            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn 
+            { 
+                Name = "PersonnelNumber", 
+                HeaderText = "ش.پرسنلی", 
+                Width = 90,
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.None
+            });
+            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn 
+            { 
+                Name = "NationalID", 
+                HeaderText = "کد ملی", 
+                Width = 100,
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.None
             });
 
-            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "FirstName",
-                HeaderText = "نام",
-                Width = 120
+            // 5. مشخصات اداری (مهم - عرض درصدی)
+            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn { Name = "DeptName", HeaderText = "اداره", FillWeight = 120 });
+            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn { Name = "DistrictName", HeaderText = "ناحیه", FillWeight = 100 });
+            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn { Name = "PostName", HeaderText = "پست", FillWeight = 100 });
+
+            // 6. سایر اطلاعات (عرض ثابت)
+            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn 
+            { 
+                Name = "MobileNumber", 
+                HeaderText = "موبایل", 
+                Width = 100,
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.None
             });
 
-            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "LastName",
-                HeaderText = "نام‌خانوادگی",
-                Width = 140
-            });
-
-            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "PersonnelNumber",
-                HeaderText = "شماره پرسنلی",
-                Width = 120
-            });
-
-            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "NationalID",
-                HeaderText = "کد ملی",
-                Width = 120
-            });
-
-            // ⭐ ستون‌های جدید ادارات
-            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "DeptName",
-                HeaderText = "اداره بهره‌برداری",
-                Width = 150
-            });
-
-            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "DistrictName",
-                HeaderText = "ناحیه",
-                Width = 150
-            });
-
-            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "PostName",
-                HeaderText = "نام پست",
-                Width = 150
-            });
-            // ⭐ پایان ستون‌های جدید
-
-            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "HireDate",
-                HeaderText = "تاریخ استخدام",
-                Width = 120
-            });
-
-            dgvMissingPhotos.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "MobileNumber",
-                HeaderText = "تلفن همراه",
-                Width = 120
-            });
-
-            // دکمه ویرایش
+            // 7. دکمه‌ها
             DataGridViewButtonColumn editColumn = new DataGridViewButtonColumn
             {
                 Name = "Edit",
-                HeaderText = "✏️ ویرایش",
-                Text = "ویرایش",
+                HeaderText = "",
+                Text = "✏️",
                 UseColumnTextForButtonValue = true,
-                Width = 100,
-                DefaultCellStyle = new DataGridViewCellStyle
-                {
-                    BackColor = Color.FromArgb(40, 167, 69),
-                    ForeColor = Color.White,
-                    Font = FontSettings.ButtonFont,
-                    Alignment = DataGridViewContentAlignment.MiddleCenter,
-                    Padding = new Padding(5)
-                }
+                Width = 40,
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
+                DefaultCellStyle = new DataGridViewCellStyle { BackColor = Color.FromArgb(40, 167, 69), ForeColor = Color.White }
             };
             dgvMissingPhotos.Columns.Add(editColumn);
-
-            // دکمه حذف
-            DataGridViewButtonColumn deleteColumn = new DataGridViewButtonColumn
-            {
-                Name = "Delete",
-                HeaderText = "🗑️ حذف",
-                Text = "حذف",
-                UseColumnTextForButtonValue = true,
-                Width = 100,
-                DefaultCellStyle = new DataGridViewCellStyle
-                {
-                    BackColor = Color.FromArgb(220, 53, 69),
-                    ForeColor = Color.White,
-                    Font = FontSettings.ButtonFont,
-                    Alignment = DataGridViewContentAlignment.MiddleCenter,
-                    Padding = new Padding(5)
-                }
-            };
-            dgvMissingPhotos.Columns.Add(deleteColumn);
 
             dgvMissingPhotos.CellClick += DgvMissingPhotos_CellClick;
         }
@@ -377,14 +314,9 @@ namespace PersonnelManagementApp
         private void PopulateDataGridView()
         {
             dgvMissingPhotos.Rows.Clear();
-
             int rowNumber = 1;
             foreach (DataRow row in currentData.Rows)
             {
-                string hireDate = row["HireDate"] != DBNull.Value
-                    ? Convert.ToDateTime(row["HireDate"]).ToString("yyyy/MM/dd")
-                    : "";
-
                 dgvMissingPhotos.Rows.Add(
                     row["PersonnelID"],
                     rowNumber++,
@@ -392,15 +324,11 @@ namespace PersonnelManagementApp
                     row["LastName"],
                     row["PersonnelNumber"],
                     row["NationalID"],
-                    // ⭐ داده‌های جدید
-                    row["DeptName"],
-                    row["DistrictName"],
-                    row["PostName"],
-                    //
-                    hireDate,
+                    row["DeptName"],    // نام اداره
+                    row["DistrictName"], // نام ناحیه
+                    row["PostName"],    // نام پست
                     row["MobileNumber"],
-                    "ویرایش",
-                    "حذف"
+                    "✏️"
                 );
             }
         }
@@ -416,10 +344,6 @@ namespace PersonnelManagementApp
                 if (e.ColumnIndex == dgvMissingPhotos.Columns["Edit"].Index)
                 {
                     OpenEditForm(personnelID);
-                }
-                else if (e.ColumnIndex == dgvMissingPhotos.Columns["Delete"].Index)
-                {
-                    DeletePersonnel(personnelID, e.RowIndex);
                 }
             }
             catch (Exception ex)
@@ -444,57 +368,6 @@ namespace PersonnelManagementApp
             catch (Exception ex)
             {
                 MessageBox.Show($"❌ خطا در باز کردن فرم ویرایش:\n\n{ex.Message}", "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void DeletePersonnel(int personnelID, int rowIndex)
-        {
-            try
-            {
-                string personnelName = $"{dgvMissingPhotos.Rows[rowIndex].Cells["FirstName"].Value} {dgvMissingPhotos.Rows[rowIndex].Cells["LastName"].Value}";
-
-                DialogResult result = MessageBox.Show(
-                    $"❓ آیا مطمئن هستید که می‌خواهید '{personnelName}' را حذف کنید؟\n\n⚠️ این عملیات قابل بازگشت نیست!",
-                    "تایید حذف",
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Warning);
-
-                if (result == DialogResult.Yes)
-                {
-                    string query = $"DELETE FROM Personnel WHERE PersonnelID = {personnelID}";
-                    int affectedRows = dbHelper.ExecuteNonQuery(query);
-
-                    if (affectedRows > 0)
-                    {
-                        MessageBox.Show("✅ پرسنل با موفقیت حذف شد.", "موفق", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                        dgvMissingPhotos.Rows.RemoveAt(rowIndex);
-                        UpdateRowNumbers();
-                        lblCount.Text = $"📊 تعداد پرسنل بدون عکس: {dgvMissingPhotos.Rows.Count} نفر";
-
-                        if (dgvMissingPhotos.Rows.Count == 0)
-                        {
-                            lblCount.Text = "✅ همه پرسنل دارای عکس هستند!";
-                            MessageBox.Show("✅ تمام پرسنل دارای عکس پرسنلی می‌باشند.", "اطلاعات", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        }
-                    }
-                    else
-                    {
-                        MessageBox.Show("❌ خطا در حذف پرسنل.", "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"❌ خطا در حذف پرسنل:\n\n{ex.Message}", "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void UpdateRowNumbers()
-        {
-            for (int i = 0; i < dgvMissingPhotos.Rows.Count; i++)
-            {
-                dgvMissingPhotos.Rows[i].Cells["RowNumber"].Value = i + 1;
             }
         }
 
@@ -528,84 +401,47 @@ namespace PersonnelManagementApp
                     {
                         var worksheet = workbook.Worksheets.Add("پرسنل بدون عکس");
 
-                        // ⭐ هدرهای اکسل
                         worksheet.Cell(1, 1).Value = "ردیف";
                         worksheet.Cell(1, 2).Value = "نام";
-                        worksheet.Cell(1, 3).Value = "نام‌خانوادگی";
+                        worksheet.Cell(1, 3).Value = "نام خانوادگی";
                         worksheet.Cell(1, 4).Value = "شماره پرسنلی";
                         worksheet.Cell(1, 5).Value = "کد ملی";
-                        
-                        // ستون‌های جدید در اکسل
                         worksheet.Cell(1, 6).Value = "اداره";
                         worksheet.Cell(1, 7).Value = "ناحیه";
                         worksheet.Cell(1, 8).Value = "پست";
+                        worksheet.Cell(1, 9).Value = "تلفن همراه";
 
-                        worksheet.Cell(1, 9).Value = "تاریخ استخدام";
-                        worksheet.Cell(1, 10).Value = "تلفن همراه";
-                        worksheet.Cell(1, 11).Value = "مسیر پوشه عکس‌ها";
-
-                        var headerRange = worksheet.Range(1, 1, 1, 11);
+                        var headerRange = worksheet.Range(1, 1, 1, 9);
                         headerRange.Style.Font.Bold = true;
                         headerRange.Style.Fill.BackgroundColor = XLColor.FromArgb(0, 102, 204);
                         headerRange.Style.Font.FontColor = XLColor.White;
                         headerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                        headerRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
 
-                        string imagesFolder = ImageHelper.ImagesFolderPath;
-
-                        int rowNumber = 1;
                         int excelRow = 2;
                         foreach (DataRow row in currentData.Rows)
                         {
-                            worksheet.Cell(excelRow, 1).Value = rowNumber++;
-                            worksheet.Cell(excelRow, 2).Value = row["FirstName"]?.ToString() ?? "";
-                            worksheet.Cell(excelRow, 3).Value = row["LastName"]?.ToString() ?? "";
-                            worksheet.Cell(excelRow, 4).Value = row["PersonnelNumber"]?.ToString() ?? "";
-                            worksheet.Cell(excelRow, 5).Value = row["NationalID"]?.ToString() ?? "";
-                            
-                            // داده‌های جدید در اکسل
-                            worksheet.Cell(excelRow, 6).Value = row["DeptName"]?.ToString() ?? "";
-                            worksheet.Cell(excelRow, 7).Value = row["DistrictName"]?.ToString() ?? "";
-                            worksheet.Cell(excelRow, 8).Value = row["PostName"]?.ToString() ?? "";
-
-                            string hireDate = row["HireDate"] != DBNull.Value
-                                ? Convert.ToDateTime(row["HireDate"]).ToString("yyyy/MM/dd")
-                                : "";
-                            worksheet.Cell(excelRow, 9).Value = hireDate;
-
-                            worksheet.Cell(excelRow, 10).Value = row["MobileNumber"]?.ToString() ?? "";
-                            worksheet.Cell(excelRow, 11).Value = imagesFolder;
-
-                            if (excelRow % 2 == 0)
-                            {
-                                worksheet.Range(excelRow, 1, excelRow, 11).Style.Fill.BackgroundColor = XLColor.FromArgb(240, 248, 255);
-                            }
-
+                            worksheet.Cell(excelRow, 1).Value = excelRow - 1;
+                            worksheet.Cell(excelRow, 2).Value = row["FirstName"]?.ToString();
+                            worksheet.Cell(excelRow, 3).Value = row["LastName"]?.ToString();
+                            worksheet.Cell(excelRow, 4).Value = row["PersonnelNumber"]?.ToString();
+                            worksheet.Cell(excelRow, 5).Value = row["NationalID"]?.ToString();
+                            worksheet.Cell(excelRow, 6).Value = row["DeptName"]?.ToString();
+                            worksheet.Cell(excelRow, 7).Value = row["DistrictName"]?.ToString();
+                            worksheet.Cell(excelRow, 8).Value = row["PostName"]?.ToString();
+                            worksheet.Cell(excelRow, 9).Value = row["MobileNumber"]?.ToString();
                             excelRow++;
                         }
 
                         worksheet.Columns().AdjustToContents();
-                        worksheet.RightToLeft = true;
-
                         workbook.SaveAs(sfd.FileName);
                     }
 
-                    MessageBox.Show($"✅ فایل اکسل با موفقیت ذخیره شد:\n\n{sfd.FileName}", "موفقیت", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                    DialogResult openResult = MessageBox.Show("آیا می‌خواهید فایل را باز کنید؟", "باز کردن فایل", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-                    if (openResult == DialogResult.Yes)
-                    {
-                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                        {
-                            FileName = sfd.FileName,
-                            UseShellExecute = true
-                        });
-                    }
+                    MessageBox.Show("✅ فایل اکسل ذخیره شد.", "موفقیت", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"❌ خطا در ایجاد فایل اکسل:\n\n{ex.Message}", "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"❌ خطا: {ex.Message}", "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
