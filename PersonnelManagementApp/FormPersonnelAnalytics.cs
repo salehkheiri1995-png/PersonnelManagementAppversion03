@@ -118,22 +118,24 @@ namespace PersonnelManagementApp
             Panel panelFilter = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 380,
+                Height = 360,
                 BackColor = Color.FromArgb(230, 240, 250),
                 BorderStyle = BorderStyle.FixedSingle,
                 AutoScroll = true,
-                Padding = new Padding(8, 8, 8, 6)
+                Padding = new Padding(6, 6, 6, 4)
             };
 
             // جدول 2 ردیفه برای فیلترها (6 ستون در هر ردیف)
             TableLayoutPanel filterGrid = new TableLayoutPanel
             {
                 Dock = DockStyle.Top,
-                Height = 255,
+                Height = 240,
                 ColumnCount = 6,
                 RowCount = 2,
                 RightToLeft = RightToLeft.Yes,
-                BackColor = Color.Transparent
+                BackColor = Color.Transparent,
+                Padding = new Padding(0),
+                Margin = new Padding(0)
             };
             for (int i = 0; i < 6; i++)
                 filterGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16.66f));
@@ -162,14 +164,15 @@ namespace PersonnelManagementApp
             Panel filterBottomPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 92,
-                BackColor = Color.Transparent
+                Height = 86,
+                BackColor = Color.Transparent,
+                Padding = new Padding(0)
             };
 
             FlowLayoutPanel rowActions = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
-                Height = 48,
+                Height = 46,
                 RightToLeft = RightToLeft.Yes,
                 FlowDirection = FlowDirection.RightToLeft,
                 WrapContents = true,
@@ -184,7 +187,7 @@ namespace PersonnelManagementApp
             btnClearFilters.Font = new Font(FontSettings.ButtonFont.FontFamily, 9.5F, FontStyle.Bold);
             btnClearFilters.FlatStyle = FlatStyle.Flat;
             btnClearFilters.FlatAppearance.BorderSize = 0;
-            btnClearFilters.Margin = new Padding(6, 6, 6, 4);
+            btnClearFilters.Margin = new Padding(4, 6, 4, 4);
             btnClearFilters.Click += BtnClearFilters_Click;
 
             Label lblHireDate = new Label
@@ -193,7 +196,7 @@ namespace PersonnelManagementApp
                 AutoSize = true,
                 Font = new Font(FontSettings.SubtitleFont.FontFamily, 9.5F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 102, 204),
-                Margin = new Padding(6, 11, 6, 4)
+                Margin = new Padding(4, 11, 4, 4)
             };
 
             chkHireDateFilter = new CheckBox
@@ -201,7 +204,7 @@ namespace PersonnelManagementApp
                 Text = "فعال",
                 AutoSize = true,
                 Font = new Font(FontSettings.BodyFont.FontFamily, 9F),
-                Margin = new Padding(6, 11, 6, 4)
+                Margin = new Padding(4, 11, 4, 4)
             };
             chkHireDateFilter.CheckedChanged += ChkHireDateFilter_CheckedChanged;
 
@@ -212,7 +215,7 @@ namespace PersonnelManagementApp
                 Enabled = false,
                 Value = DateTime.Now.AddYears(-10),
                 Format = DateTimePickerFormat.Short,
-                Margin = new Padding(6, 8, 6, 4)
+                Margin = new Padding(4, 8, 4, 4)
             };
 
             Label lblTo = new Label
@@ -220,7 +223,7 @@ namespace PersonnelManagementApp
                 Text = "تا",
                 AutoSize = true,
                 Font = new Font(FontSettings.LabelFont.FontFamily, 9F),
-                Margin = new Padding(6, 11, 6, 4)
+                Margin = new Padding(4, 11, 4, 4)
             };
 
             dtpHireDateTo = new DateTimePicker
@@ -230,7 +233,7 @@ namespace PersonnelManagementApp
                 Enabled = false,
                 Value = DateTime.Now,
                 Format = DateTimePickerFormat.Short,
-                Margin = new Padding(6, 8, 6, 4)
+                Margin = new Padding(4, 8, 4, 4)
             };
 
             rowActions.Controls.Add(btnClearFilters);
@@ -242,7 +245,7 @@ namespace PersonnelManagementApp
 
             lblFilterInfo.Text = "✓ فیلتری فعال نیست";
             lblFilterInfo.Dock = DockStyle.Bottom;
-            lblFilterInfo.Height = 32;
+            lblFilterInfo.Height = 30;
             lblFilterInfo.Font = new Font(FontSettings.SubtitleFont.FontFamily, 9.5F, FontStyle.Bold);
             lblFilterInfo.ForeColor = Color.FromArgb(0, 102, 204);
             lblFilterInfo.TextAlign = ContentAlignment.MiddleLeft;
@@ -357,8 +360,8 @@ namespace PersonnelManagementApp
             Panel box = new Panel
             {
                 Dock = DockStyle.Fill,
-                Margin = new Padding(5),
-                Padding = new Padding(4),
+                Margin = new Padding(2),
+                Padding = new Padding(3),
                 BackColor = Color.FromArgb(245, 252, 255),
                 BorderStyle = BorderStyle.FixedSingle
             };
@@ -368,7 +371,7 @@ namespace PersonnelManagementApp
                 Text = title,
                 Dock = DockStyle.Top,
                 AutoSize = false,
-                Height = 22,
+                Height = 20,
                 Font = new Font(FontSettings.SubtitleFont.FontFamily, 9.5F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 102, 204),
                 TextAlign = ContentAlignment.MiddleLeft
@@ -390,8 +393,12 @@ namespace PersonnelManagementApp
             clb.Font = new Font(FontSettings.BodyFont.FontFamily, 9F);
             clb.IntegralHeight = false;
             clb.BorderStyle = BorderStyle.FixedSingle;
-            clb.HorizontalScrollbar = true;
-            clb.HorizontalExtent = 2000; // متن‌های طولانی قطع نشوند (اسکرول افقی)
+
+            // اسکرول افقی ظاهر خیلی بدی می‌داد؛ خاموشش می‌کنیم.
+            clb.HorizontalScrollbar = false;
+            clb.HorizontalExtent = 0;
+            clb.ScrollAlwaysVisible = false;
+            clb.ItemHeight = 18;
 
             // جلوگیری از چندبار اضافه شدن handler
             clb.ItemCheck -= eventHandler;
