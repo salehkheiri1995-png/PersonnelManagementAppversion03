@@ -254,8 +254,7 @@ namespace PersonnelManagementApp
             {
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Horizontal,
-                FixedPanel = FixedPanel.Panel2,
-                Panel2MinSize = 220,
+                FixedPanel = FixedPanel.None,
                 SplitterWidth = 6
             };
 
@@ -335,23 +334,75 @@ namespace PersonnelManagementApp
             Controls.Add(mainSplit);
             Controls.Add(panelFilter);
 
-            // تنظیم نسبت 2/3 و 1/3 به صورت داینامیک
+            // جلوگیری از خطای SplitterDistance (وقتی فرم هنوز اندازه نگرفته یا خیلی کوچک می‌شود)
             Shown += (s, e) =>
             {
-                try
+                BeginInvoke((MethodInvoker)delegate
                 {
-                    mainSplit.SplitterDistance = Math.Max(250, (int)(mainSplit.Height * 0.66));
-                }
-                catch { }
+                    ApplyMainSplitSizing(mainSplit);
+                });
             };
             Resize += (s, e) =>
             {
-                try
-                {
-                    mainSplit.SplitterDistance = Math.Max(250, (int)(mainSplit.Height * 0.66));
-                }
-                catch { }
+                ApplyMainSplitSizing(mainSplit);
             };
+        }
+
+        private void ApplyMainSplitSizing(SplitContainer mainSplit)
+        {
+            if (mainSplit == null || mainSplit.IsDisposed)
+                return;
+
+            int total = mainSplit.Orientation == Orientation.Horizontal ? mainSplit.Height : mainSplit.Width;
+            if (total <= 0)
+                return;
+
+            const int desiredPanel1Min = 250;
+            const int desiredPanel2Min = 220;
+
+            // فقط وقتی مین‌سایزها را اعمال کن که واقعاً جا باشد؛
+            // وگرنه خود WinForms هنگام ApplyPanel2MinSize ممکن است SplitterDistance نامعتبر تولید کند.
+            if (total > desiredPanel1Min + desiredPanel2Min + mainSplit.SplitterWidth)
+            {
+                mainSplit.Panel1MinSize = desiredPanel1Min;
+                mainSplit.Panel2MinSize = desiredPanel2Min;
+                SetSplitDistanceSafe(mainSplit, 0.66);
+            }
+            else
+            {
+                // حالت پنجره خیلی کوچک
+                mainSplit.Panel1MinSize = 50;
+                mainSplit.Panel2MinSize = 50;
+                SetSplitDistanceSafe(mainSplit, 0.5);
+            }
+        }
+
+        private void SetSplitDistanceSafe(SplitContainer sc, double ratio)
+        {
+            if (sc == null || sc.IsDisposed)
+                return;
+
+            int total = sc.Orientation == Orientation.Horizontal ? sc.Height : sc.Width;
+            if (total <= 0)
+                return;
+
+            int min1 = sc.Panel1MinSize;
+            int max = total - sc.Panel2MinSize - sc.SplitterWidth;
+            if (max < min1)
+                return;
+
+            int desired = (int)(total * ratio);
+            if (desired < min1) desired = min1;
+            if (desired > max) desired = max;
+
+            try
+            {
+                sc.SplitterDistance = desired;
+            }
+            catch
+            {
+                // ignore
+            }
         }
 
         private Panel CreateFilterBox(string title, CheckedListBox clb, ItemCheckEventHandler eventHandler)
