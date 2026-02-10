@@ -15,7 +15,6 @@ namespace PersonnelManagementApp
         private readonly TabControl tabControl;
         private readonly AnalyticsDataModel analyticsModel;
 
-        // تمام نمودارها
         private readonly Chart chartDepartmentPie;
         private readonly Chart chartPositionPie;
         private readonly Chart chartGenderPie;
@@ -25,12 +24,13 @@ namespace PersonnelManagementApp
         private readonly Chart chartEducationPie;
         private readonly Chart chartCompanyPie;
         private readonly Chart chartWorkShiftPie;
+        private readonly Chart chartAgePie;
+        private readonly Chart chartWorkExperiencePie;
 
         private readonly DataGridView dgvPersonnelStats;
         private readonly DataGridView dgvDepartmentDetails;
         private readonly DataGridView dgvPositionDetails;
 
-        // فیلترها
         private readonly CheckedListBox clbProvincesFilter;
         private readonly CheckedListBox clbCitiesFilter;
         private readonly CheckedListBox clbAffairsFilter;
@@ -47,12 +47,18 @@ namespace PersonnelManagementApp
         private readonly Button btnClearFilters;
         private readonly Label lblFilterInfo;
 
-        // فیلتر تاریخ استخدام
         private DateTimePicker dtpHireDateFrom;
         private DateTimePicker dtpHireDateTo;
         private CheckBox chkHireDateFilter;
 
-        // رادیو باتن‌ها برای انتخاب نمایش
+        private NumericUpDown nudMinAge;
+        private NumericUpDown nudMaxAge;
+        private CheckBox chkAgeFilter;
+
+        private NumericUpDown nudMinExperience;
+        private NumericUpDown nudMaxExperience;
+        private CheckBox chkExperienceFilter;
+
         private RadioButton rbShowSummary;
         private RadioButton rbShowFullStats;
 
@@ -71,6 +77,8 @@ namespace PersonnelManagementApp
             chartEducationPie = new Chart();
             chartCompanyPie = new Chart();
             chartWorkShiftPie = new Chart();
+            chartAgePie = new Chart();
+            chartWorkExperiencePie = new Chart();
 
             dgvPersonnelStats = new DataGridView();
             dgvDepartmentDetails = new DataGridView();
@@ -98,7 +106,6 @@ namespace PersonnelManagementApp
             InitializeComponent();
             BuildUI();
 
-            // اعمال فونت مرکزی
             FontSettings.ApplyFontToForm(this);
 
             LoadData();
@@ -114,7 +121,6 @@ namespace PersonnelManagementApp
             MinimumSize = new Size(1200, 700);
             Font = FontSettings.BodyFont;
 
-            // ========== پنل فیلتر (دو ردیف + بخش پایین) ==========
             Panel panelFilter = new Panel
             {
                 Dock = DockStyle.Top,
@@ -125,7 +131,6 @@ namespace PersonnelManagementApp
                 Padding = new Padding(6, 6, 6, 4)
             };
 
-            // جدول 2 ردیفه برای فیلترها (6 ستون در هر ردیف)
             TableLayoutPanel filterGrid = new TableLayoutPanel
             {
                 Dock = DockStyle.Top,
@@ -142,7 +147,6 @@ namespace PersonnelManagementApp
             filterGrid.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
             filterGrid.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
 
-            // ردیف اول
             filterGrid.Controls.Add(CreateFilterBox("استانها 🗺️", clbProvincesFilter, ClbProvincesFilter_ItemCheck), 0, 0);
             filterGrid.Controls.Add(CreateFilterBox("شهرها 🏙️", clbCitiesFilter, ClbCitiesFilter_ItemCheck), 1, 0);
             filterGrid.Controls.Add(CreateFilterBox("امور 📋", clbAffairsFilter, ClbAffairsFilter_ItemCheck), 2, 0);
@@ -150,7 +154,6 @@ namespace PersonnelManagementApp
             filterGrid.Controls.Add(CreateFilterBox("نواحی 🔺", clbDistrictsFilter, ClbDistrictsFilter_ItemCheck), 4, 0);
             filterGrid.Controls.Add(CreateFilterBox("پستها ⚡", clbPositionsFilter, ClbPositionsFilter_ItemCheck), 5, 0);
 
-            // ردیف دوم
             filterGrid.Controls.Add(CreateFilterBox("جنسیت 👥", clbGenderFilter, ClbGenderFilter_ItemCheck), 0, 1);
             filterGrid.Controls.Add(CreateFilterBox("تحصیلات 📚", clbEducationFilter, ClbEducationFilter_ItemCheck), 1, 1);
             filterGrid.Controls.Add(CreateFilterBox("سطح شغلی 📊", clbJobLevelFilter, ClbJobLevelFilter_ItemCheck), 2, 1);
@@ -160,7 +163,6 @@ namespace PersonnelManagementApp
 
             panelFilter.Controls.Add(filterGrid);
 
-            // پایین پنل فیلتر: تاریخ استخدام + دکمه غیرفعال کردن + پیام وضعیت
             Panel filterBottomPanel = new Panel
             {
                 Dock = DockStyle.Top,
@@ -236,7 +238,119 @@ namespace PersonnelManagementApp
                 Margin = new Padding(4, 8, 4, 4)
             };
 
+            Label lblAge = new Label
+            {
+                Text = "🎂 سن",
+                AutoSize = true,
+                Font = new Font(FontSettings.SubtitleFont.FontFamily, 9.5F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 102, 204),
+                Margin = new Padding(10, 11, 4, 4)
+            };
+
+            chkAgeFilter = new CheckBox
+            {
+                Text = "فعال",
+                AutoSize = true,
+                Font = new Font(FontSettings.BodyFont.FontFamily, 9F),
+                Margin = new Padding(4, 11, 4, 4)
+            };
+            chkAgeFilter.CheckedChanged += (s, e) =>
+            {
+                nudMinAge.Enabled = chkAgeFilter.Checked;
+                nudMaxAge.Enabled = chkAgeFilter.Checked;
+                UpdateFilters();
+                RefreshAllCharts();
+            };
+
+            nudMinAge = new NumericUpDown
+            {
+                Minimum = 10,
+                Maximum = 100,
+                Value = 18,
+                Width = 70,
+                Enabled = false,
+                Margin = new Padding(4, 8, 4, 4)
+            };
+
+            Label lblAgeTo = new Label
+            {
+                Text = "تا",
+                AutoSize = true,
+                Margin = new Padding(4, 11, 4, 4)
+            };
+
+            nudMaxAge = new NumericUpDown
+            {
+                Minimum = 10,
+                Maximum = 100,
+                Value = 65,
+                Width = 70,
+                Enabled = false,
+                Margin = new Padding(4, 8, 4, 4)
+            };
+
+            Label lblExp = new Label
+            {
+                Text = "💼 سابقه کاری",
+                AutoSize = true,
+                Font = new Font(FontSettings.SubtitleFont.FontFamily, 9.5F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 102, 204),
+                Margin = new Padding(10, 11, 4, 4)
+            };
+
+            chkExperienceFilter = new CheckBox
+            {
+                Text = "فعال",
+                AutoSize = true,
+                Font = new Font(FontSettings.BodyFont.FontFamily, 9F),
+                Margin = new Padding(4, 11, 4, 4)
+            };
+            chkExperienceFilter.CheckedChanged += (s, e) =>
+            {
+                nudMinExperience.Enabled = chkExperienceFilter.Checked;
+                nudMaxExperience.Enabled = chkExperienceFilter.Checked;
+                UpdateFilters();
+                RefreshAllCharts();
+            };
+
+            nudMinExperience = new NumericUpDown
+            {
+                Minimum = 0,
+                Maximum = 50,
+                Value = 0,
+                Width = 70,
+                Enabled = false,
+                Margin = new Padding(4, 8, 4, 4)
+            };
+
+            Label lblExpTo = new Label
+            {
+                Text = "تا",
+                AutoSize = true,
+                Margin = new Padding(4, 11, 4, 4)
+            };
+
+            nudMaxExperience = new NumericUpDown
+            {
+                Minimum = 0,
+                Maximum = 50,
+                Value = 40,
+                Width = 70,
+                Enabled = false,
+                Margin = new Padding(4, 8, 4, 4)
+            };
+
             rowActions.Controls.Add(btnClearFilters);
+            rowActions.Controls.Add(nudMaxExperience);
+            rowActions.Controls.Add(lblExpTo);
+            rowActions.Controls.Add(nudMinExperience);
+            rowActions.Controls.Add(chkExperienceFilter);
+            rowActions.Controls.Add(lblExp);
+            rowActions.Controls.Add(nudMaxAge);
+            rowActions.Controls.Add(lblAgeTo);
+            rowActions.Controls.Add(nudMinAge);
+            rowActions.Controls.Add(chkAgeFilter);
+            rowActions.Controls.Add(lblAge);
             rowActions.Controls.Add(dtpHireDateTo);
             rowActions.Controls.Add(lblTo);
             rowActions.Controls.Add(dtpHireDateFrom);
@@ -255,21 +369,18 @@ namespace PersonnelManagementApp
 
             panelFilter.Controls.Add(filterBottomPanel);
 
-            // ========== Layout اصلی: چپ نمودارها (2/3) - راست جدول‌ها (1/3) ==========
-            // کاربر گفته بالا/پایین نمی‌خواهد، چپ/راست می‌خواهد.
             TableLayoutPanel mainLayout = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 2,
                 RowCount = 1,
-                RightToLeft = RightToLeft.No, // برای اینکه ستون 0 همیشه سمت چپ باشد
+                RightToLeft = RightToLeft.No,
                 BackColor = Color.Transparent
             };
             mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 66f));
             mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 34f));
             mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
-            // ========== چپ: نمودارها ==========
             Panel chartsPanel = new Panel
             {
                 Dock = DockStyle.Fill,
@@ -283,7 +394,6 @@ namespace PersonnelManagementApp
             tabControl.ItemSize = new Size(120, 30);
             tabControl.Font = FontSettings.BodyFont;
 
-            // جدول‌های جزئیاتِ ادارات و پست‌ها از زیر نمودارها حذف شدند و به پنل جدول‌ها (سمت راست) منتقل شدند.
             AddChartTab(tabControl, "📊 ادارات", chartDepartmentPie, null);
             AddChartTab(tabControl, "💼 پستها", chartPositionPie, null);
             AddChartTab(tabControl, "👥 جنسیت", chartGenderPie, null);
@@ -293,10 +403,11 @@ namespace PersonnelManagementApp
             AddChartTab(tabControl, "📚 تحصیلات", chartEducationPie, null);
             AddChartTab(tabControl, "🏢 شرکت", chartCompanyPie, null);
             AddChartTab(tabControl, "⏰ شیفت", chartWorkShiftPie, null);
+            AddChartTab(tabControl, "🎂 سن", chartAgePie, null);
+            AddChartTab(tabControl, "💼 سابقه کاری", chartWorkExperiencePie, null);
 
             chartsPanel.Controls.Add(tabControl);
 
-            // ========== راست: جدول‌ها ==========
             Panel tablesPanel = new Panel
             {
                 Dock = DockStyle.Fill,
@@ -304,7 +415,6 @@ namespace PersonnelManagementApp
                 Padding = new Padding(4)
             };
 
-            // TabControl برای جدول‌ها (آمار + جزئیات ادارات + جزئیات پست‌ها)
             TabControl tablesTabControl = new TabControl
             {
                 Dock = DockStyle.Fill,
@@ -314,7 +424,6 @@ namespace PersonnelManagementApp
                 ItemSize = new Size(130, 30)
             };
 
-            // تب آمار (با رادیوباتن‌ها)
             TabPage tabStats = new TabPage("📋 آمار")
             {
                 Padding = new Padding(0)
@@ -367,7 +476,6 @@ namespace PersonnelManagementApp
             tabStats.Controls.Add(dgvPersonnelStats);
             tabStats.Controls.Add(radioPanel);
 
-            // تب جزئیات ادارات
             TabPage tabDeptDetails = new TabPage("🏛️ جزئیات ادارات")
             {
                 Padding = new Padding(0)
@@ -389,7 +497,6 @@ namespace PersonnelManagementApp
             dgvDepartmentDetails.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(240, 248, 255);
             tabDeptDetails.Controls.Add(dgvDepartmentDetails);
 
-            // تب جزئیات پست‌ها
             TabPage tabPosDetails = new TabPage("💼 جزئیات پست‌ها")
             {
                 Padding = new Padding(0)
@@ -456,20 +563,17 @@ namespace PersonnelManagementApp
 
         private void SetupFilterCheckedListBox(CheckedListBox clb, ItemCheckEventHandler eventHandler)
         {
-            clb.RightToLeft = RightToLeft.Yes; // شروع متن از راست
-            clb.CheckOnClick = true; // با یک کلیک تیک بخورد
+            clb.RightToLeft = RightToLeft.Yes;
+            clb.CheckOnClick = true;
             clb.BackColor = Color.White;
             clb.Font = new Font(FontSettings.BodyFont.FontFamily, 9F);
             clb.IntegralHeight = false;
             clb.BorderStyle = BorderStyle.FixedSingle;
-
-            // اسکرول افقی ظاهر خیلی بدی می‌داد؛ خاموشش می‌کنیم.
             clb.HorizontalScrollbar = false;
             clb.HorizontalExtent = 0;
             clb.ScrollAlwaysVisible = false;
             clb.ItemHeight = 18;
 
-            // جلوگیری از چندبار اضافه شدن handler
             clb.ItemCheck -= eventHandler;
             clb.ItemCheck += eventHandler;
         }
@@ -572,16 +676,12 @@ namespace PersonnelManagementApp
 
         private void LoadFilterOptions()
         {
-            // برای اینکه کاربر حس نکند بعضی فیلترها «نیستند»،
-            // در شروع همه لیست‌ها را با حالت کلی (همه داده‌ها) پر می‌کنیم.
-
             var allProvinces = analyticsModel.GetAllProvinces().Distinct().OrderBy(x => x).ToList();
 
             clbProvincesFilter.Items.Clear();
             foreach (var p in allProvinces)
                 clbProvincesFilter.Items.Add(p, false);
 
-            // شهرها و امور بر اساس همه استان‌ها
             clbCitiesFilter.Items.Clear();
             foreach (var c in analyticsModel.GetCitiesByProvinces(allProvinces).Distinct().OrderBy(x => x))
                 clbCitiesFilter.Items.Add(c, false);
@@ -590,7 +690,6 @@ namespace PersonnelManagementApp
             foreach (var a in analyticsModel.GetAffairsByProvinces(allProvinces).Distinct().OrderBy(x => x))
                 clbAffairsFilter.Items.Add(a, false);
 
-            // ادارات / نواحی / پست‌ها - با داده کلی
             var allCities = clbCitiesFilter.Items.Cast<string>().ToList();
             var allAffairs = clbAffairsFilter.Items.Cast<string>().ToList();
 
@@ -781,15 +880,22 @@ namespace PersonnelManagementApp
             DateTime? hireFromDate = chkHireDateFilter.Checked ? dtpHireDateFrom.Value : (DateTime?)null;
             DateTime? hireToDate = chkHireDateFilter.Checked ? dtpHireDateTo.Value : (DateTime?)null;
 
+            int? minAgeValue = chkAgeFilter.Checked ? (int)nudMinAge.Value : (int?)null;
+            int? maxAgeValue = chkAgeFilter.Checked ? (int)nudMaxAge.Value : (int?)null;
+
+            int? minExpValue = chkExperienceFilter.Checked ? (int)nudMinExperience.Value : (int?)null;
+            int? maxExpValue = chkExperienceFilter.Checked ? (int)nudMaxExperience.Value : (int?)null;
+
             analyticsModel.SetFilters(selectedProvinces, selectedCities, selectedAffairs, selectedDepts,
                 selectedDistricts, selectedPositions, selectedGenders, selectedEducations, selectedJobLevels,
-                selectedContractTypes, selectedCompanies, selectedWorkShifts, hireFromDate, hireToDate);
+                selectedContractTypes, selectedCompanies, selectedWorkShifts, hireFromDate, hireToDate,
+                minAgeValue, maxAgeValue, minExpValue, maxExpValue);
 
             int filterCount = selectedProvinces.Count + selectedCities.Count + selectedAffairs.Count +
                 selectedDepts.Count + selectedDistricts.Count + selectedPositions.Count +
                 selectedGenders.Count + selectedEducations.Count + selectedJobLevels.Count +
                 selectedContractTypes.Count + selectedCompanies.Count + selectedWorkShifts.Count +
-                (chkHireDateFilter.Checked ? 1 : 0);
+                (chkHireDateFilter.Checked ? 1 : 0) + (chkAgeFilter.Checked ? 1 : 0) + (chkExperienceFilter.Checked ? 1 : 0);
 
             lblFilterInfo.Text = filterCount > 0 ? $"🔴 {filterCount} فیلتر فعال" : "✓ فیلتری فعال نیست";
         }
@@ -810,7 +916,6 @@ namespace PersonnelManagementApp
             }
             else
             {
-                // اگر هیچ استانی انتخاب نشد، همه را نشان بده
                 var allProvinces = analyticsModel.GetAllProvinces().Distinct().OrderBy(x => x).ToList();
                 foreach (var city in analyticsModel.GetCitiesByProvinces(allProvinces).Distinct().OrderBy(x => x))
                     clbCitiesFilter.Items.Add(city, false);
@@ -829,7 +934,6 @@ namespace PersonnelManagementApp
             var selectedCities = clbCitiesFilter.CheckedItems.Cast<string>().ToList();
             var selectedAffairs = clbAffairsFilter.CheckedItems.Cast<string>().ToList();
 
-            // اگر انتخابی نبود، حالت کلی
             if (selectedProvinces.Count == 0)
                 selectedProvinces = analyticsModel.GetAllProvinces().Distinct().OrderBy(x => x).ToList();
 
@@ -845,7 +949,6 @@ namespace PersonnelManagementApp
             foreach (var dept in depts)
                 clbDepartmentsFilter.Items.Add(dept, false);
 
-            // نواحی را هم برای اینکه «دیده شوند» پر می‌کنیم
             if (depts.Count > 0)
             {
                 foreach (var district in analyticsModel.GetDistrictsByDepartments(depts).Distinct().OrderBy(x => x))
@@ -865,7 +968,6 @@ namespace PersonnelManagementApp
             }
             else
             {
-                // اگر اداره انتخاب نشد، لیست نواحی کلی نمایش داده شود
                 var allDepts = clbDepartmentsFilter.Items.Cast<string>().ToList();
                 if (allDepts.Count > 0)
                 {
@@ -887,7 +989,6 @@ namespace PersonnelManagementApp
             }
             else
             {
-                // اگر ناحیه انتخاب نشد، لیست کلی پست‌ها نمایش داده شود
                 var allDistricts = clbDistrictsFilter.Items.Cast<string>().ToList();
                 if (allDistricts.Count > 0)
                 {
@@ -912,6 +1013,8 @@ namespace PersonnelManagementApp
             for (int i = 0; i < clbCompanyFilter.Items.Count; i++) clbCompanyFilter.SetItemChecked(i, false);
             for (int i = 0; i < clbWorkShiftFilter.Items.Count; i++) clbWorkShiftFilter.SetItemChecked(i, false);
             chkHireDateFilter.Checked = false;
+            chkAgeFilter.Checked = false;
+            chkExperienceFilter.Checked = false;
 
             analyticsModel.ClearFilters();
             lblFilterInfo.Text = "✓ فیلتری فعال نیست";
@@ -935,6 +1038,8 @@ namespace PersonnelManagementApp
             LoadEducationPieChart();
             LoadCompanyPieChart();
             LoadWorkShiftPieChart();
+            LoadAgePieChart();
+            LoadWorkExperiencePieChart();
         }
 
         private void LoadSummaryTable()
@@ -1254,6 +1359,66 @@ namespace PersonnelManagementApp
             catch (Exception ex) { MessageBox.Show($"❌ خطا: {ex.Message}"); }
         }
 
+        private void LoadAgePieChart()
+        {
+            try
+            {
+                chartAgePie.Series.Clear();
+                var stats = analyticsModel.GetFilteredAgeStatistics();
+                int total = stats.Sum(x => x.Count);
+
+                Series series = new Series("درصد")
+                {
+                    ChartType = SeriesChartType.Pie,
+                    IsValueShownAsLabel = true,
+                    CustomProperties = "PieLabelStyle=Outside"
+                };
+
+                foreach (var item in stats)
+                {
+                    double pct = total > 0 ? (item.Count * 100.0) / total : 0;
+                    int idx = series.Points.AddXY(item.Name, item.Count);
+                    series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
+                    series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
+                }
+
+                chartAgePie.Series.Add(series);
+                chartAgePie.Titles.Clear();
+                chartAgePie.Titles.Add(new Title("🎂 توزیع بر اساس سن") { Font = FontSettings.HeaderFont });
+            }
+            catch (Exception ex) { MessageBox.Show($"❌ خطا: {ex.Message}"); }
+        }
+
+        private void LoadWorkExperiencePieChart()
+        {
+            try
+            {
+                chartWorkExperiencePie.Series.Clear();
+                var stats = analyticsModel.GetFilteredWorkExperienceStatistics();
+                int total = stats.Sum(x => x.Count);
+
+                Series series = new Series("درصد")
+                {
+                    ChartType = SeriesChartType.Pie,
+                    IsValueShownAsLabel = true,
+                    CustomProperties = "PieLabelStyle=Outside"
+                };
+
+                foreach (var item in stats)
+                {
+                    double pct = total > 0 ? (item.Count * 100.0) / total : 0;
+                    int idx = series.Points.AddXY(item.Name, item.Count);
+                    series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
+                    series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
+                }
+
+                chartWorkExperiencePie.Series.Add(series);
+                chartWorkExperiencePie.Titles.Clear();
+                chartWorkExperiencePie.Titles.Add(new Title("💼 توزیع بر اساس سابقه کاری") { Font = FontSettings.HeaderFont });
+            }
+            catch (Exception ex) { MessageBox.Show($"❌ خطا: {ex.Message}"); }
+        }
+
         private void Chart_MouseClick(object sender, MouseEventArgs e)
         {
             try
@@ -1292,7 +1457,6 @@ namespace PersonnelManagementApp
                 Font = FontSettings.BodyFont
             };
 
-            // =============== DataGridView ===============
             DataGridView dgv = new DataGridView
             {
                 Dock = DockStyle.Fill,
@@ -1325,7 +1489,6 @@ namespace PersonnelManagementApp
             dgv.Columns.Add("HireDate", "تاریخ استخدام");
             dgv.Columns.Add("MobileNumber", "تلفن");
 
-            // سیل‌های اکشن
             DataGridViewButtonColumn editColumn = new DataGridViewButtonColumn
             {
                 Name = "Edit",
@@ -1368,7 +1531,6 @@ namespace PersonnelManagementApp
                     p.DeptName, p.Province, p.ContractType, p.HireDate?.ToString("yyyy/MM/dd"), p.MobileNumber, "ویرایش", "حذف");
             }
 
-            // Event Handler برای کلیک دکمه ها
             dgv.CellClick += (sender, e) =>
             {
                 if (e.ColumnIndex == dgv.Columns["Edit"].Index && e.RowIndex >= 0)
@@ -1383,7 +1545,6 @@ namespace PersonnelManagementApp
                 }
             };
 
-            // =============== پنل دکمه‌های پایین ===============
             Panel bottomPanel = new Panel
             {
                 Dock = DockStyle.Bottom,
