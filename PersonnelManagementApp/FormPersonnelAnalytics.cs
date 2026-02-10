@@ -638,23 +638,105 @@ namespace PersonnelManagementApp
             ApplyChartTypeToChart(chart, type);
         }
 
-        private void ApplyChartTypeToChart(Chart chart, SeriesChartType type)
+        private static bool IsPieType(SeriesChartType type)
         {
-            foreach (Series series in chart.Series)
-            {
-                series.ChartType = type;
+            return type == SeriesChartType.Pie || type == SeriesChartType.Doughnut;
+        }
 
-                if (type == SeriesChartType.Pie || type == SeriesChartType.Doughnut)
+        private SeriesChartType GetChartTypeOrDefault(Chart chart)
+        {
+            if (chart != null && chart.Tag is SeriesChartType type)
+                return type;
+
+            return SeriesChartType.Pie;
+        }
+
+        private void ConfigureChartAreaForType(Chart chart, SeriesChartType type)
+        {
+            if (chart == null || chart.ChartAreas.Count == 0)
+                return;
+
+            var area = chart.ChartAreas[0];
+            bool pie = IsPieType(type);
+
+            // 3D برای نمودارهای میله‌ای/ستونی باعث "روی هم افتادن" و یکپارچه دیده شدن می‌شود
+            area.Area3DStyle.Enable3D = pie;
+            if (pie)
+            {
+                area.Area3DStyle.Inclination = 15;
+                area.Area3DStyle.Rotation = 45;
+            }
+
+            area.AxisX.Enabled = pie ? AxisEnabled.False : AxisEnabled.True;
+            area.AxisY.Enabled = pie ? AxisEnabled.False : AxisEnabled.True;
+
+            area.AxisX.MajorGrid.Enabled = !pie;
+            area.AxisY.MajorGrid.Enabled = !pie;
+            area.AxisX.MajorGrid.LineColor = Color.Gainsboro;
+            area.AxisY.MajorGrid.LineColor = Color.Gainsboro;
+
+            area.AxisX.IsLabelAutoFit = true;
+            area.AxisY.IsLabelAutoFit = true;
+
+            // فاصله‌ی دسته‌ها
+            if (!pie)
+            {
+                if (type == SeriesChartType.Bar || type == SeriesChartType.StackedBar)
                 {
-                    series["PieLabelStyle"] = "Outside";
+                    // در Bar دسته‌ها روی AxisY هستند
+                    area.AxisY.Interval = 1;
+                    area.AxisX.Interval = 0;
+                    area.AxisX.LabelStyle.Angle = 0;
                 }
                 else
                 {
-                    if (series.CustomProperties != null && series.CustomProperties.Contains("PieLabelStyle"))
-                    {
-                        series["PieLabelStyle"] = null;
-                    }
+                    // Column/StackedColumn و... دسته‌ها روی AxisX هستند
+                    area.AxisX.Interval = 1;
+                    area.AxisY.Interval = 0;
+
+                    // اگر تعداد دسته‌ها زیاد باشد، چرخش لیبل‌ها کمک می‌کند
+                    if (chart.Series.Count > 0 && chart.Series[0].Points.Count > 10)
+                        area.AxisX.LabelStyle.Angle = -45;
+                    else
+                        area.AxisX.LabelStyle.Angle = 0;
                 }
+            }
+        }
+
+        private void ConfigureSeriesForType(Series series, SeriesChartType type)
+        {
+            if (series == null)
+                return;
+
+            series.ChartType = type;
+            series.XValueType = ChartValueType.String;
+            series.YValueType = ChartValueType.Int32;
+            series.IsXValueIndexed = true;
+
+            if (IsPieType(type))
+            {
+                series.IsValueShownAsLabel = true;
+                series["PieLabelStyle"] = "Outside";
+            }
+            else
+            {
+                series.IsValueShownAsLabel = true;
+                // پاک کردن تنظیمات Pie اگر قبلا بوده
+                if (series.CustomProperties != null && series.CustomProperties.Contains("PieLabelStyle"))
+                    series["PieLabelStyle"] = null;
+            }
+        }
+
+        private void ApplyChartTypeToChart(Chart chart, SeriesChartType type)
+        {
+            if (chart == null)
+                return;
+
+            ConfigureChartAreaForType(chart, type);
+
+            foreach (Series series in chart.Series)
+            {
+                ConfigureSeriesForType(series, type);
             }
         }
 
@@ -1180,19 +1262,25 @@ namespace PersonnelManagementApp
                 var stats = analyticsModel.GetFilteredDepartmentStatistics();
                 int total = stats.Sum(x => x.Count);
 
-                Series series = new Series("درصد")
-                {
-                    ChartType = SeriesChartType.Pie,
-                    IsValueShownAsLabel = true,
-                    CustomProperties = "PieLabelStyle=Outside"
-                };
+                var type = GetChartTypeOrDefault(chartDepartmentPie);
+                bool pie = IsPieType(type);
+                ConfigureChartAreaForType(chartDepartmentPie, type);
 
-                foreach (var item in stats.Take(15))
+                Series series = new Series("تعداد");
+                ConfigureSeriesForType(series, type);
+
+                var items = pie ? stats.Take(15).ToList() : stats.ToList();
+                foreach (var item in items)
                 {
                     double pct = total > 0 ? (item.Count * 100.0) / total : 0;
                     int idx = series.Points.AddXY(item.Name, item.Count);
-                    series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
+                    series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
+
+                    if (pie)
+                        series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
+                    else
+                        series.Points[idx].Label = item.Count.ToString();
                 }
 
                 chartDepartmentPie.Series.Add(series);
@@ -1221,19 +1309,25 @@ namespace PersonnelManagementApp
                 var stats = analyticsModel.GetFilteredPositionStatistics();
                 int total = stats.Sum(x => x.Count);
 
-                Series series = new Series("درصد")
-                {
-                    ChartType = SeriesChartType.Pie,
-                    IsValueShownAsLabel = true,
-                    CustomProperties = "PieLabelStyle=Outside"
-                };
+                var type = GetChartTypeOrDefault(chartPositionPie);
+                bool pie = IsPieType(type);
+                ConfigureChartAreaForType(chartPositionPie, type);
 
-                foreach (var item in stats.Take(15))
+                Series series = new Series("تعداد");
+                ConfigureSeriesForType(series, type);
+
+                var items = pie ? stats.Take(15).ToList() : stats.ToList();
+                foreach (var item in items)
                 {
                     double pct = total > 0 ? (item.Count * 100.0) / total : 0;
                     int idx = series.Points.AddXY(item.Name, item.Count);
-                    series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
+                    series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
+
+                    if (pie)
+                        series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
+                    else
+                        series.Points[idx].Label = item.Count.ToString();
                 }
 
                 chartPositionPie.Series.Add(series);
@@ -1262,19 +1356,24 @@ namespace PersonnelManagementApp
                 var stats = analyticsModel.GetFilteredGenderStatistics();
                 int total = stats.Sum(x => x.Count);
 
-                Series series = new Series("درصد")
-                {
-                    ChartType = SeriesChartType.Pie,
-                    IsValueShownAsLabel = true,
-                    CustomProperties = "PieLabelStyle=Outside"
-                };
+                var type = GetChartTypeOrDefault(chartGenderPie);
+                bool pie = IsPieType(type);
+                ConfigureChartAreaForType(chartGenderPie, type);
+
+                Series series = new Series("تعداد");
+                ConfigureSeriesForType(series, type);
 
                 foreach (var item in stats)
                 {
                     double pct = total > 0 ? (item.Count * 100.0) / total : 0;
                     int idx = series.Points.AddXY(item.Name, item.Count);
-                    series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
+                    series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
+
+                    if (pie)
+                        series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
+                    else
+                        series.Points[idx].Label = item.Count.ToString();
                 }
 
                 chartGenderPie.Series.Add(series);
@@ -1292,19 +1391,24 @@ namespace PersonnelManagementApp
                 var stats = analyticsModel.GetFilteredJobLevelStatistics();
                 int total = stats.Sum(x => x.Count);
 
-                Series series = new Series("درصد")
-                {
-                    ChartType = SeriesChartType.Pie,
-                    IsValueShownAsLabel = true,
-                    CustomProperties = "PieLabelStyle=Outside"
-                };
+                var type = GetChartTypeOrDefault(chartJobLevelPie);
+                bool pie = IsPieType(type);
+                ConfigureChartAreaForType(chartJobLevelPie, type);
+
+                Series series = new Series("تعداد");
+                ConfigureSeriesForType(series, type);
 
                 foreach (var item in stats)
                 {
                     double pct = total > 0 ? (item.Count * 100.0) / total : 0;
                     int idx = series.Points.AddXY(item.Name, item.Count);
-                    series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
+                    series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
+
+                    if (pie)
+                        series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
+                    else
+                        series.Points[idx].Label = item.Count.ToString();
                 }
 
                 chartJobLevelPie.Series.Add(series);
@@ -1322,19 +1426,24 @@ namespace PersonnelManagementApp
                 var stats = analyticsModel.GetFilteredContractTypeStatistics();
                 int total = stats.Sum(x => x.Count);
 
-                Series series = new Series("درصد")
-                {
-                    ChartType = SeriesChartType.Pie,
-                    IsValueShownAsLabel = true,
-                    CustomProperties = "PieLabelStyle=Outside"
-                };
+                var type = GetChartTypeOrDefault(chartContractTypePie);
+                bool pie = IsPieType(type);
+                ConfigureChartAreaForType(chartContractTypePie, type);
+
+                Series series = new Series("تعداد");
+                ConfigureSeriesForType(series, type);
 
                 foreach (var item in stats)
                 {
                     double pct = total > 0 ? (item.Count * 100.0) / total : 0;
                     int idx = series.Points.AddXY(item.Name, item.Count);
-                    series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
+                    series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
+
+                    if (pie)
+                        series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
+                    else
+                        series.Points[idx].Label = item.Count.ToString();
                 }
 
                 chartContractTypePie.Series.Add(series);
@@ -1352,19 +1461,25 @@ namespace PersonnelManagementApp
                 var stats = analyticsModel.GetFilteredProvinceStatistics();
                 int total = stats.Sum(x => x.Count);
 
-                Series series = new Series("درصد")
-                {
-                    ChartType = SeriesChartType.Pie,
-                    IsValueShownAsLabel = true,
-                    CustomProperties = "PieLabelStyle=Outside"
-                };
+                var type = GetChartTypeOrDefault(chartProvincePie);
+                bool pie = IsPieType(type);
+                ConfigureChartAreaForType(chartProvincePie, type);
 
-                foreach (var item in stats.Take(20))
+                Series series = new Series("تعداد");
+                ConfigureSeriesForType(series, type);
+
+                var items = pie ? stats.Take(20).ToList() : stats.ToList();
+                foreach (var item in items)
                 {
                     double pct = total > 0 ? (item.Count * 100.0) / total : 0;
                     int idx = series.Points.AddXY(item.Name, item.Count);
-                    series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
+                    series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
+
+                    if (pie)
+                        series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
+                    else
+                        series.Points[idx].Label = item.Count.ToString();
                 }
 
                 chartProvincePie.Series.Add(series);
@@ -1382,19 +1497,24 @@ namespace PersonnelManagementApp
                 var stats = analyticsModel.GetFilteredEducationStatistics();
                 int total = stats.Sum(x => x.Count);
 
-                Series series = new Series("درصد")
-                {
-                    ChartType = SeriesChartType.Pie,
-                    IsValueShownAsLabel = true,
-                    CustomProperties = "PieLabelStyle=Outside"
-                };
+                var type = GetChartTypeOrDefault(chartEducationPie);
+                bool pie = IsPieType(type);
+                ConfigureChartAreaForType(chartEducationPie, type);
+
+                Series series = new Series("تعداد");
+                ConfigureSeriesForType(series, type);
 
                 foreach (var item in stats)
                 {
                     double pct = total > 0 ? (item.Count * 100.0) / total : 0;
                     int idx = series.Points.AddXY(item.Name, item.Count);
-                    series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
+                    series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
+
+                    if (pie)
+                        series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
+                    else
+                        series.Points[idx].Label = item.Count.ToString();
                 }
 
                 chartEducationPie.Series.Add(series);
@@ -1412,19 +1532,24 @@ namespace PersonnelManagementApp
                 var stats = analyticsModel.GetFilteredCompanyStatistics();
                 int total = stats.Sum(x => x.Count);
 
-                Series series = new Series("درصد")
-                {
-                    ChartType = SeriesChartType.Pie,
-                    IsValueShownAsLabel = true,
-                    CustomProperties = "PieLabelStyle=Outside"
-                };
+                var type = GetChartTypeOrDefault(chartCompanyPie);
+                bool pie = IsPieType(type);
+                ConfigureChartAreaForType(chartCompanyPie, type);
+
+                Series series = new Series("تعداد");
+                ConfigureSeriesForType(series, type);
 
                 foreach (var item in stats)
                 {
                     double pct = total > 0 ? (item.Count * 100.0) / total : 0;
                     int idx = series.Points.AddXY(item.Name, item.Count);
-                    series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
+                    series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
+
+                    if (pie)
+                        series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
+                    else
+                        series.Points[idx].Label = item.Count.ToString();
                 }
 
                 chartCompanyPie.Series.Add(series);
@@ -1442,19 +1567,24 @@ namespace PersonnelManagementApp
                 var stats = analyticsModel.GetFilteredWorkShiftStatistics();
                 int total = stats.Sum(x => x.Count);
 
-                Series series = new Series("درصد")
-                {
-                    ChartType = SeriesChartType.Pie,
-                    IsValueShownAsLabel = true,
-                    CustomProperties = "PieLabelStyle=Outside"
-                };
+                var type = GetChartTypeOrDefault(chartWorkShiftPie);
+                bool pie = IsPieType(type);
+                ConfigureChartAreaForType(chartWorkShiftPie, type);
+
+                Series series = new Series("تعداد");
+                ConfigureSeriesForType(series, type);
 
                 foreach (var item in stats)
                 {
                     double pct = total > 0 ? (item.Count * 100.0) / total : 0;
                     int idx = series.Points.AddXY(item.Name, item.Count);
-                    series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
+                    series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
+
+                    if (pie)
+                        series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
+                    else
+                        series.Points[idx].Label = item.Count.ToString();
                 }
 
                 chartWorkShiftPie.Series.Add(series);
@@ -1472,19 +1602,24 @@ namespace PersonnelManagementApp
                 var stats = analyticsModel.GetFilteredAgeStatistics();
                 int total = stats.Sum(x => x.Count);
 
-                Series series = new Series("درصد")
-                {
-                    ChartType = SeriesChartType.Pie,
-                    IsValueShownAsLabel = true,
-                    CustomProperties = "PieLabelStyle=Outside"
-                };
+                var type = GetChartTypeOrDefault(chartAgePie);
+                bool pie = IsPieType(type);
+                ConfigureChartAreaForType(chartAgePie, type);
+
+                Series series = new Series("تعداد");
+                ConfigureSeriesForType(series, type);
 
                 foreach (var item in stats)
                 {
                     double pct = total > 0 ? (item.Count * 100.0) / total : 0;
                     int idx = series.Points.AddXY(item.Name, item.Count);
-                    series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
+                    series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
+
+                    if (pie)
+                        series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
+                    else
+                        series.Points[idx].Label = item.Count.ToString();
                 }
 
                 chartAgePie.Series.Add(series);
@@ -1502,19 +1637,24 @@ namespace PersonnelManagementApp
                 var stats = analyticsModel.GetFilteredWorkExperienceStatistics();
                 int total = stats.Sum(x => x.Count);
 
-                Series series = new Series("درصد")
-                {
-                    ChartType = SeriesChartType.Pie,
-                    IsValueShownAsLabel = true,
-                    CustomProperties = "PieLabelStyle=Outside"
-                };
+                var type = GetChartTypeOrDefault(chartWorkExperiencePie);
+                bool pie = IsPieType(type);
+                ConfigureChartAreaForType(chartWorkExperiencePie, type);
+
+                Series series = new Series("تعداد");
+                ConfigureSeriesForType(series, type);
 
                 foreach (var item in stats)
                 {
                     double pct = total > 0 ? (item.Count * 100.0) / total : 0;
                     int idx = series.Points.AddXY(item.Name, item.Count);
-                    series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
+                    series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
+
+                    if (pie)
+                        series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
+                    else
+                        series.Points[idx].Label = item.Count.ToString();
                 }
 
                 chartWorkExperiencePie.Series.Add(series);
@@ -1536,6 +1676,8 @@ namespace PersonnelManagementApp
                 {
                     int pointIndex = result.PointIndex;
                     DataPoint point = result.Series.Points[pointIndex];
+
+                    // برای نمودارهای Bar/Column از AxisLabel استفاده می‌کنیم و برای Pie هم به صورت دستی ست شده
                     string itemName = point.AxisLabel;
 
                     var personnel = analyticsModel.GetPersonnelByFilter(itemName, chart);
