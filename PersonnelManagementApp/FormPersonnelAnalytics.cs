@@ -109,18 +109,19 @@ namespace PersonnelManagementApp
             Text = "🎯 تحلیل دادههای پرسنل - سیستم پیشرفته";
             WindowState = FormWindowState.Maximized;
             RightToLeft = RightToLeft.Yes;
+            RightToLeftLayout = true;
             BackColor = Color.FromArgb(240, 248, 255);
             MinimumSize = new Size(1200, 700);
             Font = FontSettings.BodyFont;
 
-            // ========== پنل فیلتر (دو ردیف) ==========
+            // ========== پنل فیلتر (دو ردیف + بخش پایین) ==========
             Panel panelFilter = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 330,
+                Height = 380,
                 BackColor = Color.FromArgb(230, 240, 250),
                 BorderStyle = BorderStyle.FixedSingle,
-                AutoScroll = false,
+                AutoScroll = true,
                 Padding = new Padding(8, 8, 8, 6)
             };
 
@@ -128,7 +129,7 @@ namespace PersonnelManagementApp
             TableLayoutPanel filterGrid = new TableLayoutPanel
             {
                 Dock = DockStyle.Top,
-                Height = 245,
+                Height = 255,
                 ColumnCount = 6,
                 RowCount = 2,
                 RightToLeft = RightToLeft.Yes,
@@ -157,32 +158,33 @@ namespace PersonnelManagementApp
 
             panelFilter.Controls.Add(filterGrid);
 
-            // پایین پنل فیلتر: تاریخ استخدام + دکمه پاک کردن + پیام وضعیت
+            // پایین پنل فیلتر: تاریخ استخدام + دکمه غیرفعال کردن + پیام وضعیت
             Panel filterBottomPanel = new Panel
             {
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Top,
+                Height = 92,
                 BackColor = Color.Transparent
             };
 
             FlowLayoutPanel rowActions = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
-                Height = 42,
+                Height = 48,
                 RightToLeft = RightToLeft.Yes,
                 FlowDirection = FlowDirection.RightToLeft,
-                WrapContents = false,
+                WrapContents = true,
                 BackColor = Color.Transparent,
                 Padding = new Padding(0, 2, 0, 0)
             };
 
-            btnClearFilters.Text = "🔄 پاک کردن فیلترها";
-            btnClearFilters.Size = new Size(170, 32);
+            btnClearFilters.Text = "🔄 غیرفعال کردن فیلترها";
+            btnClearFilters.Size = new Size(185, 34);
             btnClearFilters.BackColor = Color.FromArgb(220, 53, 69);
             btnClearFilters.ForeColor = Color.White;
             btnClearFilters.Font = new Font(FontSettings.ButtonFont.FontFamily, 9.5F, FontStyle.Bold);
             btnClearFilters.FlatStyle = FlatStyle.Flat;
             btnClearFilters.FlatAppearance.BorderSize = 0;
-            btnClearFilters.Margin = new Padding(6, 4, 6, 4);
+            btnClearFilters.Margin = new Padding(6, 6, 6, 4);
             btnClearFilters.Click += BtnClearFilters_Click;
 
             Label lblHireDate = new Label
@@ -191,7 +193,7 @@ namespace PersonnelManagementApp
                 AutoSize = true,
                 Font = new Font(FontSettings.SubtitleFont.FontFamily, 9.5F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 102, 204),
-                Margin = new Padding(6, 9, 6, 4)
+                Margin = new Padding(6, 11, 6, 4)
             };
 
             chkHireDateFilter = new CheckBox
@@ -199,18 +201,18 @@ namespace PersonnelManagementApp
                 Text = "فعال",
                 AutoSize = true,
                 Font = new Font(FontSettings.BodyFont.FontFamily, 9F),
-                Margin = new Padding(6, 9, 6, 4)
+                Margin = new Padding(6, 11, 6, 4)
             };
             chkHireDateFilter.CheckedChanged += ChkHireDateFilter_CheckedChanged;
 
             dtpHireDateFrom = new DateTimePicker
             {
-                Size = new Size(135, 26),
+                Size = new Size(140, 28),
                 Font = new Font(FontSettings.TextBoxFont.FontFamily, 9F),
                 Enabled = false,
                 Value = DateTime.Now.AddYears(-10),
                 Format = DateTimePickerFormat.Short,
-                Margin = new Padding(6, 6, 6, 4)
+                Margin = new Padding(6, 8, 6, 4)
             };
 
             Label lblTo = new Label
@@ -218,17 +220,17 @@ namespace PersonnelManagementApp
                 Text = "تا",
                 AutoSize = true,
                 Font = new Font(FontSettings.LabelFont.FontFamily, 9F),
-                Margin = new Padding(6, 9, 6, 4)
+                Margin = new Padding(6, 11, 6, 4)
             };
 
             dtpHireDateTo = new DateTimePicker
             {
-                Size = new Size(135, 26),
+                Size = new Size(140, 28),
                 Font = new Font(FontSettings.TextBoxFont.FontFamily, 9F),
                 Enabled = false,
                 Value = DateTime.Now,
                 Format = DateTimePickerFormat.Short,
-                Margin = new Padding(6, 6, 6, 4)
+                Margin = new Padding(6, 8, 6, 4)
             };
 
             rowActions.Controls.Add(btnClearFilters);
@@ -240,27 +242,41 @@ namespace PersonnelManagementApp
 
             lblFilterInfo.Text = "✓ فیلتری فعال نیست";
             lblFilterInfo.Dock = DockStyle.Bottom;
-            lblFilterInfo.Height = 26;
+            lblFilterInfo.Height = 32;
             lblFilterInfo.Font = new Font(FontSettings.SubtitleFont.FontFamily, 9.5F, FontStyle.Bold);
             lblFilterInfo.ForeColor = Color.FromArgb(0, 102, 204);
             lblFilterInfo.TextAlign = ContentAlignment.MiddleLeft;
 
-            filterBottomPanel.Controls.Add(rowActions);
             filterBottomPanel.Controls.Add(lblFilterInfo);
+            filterBottomPanel.Controls.Add(rowActions);
+
             panelFilter.Controls.Add(filterBottomPanel);
 
-            // ========== SplitContainer: بالا نمودارها (2/3) - پایین جدول‌ها (1/3) ==========
-            SplitContainer mainSplit = new SplitContainer
+            // ========== Layout اصلی: چپ نمودارها (2/3) - راست جدول‌ها (1/3) ==========
+            // کاربر گفته بالا/پایین نمی‌خواهد، چپ/راست می‌خواهد.
+            TableLayoutPanel mainLayout = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                Orientation = Orientation.Horizontal,
-                FixedPanel = FixedPanel.None,
-                SplitterWidth = 6
+                ColumnCount = 2,
+                RowCount = 1,
+                RightToLeft = RightToLeft.No, // برای اینکه ستون 0 همیشه سمت چپ باشد
+                BackColor = Color.Transparent
+            };
+            mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 66f));
+            mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 34f));
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+
+            // ========== چپ: نمودارها ==========
+            Panel chartsPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
+                Padding = new Padding(6)
             };
 
-            // ========== بالا: نمودارها (TabControl) ==========
             tabControl.Dock = DockStyle.Fill;
             tabControl.RightToLeft = RightToLeft.Yes;
+            tabControl.RightToLeftLayout = true;
             tabControl.ItemSize = new Size(120, 30);
             tabControl.Font = FontSettings.BodyFont;
 
@@ -274,10 +290,10 @@ namespace PersonnelManagementApp
             AddChartTab(tabControl, "🏢 شرکت", chartCompanyPie, null);
             AddChartTab(tabControl, "⏰ شیفت", chartWorkShiftPie, null);
 
-            mainSplit.Panel1.Controls.Add(tabControl);
+            chartsPanel.Controls.Add(tabControl);
 
-            // ========== پایین: جدول آماری/خلاصه ==========
-            Panel statsPanel = new Panel
+            // ========== راست: جدول‌ها ==========
+            Panel tablesPanel = new Panel
             {
                 Dock = DockStyle.Fill,
                 BackColor = Color.White,
@@ -287,14 +303,14 @@ namespace PersonnelManagementApp
             Panel radioPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 40,
+                Height = 42,
                 BackColor = Color.FromArgb(230, 240, 250)
             };
 
             rbShowSummary = new RadioButton
             {
                 Text = "📊 خلاصه آماری",
-                Location = new Point(10, 9),
+                Location = new Point(10, 10),
                 Size = new Size(150, 25),
                 Checked = true,
                 Font = FontSettings.ButtonFont
@@ -305,7 +321,7 @@ namespace PersonnelManagementApp
             rbShowFullStats = new RadioButton
             {
                 Text = "📋 جدول کامل آمار",
-                Location = new Point(170, 9),
+                Location = new Point(170, 10),
                 Size = new Size(170, 25),
                 Font = FontSettings.ButtonFont
             };
@@ -326,83 +342,14 @@ namespace PersonnelManagementApp
             dgvPersonnelStats.DefaultCellStyle.Font = FontSettings.BodyFont;
             dgvPersonnelStats.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(240, 248, 255);
 
-            statsPanel.Controls.Add(dgvPersonnelStats);
-            statsPanel.Controls.Add(radioPanel);
+            tablesPanel.Controls.Add(dgvPersonnelStats);
+            tablesPanel.Controls.Add(radioPanel);
 
-            mainSplit.Panel2.Controls.Add(statsPanel);
+            mainLayout.Controls.Add(chartsPanel, 0, 0);
+            mainLayout.Controls.Add(tablesPanel, 1, 0);
 
-            Controls.Add(mainSplit);
+            Controls.Add(mainLayout);
             Controls.Add(panelFilter);
-
-            // جلوگیری از خطای SplitterDistance (وقتی فرم هنوز اندازه نگرفته یا خیلی کوچک می‌شود)
-            Shown += (s, e) =>
-            {
-                BeginInvoke((MethodInvoker)delegate
-                {
-                    ApplyMainSplitSizing(mainSplit);
-                });
-            };
-            Resize += (s, e) =>
-            {
-                ApplyMainSplitSizing(mainSplit);
-            };
-        }
-
-        private void ApplyMainSplitSizing(SplitContainer mainSplit)
-        {
-            if (mainSplit == null || mainSplit.IsDisposed)
-                return;
-
-            int total = mainSplit.Orientation == Orientation.Horizontal ? mainSplit.Height : mainSplit.Width;
-            if (total <= 0)
-                return;
-
-            const int desiredPanel1Min = 250;
-            const int desiredPanel2Min = 220;
-
-            // فقط وقتی مین‌سایزها را اعمال کن که واقعاً جا باشد؛
-            // وگرنه خود WinForms هنگام ApplyPanel2MinSize ممکن است SplitterDistance نامعتبر تولید کند.
-            if (total > desiredPanel1Min + desiredPanel2Min + mainSplit.SplitterWidth)
-            {
-                mainSplit.Panel1MinSize = desiredPanel1Min;
-                mainSplit.Panel2MinSize = desiredPanel2Min;
-                SetSplitDistanceSafe(mainSplit, 0.66);
-            }
-            else
-            {
-                // حالت پنجره خیلی کوچک
-                mainSplit.Panel1MinSize = 50;
-                mainSplit.Panel2MinSize = 50;
-                SetSplitDistanceSafe(mainSplit, 0.5);
-            }
-        }
-
-        private void SetSplitDistanceSafe(SplitContainer sc, double ratio)
-        {
-            if (sc == null || sc.IsDisposed)
-                return;
-
-            int total = sc.Orientation == Orientation.Horizontal ? sc.Height : sc.Width;
-            if (total <= 0)
-                return;
-
-            int min1 = sc.Panel1MinSize;
-            int max = total - sc.Panel2MinSize - sc.SplitterWidth;
-            if (max < min1)
-                return;
-
-            int desired = (int)(total * ratio);
-            if (desired < min1) desired = min1;
-            if (desired > max) desired = max;
-
-            try
-            {
-                sc.SplitterDistance = desired;
-            }
-            catch
-            {
-                // ignore
-            }
         }
 
         private Panel CreateFilterBox(string title, CheckedListBox clb, ItemCheckEventHandler eventHandler)
@@ -437,37 +384,18 @@ namespace PersonnelManagementApp
 
         private void SetupFilterCheckedListBox(CheckedListBox clb, ItemCheckEventHandler eventHandler)
         {
-            clb.RightToLeft = RightToLeft.Yes;
-            clb.ItemCheck -= eventHandler;
-            clb.ItemCheck += eventHandler;
+            clb.RightToLeft = RightToLeft.Yes; // شروع متن از راست
+            clb.CheckOnClick = true; // با یک کلیک تیک بخورد
             clb.BackColor = Color.White;
             clb.Font = new Font(FontSettings.BodyFont.FontFamily, 9F);
             clb.IntegralHeight = false;
+            clb.BorderStyle = BorderStyle.FixedSingle;
             clb.HorizontalScrollbar = true;
-            clb.HorizontalExtent = 2000; // برای اینکه متن‌های طولانی قطع نشوند (با اسکرول افقی)
-        }
+            clb.HorizontalExtent = 2000; // متن‌های طولانی قطع نشوند (اسکرول افقی)
 
-        private void CreateFilterColumn(Panel parent, string title, CheckedListBox clb, int x, int y, int width, int height, ItemCheckEventHandler eventHandler)
-        {
-            // (این متد از نسخه قبلی باقی مانده و فعلاً استفاده نمی‌شود)
-            Label lbl = new Label
-            {
-                Text = title,
-                Location = new Point(x, y),
-                Size = new Size(width, 18),
-                Font = new Font(FontSettings.SubtitleFont.FontFamily, 9F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(0, 102, 204)
-            };
-            parent.Controls.Add(lbl);
-
-            clb.Location = new Point(x, y + 22);
-            clb.Size = new Size(width, height - 22);
-            clb.RightToLeft = RightToLeft.Yes;
+            // جلوگیری از چندبار اضافه شدن handler
+            clb.ItemCheck -= eventHandler;
             clb.ItemCheck += eventHandler;
-            clb.BackColor = Color.White;
-            clb.Font = new Font(FontSettings.BodyFont.FontFamily, 8F);
-            clb.IntegralHeight = false;
-            parent.Controls.Add(clb);
         }
 
         private void RbShowSummary_CheckedChanged(object sender, EventArgs e)
@@ -568,9 +496,46 @@ namespace PersonnelManagementApp
 
         private void LoadFilterOptions()
         {
+            // برای اینکه کاربر حس نکند بعضی فیلترها «نیستند»،
+            // در شروع همه لیست‌ها را با حالت کلی (همه داده‌ها) پر می‌کنیم.
+
+            var allProvinces = analyticsModel.GetAllProvinces().Distinct().OrderBy(x => x).ToList();
+
             clbProvincesFilter.Items.Clear();
-            foreach (var p in analyticsModel.GetAllProvinces())
+            foreach (var p in allProvinces)
                 clbProvincesFilter.Items.Add(p, false);
+
+            // شهرها و امور بر اساس همه استان‌ها
+            clbCitiesFilter.Items.Clear();
+            foreach (var c in analyticsModel.GetCitiesByProvinces(allProvinces).Distinct().OrderBy(x => x))
+                clbCitiesFilter.Items.Add(c, false);
+
+            clbAffairsFilter.Items.Clear();
+            foreach (var a in analyticsModel.GetAffairsByProvinces(allProvinces).Distinct().OrderBy(x => x))
+                clbAffairsFilter.Items.Add(a, false);
+
+            // ادارات / نواحی / پست‌ها - با داده کلی
+            var allCities = clbCitiesFilter.Items.Cast<string>().ToList();
+            var allAffairs = clbAffairsFilter.Items.Cast<string>().ToList();
+
+            var allDepts = analyticsModel.GetDepartmentsByFilters(allProvinces, allCities, allAffairs).Distinct().OrderBy(x => x).ToList();
+            clbDepartmentsFilter.Items.Clear();
+            foreach (var d in allDepts)
+                clbDepartmentsFilter.Items.Add(d, false);
+
+            var allDistricts = allDepts.Count > 0
+                ? analyticsModel.GetDistrictsByDepartments(allDepts).Distinct().OrderBy(x => x).ToList()
+                : new List<string>();
+            clbDistrictsFilter.Items.Clear();
+            foreach (var dist in allDistricts)
+                clbDistrictsFilter.Items.Add(dist, false);
+
+            var allPositions = allDistricts.Count > 0
+                ? analyticsModel.GetPositionsByDistricts(allDistricts).Distinct().OrderBy(x => x).ToList()
+                : new List<string>();
+            clbPositionsFilter.Items.Clear();
+            foreach (var pos in allPositions)
+                clbPositionsFilter.Items.Add(pos, false);
 
             clbGenderFilter.Items.Clear();
             foreach (var g in analyticsModel.GetAllGenders())
@@ -603,6 +568,7 @@ namespace PersonnelManagementApp
             {
                 UpdateFilters();
                 UpdateCitiesAndAffairs();
+                UpdateDepartmentsAndDistricts();
                 RefreshAllCharts();
             });
         }
@@ -766,20 +732,48 @@ namespace PersonnelManagementApp
                 foreach (var affair in analyticsModel.GetAffairsByProvinces(selectedProvinces).Distinct().OrderBy(x => x))
                     clbAffairsFilter.Items.Add(affair, false);
             }
+            else
+            {
+                // اگر هیچ استانی انتخاب نشد، همه را نشان بده
+                var allProvinces = analyticsModel.GetAllProvinces().Distinct().OrderBy(x => x).ToList();
+                foreach (var city in analyticsModel.GetCitiesByProvinces(allProvinces).Distinct().OrderBy(x => x))
+                    clbCitiesFilter.Items.Add(city, false);
+
+                foreach (var affair in analyticsModel.GetAffairsByProvinces(allProvinces).Distinct().OrderBy(x => x))
+                    clbAffairsFilter.Items.Add(affair, false);
+            }
         }
 
         private void UpdateDepartmentsAndDistricts()
         {
             clbDepartmentsFilter.Items.Clear();
             clbDistrictsFilter.Items.Clear();
+
             var selectedProvinces = clbProvincesFilter.CheckedItems.Cast<string>().ToList();
             var selectedCities = clbCitiesFilter.CheckedItems.Cast<string>().ToList();
             var selectedAffairs = clbAffairsFilter.CheckedItems.Cast<string>().ToList();
 
-            if (selectedProvinces.Count > 0 || selectedCities.Count > 0 || selectedAffairs.Count > 0)
+            // اگر انتخابی نبود، حالت کلی
+            if (selectedProvinces.Count == 0)
+                selectedProvinces = analyticsModel.GetAllProvinces().Distinct().OrderBy(x => x).ToList();
+
+            if (selectedCities.Count == 0)
+                selectedCities = clbCitiesFilter.Items.Cast<string>().ToList();
+
+            if (selectedAffairs.Count == 0)
+                selectedAffairs = clbAffairsFilter.Items.Cast<string>().ToList();
+
+            var depts = analyticsModel.GetDepartmentsByFilters(selectedProvinces, selectedCities, selectedAffairs)
+                .Distinct().OrderBy(x => x).ToList();
+
+            foreach (var dept in depts)
+                clbDepartmentsFilter.Items.Add(dept, false);
+
+            // نواحی را هم برای اینکه «دیده شوند» پر می‌کنیم
+            if (depts.Count > 0)
             {
-                foreach (var dept in analyticsModel.GetDepartmentsByFilters(selectedProvinces, selectedCities, selectedAffairs).Distinct().OrderBy(x => x))
-                    clbDepartmentsFilter.Items.Add(dept, false);
+                foreach (var district in analyticsModel.GetDistrictsByDepartments(depts).Distinct().OrderBy(x => x))
+                    clbDistrictsFilter.Items.Add(district, false);
             }
         }
 
@@ -793,6 +787,16 @@ namespace PersonnelManagementApp
                 foreach (var district in analyticsModel.GetDistrictsByDepartments(selectedDepts).Distinct().OrderBy(x => x))
                     clbDistrictsFilter.Items.Add(district, false);
             }
+            else
+            {
+                // اگر اداره انتخاب نشد، لیست نواحی کلی نمایش داده شود
+                var allDepts = clbDepartmentsFilter.Items.Cast<string>().ToList();
+                if (allDepts.Count > 0)
+                {
+                    foreach (var district in analyticsModel.GetDistrictsByDepartments(allDepts).Distinct().OrderBy(x => x))
+                        clbDistrictsFilter.Items.Add(district, false);
+                }
+            }
         }
 
         private void UpdatePositions()
@@ -804,6 +808,16 @@ namespace PersonnelManagementApp
             {
                 foreach (var pos in analyticsModel.GetPositionsByDistricts(selectedDistricts).Distinct().OrderBy(x => x))
                     clbPositionsFilter.Items.Add(pos, false);
+            }
+            else
+            {
+                // اگر ناحیه انتخاب نشد، لیست کلی پست‌ها نمایش داده شود
+                var allDistricts = clbDistrictsFilter.Items.Cast<string>().ToList();
+                if (allDistricts.Count > 0)
+                {
+                    foreach (var pos in analyticsModel.GetPositionsByDistricts(allDistricts).Distinct().OrderBy(x => x))
+                        clbPositionsFilter.Items.Add(pos, false);
+                }
             }
         }
 
@@ -1196,6 +1210,7 @@ namespace PersonnelManagementApp
                 Size = new Size(1400, 800),
                 StartPosition = FormStartPosition.CenterScreen,
                 RightToLeft = RightToLeft.Yes,
+                RightToLeftLayout = true,
                 BackColor = Color.FromArgb(240, 248, 255),
                 WindowState = FormWindowState.Maximized,
                 Font = FontSettings.BodyFont
