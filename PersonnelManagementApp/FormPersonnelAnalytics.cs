@@ -62,6 +62,8 @@ namespace PersonnelManagementApp
         private RadioButton rbShowSummary;
         private RadioButton rbShowFullStats;
 
+        private ContextMenuStrip chartTypeMenu;
+
         public FormPersonnelAnalytics()
         {
             dbHelper = new DbHelper();
@@ -105,6 +107,7 @@ namespace PersonnelManagementApp
 
             InitializeComponent();
             BuildUI();
+            InitializeChartTypeMenu();
 
             FontSettings.ApplyFontToForm(this);
 
@@ -578,6 +581,106 @@ namespace PersonnelManagementApp
             clb.ItemCheck += eventHandler;
         }
 
+        private void InitializeChartTypeMenu()
+        {
+            chartTypeMenu = new ContextMenuStrip
+            {
+                RightToLeft = RightToLeft.Yes,
+                ShowImageMargin = false
+            };
+
+            AddChartTypeMenuItem("نمودار دایره‌ای (Pie)", SeriesChartType.Pie);
+            AddChartTypeMenuItem("نمودار حلقه‌ای (Doughnut)", SeriesChartType.Doughnut);
+            AddChartTypeMenuItem("نمودار میله‌ای افقی (Bar)", SeriesChartType.Bar);
+            AddChartTypeMenuItem("نمودار ستونی عمودی (Column)", SeriesChartType.Column);
+            AddChartTypeMenuItem("نمودار راداری (Radar)", SeriesChartType.Radar);
+            AddChartTypeMenuItem("نمودار قطبی (Polar)", SeriesChartType.Polar);
+            AddChartTypeMenuItem("میله‌ای انباشته (StackedBar)", SeriesChartType.StackedBar);
+            AddChartTypeMenuItem("ستونی انباشته (StackedColumn)", SeriesChartType.StackedColumn);
+
+            chartTypeMenu.ItemClicked += ChartTypeMenu_ItemClicked;
+
+            chartDepartmentPie.ContextMenuStrip = chartTypeMenu;
+            chartPositionPie.ContextMenuStrip = chartTypeMenu;
+            chartGenderPie.ContextMenuStrip = chartTypeMenu;
+            chartJobLevelPie.ContextMenuStrip = chartTypeMenu;
+            chartContractTypePie.ContextMenuStrip = chartTypeMenu;
+            chartProvincePie.ContextMenuStrip = chartTypeMenu;
+            chartEducationPie.ContextMenuStrip = chartTypeMenu;
+            chartCompanyPie.ContextMenuStrip = chartTypeMenu;
+            chartWorkShiftPie.ContextMenuStrip = chartTypeMenu;
+            chartAgePie.ContextMenuStrip = chartTypeMenu;
+            chartWorkExperiencePie.ContextMenuStrip = chartTypeMenu;
+        }
+
+        private void AddChartTypeMenuItem(string text, SeriesChartType type)
+        {
+            var item = new ToolStripMenuItem(text) { Tag = type };
+            chartTypeMenu.Items.Add(item);
+        }
+
+        private void ChartTypeMenu_ItemClicked(object sender, ToolStripItemClickedEventArgs e)
+        {
+            chartTypeMenu.Hide();
+
+            if (e.ClickedItem == null || e.ClickedItem.Tag == null)
+                return;
+
+            if (!(e.ClickedItem.Tag is SeriesChartType type))
+                return;
+
+            var cms = sender as ContextMenuStrip;
+            var chart = cms?.SourceControl as Chart;
+            if (chart == null)
+                return;
+
+            chart.Tag = type;
+            ApplyChartTypeToChart(chart, type);
+        }
+
+        private void ApplyChartTypeToChart(Chart chart, SeriesChartType type)
+        {
+            foreach (Series series in chart.Series)
+            {
+                series.ChartType = type;
+
+                if (type == SeriesChartType.Pie || type == SeriesChartType.Doughnut)
+                {
+                    series["PieLabelStyle"] = "Outside";
+                }
+                else
+                {
+                    if (series.CustomProperties != null && series.CustomProperties.Contains("PieLabelStyle"))
+                    {
+                        series["PieLabelStyle"] = null;
+                    }
+                }
+            }
+        }
+
+        private void ApplyChartTypeFromTag(Chart chart)
+        {
+            if (chart.Tag is SeriesChartType type)
+            {
+                ApplyChartTypeToChart(chart, type);
+            }
+        }
+
+        private void ReapplyChartTypes()
+        {
+            ApplyChartTypeFromTag(chartDepartmentPie);
+            ApplyChartTypeFromTag(chartPositionPie);
+            ApplyChartTypeFromTag(chartGenderPie);
+            ApplyChartTypeFromTag(chartJobLevelPie);
+            ApplyChartTypeFromTag(chartContractTypePie);
+            ApplyChartTypeFromTag(chartProvincePie);
+            ApplyChartTypeFromTag(chartEducationPie);
+            ApplyChartTypeFromTag(chartCompanyPie);
+            ApplyChartTypeFromTag(chartWorkShiftPie);
+            ApplyChartTypeFromTag(chartAgePie);
+            ApplyChartTypeFromTag(chartWorkExperiencePie);
+        }
+
         private void RbShowSummary_CheckedChanged(object sender, EventArgs e)
         {
             if (rbShowSummary.Checked)
@@ -1040,6 +1143,8 @@ namespace PersonnelManagementApp
             LoadWorkShiftPieChart();
             LoadAgePieChart();
             LoadWorkExperiencePieChart();
+
+            ReapplyChartTypes();
         }
 
         private void LoadSummaryTable()
