@@ -25,6 +25,10 @@ namespace PersonnelManagementApp
         private List<string> filteredWorkShifts = new List<string>();
         private DateTime? hireDateFrom = null;
         private DateTime? hireDateTo = null;
+        private int? minAge = null;
+        private int? maxAge = null;
+        private int? minExperience = null;
+        private int? maxExperience = null;
 
         private readonly Dictionary<int, string> provinceCache = new Dictionary<int, string>();
         private readonly Dictionary<int, string> cityCache = new Dictionary<int, string>();
@@ -166,7 +170,8 @@ namespace PersonnelManagementApp
         public void SetFilters(List<string> provinces, List<string> cities, List<string> affairs, List<string> depts,
             List<string> districts, List<string> positions, List<string> genders, List<string> educations,
             List<string> jobLevels, List<string> contractTypes, List<string> companies, List<string> workShifts,
-            DateTime? hireFrom, DateTime? hireTo)
+            DateTime? hireFrom, DateTime? hireTo, int? ageMin = null, int? ageMax = null, 
+            int? expMin = null, int? expMax = null)
         {
             filteredProvinces = provinces ?? new List<string>();
             filteredCities = cities ?? new List<string>();
@@ -182,6 +187,10 @@ namespace PersonnelManagementApp
             filteredWorkShifts = workShifts ?? new List<string>();
             hireDateFrom = hireFrom;
             hireDateTo = hireTo;
+            minAge = ageMin;
+            maxAge = ageMax;
+            minExperience = expMin;
+            maxExperience = expMax;
         }
 
         public void ClearFilters()
@@ -200,6 +209,28 @@ namespace PersonnelManagementApp
             filteredWorkShifts.Clear();
             hireDateFrom = null;
             hireDateTo = null;
+            minAge = null;
+            maxAge = null;
+            minExperience = null;
+            maxExperience = null;
+        }
+
+        private int CalculateAge(DateTime? birthDate)
+        {
+            if (!birthDate.HasValue) return 0;
+            var today = DateTime.Today;
+            int age = today.Year - birthDate.Value.Year;
+            if (birthDate.Value.Date > today.AddYears(-age)) age--;
+            return age;
+        }
+
+        private int CalculateWorkExperience(DateTime? hireDate)
+        {
+            if (!hireDate.HasValue) return 0;
+            var today = DateTime.Today;
+            int years = today.Year - hireDate.Value.Year;
+            if (hireDate.Value.Date > today.AddYears(-years)) years--;
+            return years < 0 ? 0 : years;
         }
 
         private List<PersonnelRecord> GetFiltered()
@@ -244,6 +275,29 @@ namespace PersonnelManagementApp
 
             if (hireDateFrom.HasValue && hireDateTo.HasValue)
                 result = result.Where(p => p.HireDate.HasValue && p.HireDate >= hireDateFrom && p.HireDate <= hireDateTo);
+
+            if (minAge.HasValue || maxAge.HasValue)
+            {
+                result = result.Where(p =>
+                {
+                    int age = CalculateAge(p.BirthDate);
+                    if (age == 0) return false;
+                    if (minAge.HasValue && age < minAge.Value) return false;
+                    if (maxAge.HasValue && age > maxAge.Value) return false;
+                    return true;
+                });
+            }
+
+            if (minExperience.HasValue || maxExperience.HasValue)
+            {
+                result = result.Where(p =>
+                {
+                    int exp = CalculateWorkExperience(p.HireDate);
+                    if (minExperience.HasValue && exp < minExperience.Value) return false;
+                    if (maxExperience.HasValue && exp > maxExperience.Value) return false;
+                    return true;
+                });
+            }
 
             return result.ToList();
         }
@@ -409,6 +463,72 @@ namespace PersonnelManagementApp
                 }).OrderByDescending(x => x.Count).ToList();
         }
 
+        public List<StatisticItem> GetFilteredAgeStatistics()
+        {
+            var filtered = GetFiltered().Where(p => p.BirthDate.HasValue).ToList();
+            var ageGroups = new Dictionary<string, int>
+            {
+                {"10-20 سال", 0},
+                {"21-30 سال", 0},
+                {"31-40 سال", 0},
+                {"41-50 سال", 0},
+                {"51-60 سال", 0},
+                {"61-70 سال", 0},
+                {"71-80 سال", 0},
+                {"81-90 سال", 0},
+                {"91-100 سال", 0}
+            };
+
+            foreach (var person in filtered)
+            {
+                int age = CalculateAge(person.BirthDate);
+                if (age >= 10 && age <= 20) ageGroups["10-20 سال"]++;
+                else if (age >= 21 && age <= 30) ageGroups["21-30 سال"]++;
+                else if (age >= 31 && age <= 40) ageGroups["31-40 سال"]++;
+                else if (age >= 41 && age <= 50) ageGroups["41-50 سال"]++;
+                else if (age >= 51 && age <= 60) ageGroups["51-60 سال"]++;
+                else if (age >= 61 && age <= 70) ageGroups["61-70 سال"]++;
+                else if (age >= 71 && age <= 80) ageGroups["71-80 سال"]++;
+                else if (age >= 81 && age <= 90) ageGroups["81-90 سال"]++;
+                else if (age >= 91 && age <= 100) ageGroups["91-100 سال"]++;
+            }
+
+            return ageGroups.Where(x => x.Value > 0).Select(x => new StatisticItem { Name = x.Key, Count = x.Value }).ToList();
+        }
+
+        public List<StatisticItem> GetFilteredWorkExperienceStatistics()
+        {
+            var filtered = GetFiltered().Where(p => p.HireDate.HasValue).ToList();
+            var expGroups = new Dictionary<string, int>
+            {
+                {"0-5 سال", 0},
+                {"6-10 سال", 0},
+                {"11-15 سال", 0},
+                {"16-20 سال", 0},
+                {"21-25 سال", 0},
+                {"26-30 سال", 0},
+                {"31-35 سال", 0},
+                {"36-40 سال", 0},
+                {"بیش از 40 سال", 0}
+            };
+
+            foreach (var person in filtered)
+            {
+                int exp = CalculateWorkExperience(person.HireDate);
+                if (exp >= 0 && exp <= 5) expGroups["0-5 سال"]++;
+                else if (exp >= 6 && exp <= 10) expGroups["6-10 سال"]++;
+                else if (exp >= 11 && exp <= 15) expGroups["11-15 سال"]++;
+                else if (exp >= 16 && exp <= 20) expGroups["16-20 سال"]++;
+                else if (exp >= 21 && exp <= 25) expGroups["21-25 سال"]++;
+                else if (exp >= 26 && exp <= 30) expGroups["26-30 سال"]++;
+                else if (exp >= 31 && exp <= 35) expGroups["31-35 سال"]++;
+                else if (exp >= 36 && exp <= 40) expGroups["36-40 سال"]++;
+                else if (exp > 40) expGroups["بیش از 40 سال"]++;
+            }
+
+            return expGroups.Where(x => x.Value > 0).Select(x => new StatisticItem { Name = x.Key, Count = x.Value }).ToList();
+        }
+
         public List<PersonnelDetail> GetPersonnelByFilter(string filterValue, Chart chart)
         {
             var filtered = GetFiltered();
@@ -450,6 +570,42 @@ namespace PersonnelManagementApp
             if (title.Contains("شیفت"))
                 return filtered.Where(p => p.WorkShiftID > 0 && workShiftCache.ContainsKey(p.WorkShiftID) && workShiftCache[p.WorkShiftID] == filterValue)
                     .Select(ToDetail).ToList();
+
+            if (title.Contains("سن"))
+            {
+                return filtered.Where(p => p.BirthDate.HasValue).Where(p =>
+                {
+                    int age = CalculateAge(p.BirthDate);
+                    if (filterValue == "10-20 سال") return age >= 10 && age <= 20;
+                    if (filterValue == "21-30 سال") return age >= 21 && age <= 30;
+                    if (filterValue == "31-40 سال") return age >= 31 && age <= 40;
+                    if (filterValue == "41-50 سال") return age >= 41 && age <= 50;
+                    if (filterValue == "51-60 سال") return age >= 51 && age <= 60;
+                    if (filterValue == "61-70 سال") return age >= 61 && age <= 70;
+                    if (filterValue == "71-80 سال") return age >= 71 && age <= 80;
+                    if (filterValue == "81-90 سال") return age >= 81 && age <= 90;
+                    if (filterValue == "91-100 سال") return age >= 91 && age <= 100;
+                    return false;
+                }).Select(ToDetail).ToList();
+            }
+
+            if (title.Contains("سابقه"))
+            {
+                return filtered.Where(p => p.HireDate.HasValue).Where(p =>
+                {
+                    int exp = CalculateWorkExperience(p.HireDate);
+                    if (filterValue == "0-5 سال") return exp >= 0 && exp <= 5;
+                    if (filterValue == "6-10 سال") return exp >= 6 && exp <= 10;
+                    if (filterValue == "11-15 سال") return exp >= 11 && exp <= 15;
+                    if (filterValue == "16-20 سال") return exp >= 16 && exp <= 20;
+                    if (filterValue == "21-25 سال") return exp >= 21 && exp <= 25;
+                    if (filterValue == "26-30 سال") return exp >= 26 && exp <= 30;
+                    if (filterValue == "31-35 سال") return exp >= 31 && exp <= 35;
+                    if (filterValue == "36-40 سال") return exp >= 36 && exp <= 40;
+                    if (filterValue == "بیش از 40 سال") return exp > 40;
+                    return false;
+                }).Select(ToDetail).ToList();
+            }
 
             return new List<PersonnelDetail>();
         }
