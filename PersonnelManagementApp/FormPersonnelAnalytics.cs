@@ -97,10 +97,10 @@ namespace PersonnelManagementApp
 
             InitializeComponent();
             BuildUI();
-            
+
             // اعمال فونت مرکزی
             FontSettings.ApplyFontToForm(this);
-            
+
             LoadData();
         }
 
@@ -113,161 +113,178 @@ namespace PersonnelManagementApp
             MinimumSize = new Size(1200, 700);
             Font = FontSettings.BodyFont;
 
-            // ========== پنل فیلتر فشرده ==========
+            // ========== پنل فیلتر (دو ردیف) ==========
             Panel panelFilter = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 220, // کاهش ارتفاع از 350 به 220
+                Height = 330,
                 BackColor = Color.FromArgb(230, 240, 250),
                 BorderStyle = BorderStyle.FixedSingle,
-                AutoScroll = false // حذف اسکرول
+                AutoScroll = false,
+                Padding = new Padding(8, 8, 8, 6)
             };
 
-            int xPos = 10;
-            int yPos = 10;
-            int colWidth = 130; // کاهش عرض از 180 به 130
-            int colHeight = 150; // کاهش ارتفاع از 280 به 150
+            // جدول 2 ردیفه برای فیلترها (6 ستون در هر ردیف)
+            TableLayoutPanel filterGrid = new TableLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                Height = 245,
+                ColumnCount = 6,
+                RowCount = 2,
+                RightToLeft = RightToLeft.Yes,
+                BackColor = Color.Transparent
+            };
+            for (int i = 0; i < 6; i++)
+                filterGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16.66f));
+            filterGrid.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
+            filterGrid.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
 
-            // استانها
-            CreateFilterColumn(panelFilter, "استانها 🗺️", clbProvincesFilter, xPos, yPos, colWidth, colHeight, ClbProvincesFilter_ItemCheck);
-            xPos += colWidth + 8;
+            // ردیف اول
+            filterGrid.Controls.Add(CreateFilterBox("استانها 🗺️", clbProvincesFilter, ClbProvincesFilter_ItemCheck), 0, 0);
+            filterGrid.Controls.Add(CreateFilterBox("شهرها 🏙️", clbCitiesFilter, ClbCitiesFilter_ItemCheck), 1, 0);
+            filterGrid.Controls.Add(CreateFilterBox("امور 📋", clbAffairsFilter, ClbAffairsFilter_ItemCheck), 2, 0);
+            filterGrid.Controls.Add(CreateFilterBox("ادارات 🏛️", clbDepartmentsFilter, ClbDepartmentsFilter_ItemCheck), 3, 0);
+            filterGrid.Controls.Add(CreateFilterBox("نواحی 🔺", clbDistrictsFilter, ClbDistrictsFilter_ItemCheck), 4, 0);
+            filterGrid.Controls.Add(CreateFilterBox("پستها ⚡", clbPositionsFilter, ClbPositionsFilter_ItemCheck), 5, 0);
 
-            // شهرها
-            CreateFilterColumn(panelFilter, "شهرها 🏙️", clbCitiesFilter, xPos, yPos, colWidth, colHeight, ClbCitiesFilter_ItemCheck);
-            xPos += colWidth + 8;
+            // ردیف دوم
+            filterGrid.Controls.Add(CreateFilterBox("جنسیت 👥", clbGenderFilter, ClbGenderFilter_ItemCheck), 0, 1);
+            filterGrid.Controls.Add(CreateFilterBox("تحصیلات 📚", clbEducationFilter, ClbEducationFilter_ItemCheck), 1, 1);
+            filterGrid.Controls.Add(CreateFilterBox("سطح شغلی 📊", clbJobLevelFilter, ClbJobLevelFilter_ItemCheck), 2, 1);
+            filterGrid.Controls.Add(CreateFilterBox("نوع قرارداد 📄", clbContractTypeFilter, ClbContractTypeFilter_ItemCheck), 3, 1);
+            filterGrid.Controls.Add(CreateFilterBox("شرکت 🏢", clbCompanyFilter, ClbCompanyFilter_ItemCheck), 4, 1);
+            filterGrid.Controls.Add(CreateFilterBox("شیفت کاری ⏰", clbWorkShiftFilter, ClbWorkShiftFilter_ItemCheck), 5, 1);
 
-            // امور
-            CreateFilterColumn(panelFilter, "امور 📋", clbAffairsFilter, xPos, yPos, colWidth, colHeight, ClbAffairsFilter_ItemCheck);
-            xPos += colWidth + 8;
+            panelFilter.Controls.Add(filterGrid);
 
-            // ادارات
-            CreateFilterColumn(panelFilter, "ادارات 🏛️", clbDepartmentsFilter, xPos, yPos, colWidth, colHeight, ClbDepartmentsFilter_ItemCheck);
-            xPos += colWidth + 8;
+            // پایین پنل فیلتر: تاریخ استخدام + دکمه پاک کردن + پیام وضعیت
+            Panel filterBottomPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.Transparent
+            };
 
-            // نواحی
-            CreateFilterColumn(panelFilter, "نواحی 🔺", clbDistrictsFilter, xPos, yPos, colWidth, colHeight, ClbDistrictsFilter_ItemCheck);
-            xPos += colWidth + 8;
+            FlowLayoutPanel rowActions = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                Height = 42,
+                RightToLeft = RightToLeft.Yes,
+                FlowDirection = FlowDirection.RightToLeft,
+                WrapContents = false,
+                BackColor = Color.Transparent,
+                Padding = new Padding(0, 2, 0, 0)
+            };
 
-            // پستها
-            CreateFilterColumn(panelFilter, "پستها ⚡", clbPositionsFilter, xPos, yPos, colWidth, colHeight, ClbPositionsFilter_ItemCheck);
-            xPos += colWidth + 8;
-
-            // جنسیت
-            CreateFilterColumn(panelFilter, "جنسیت 👥", clbGenderFilter, xPos, yPos, colWidth, colHeight, ClbGenderFilter_ItemCheck);
-            xPos += colWidth + 8;
-
-            // تحصیلات
-            CreateFilterColumn(panelFilter, "تحصیلات 📚", clbEducationFilter, xPos, yPos, colWidth, colHeight, ClbEducationFilter_ItemCheck);
-            xPos += colWidth + 8;
-
-            // سطح شغلی
-            CreateFilterColumn(panelFilter, "سطح شغلی 📊", clbJobLevelFilter, xPos, yPos, colWidth, colHeight, ClbJobLevelFilter_ItemCheck);
-            xPos += colWidth + 8;
-
-            // نوع قرارداد
-            CreateFilterColumn(panelFilter, "قرارداد 📄", clbContractTypeFilter, xPos, yPos, colWidth, colHeight, ClbContractTypeFilter_ItemCheck);
-            xPos += colWidth + 8;
-
-            // شرکت
-            CreateFilterColumn(panelFilter, "شرکت 🏢", clbCompanyFilter, xPos, yPos, colWidth, colHeight, ClbCompanyFilter_ItemCheck);
-            xPos += colWidth + 8;
-
-            // شیفت کاری
-            CreateFilterColumn(panelFilter, "شیفت ⏰", clbWorkShiftFilter, xPos, yPos, colWidth, colHeight, ClbWorkShiftFilter_ItemCheck);
-            xPos += colWidth + 8;
-
-            // تاریخ استخدام - سطر دوم
-            yPos += colHeight + 8;
-            xPos = 10;
+            btnClearFilters.Text = "🔄 پاک کردن فیلترها";
+            btnClearFilters.Size = new Size(170, 32);
+            btnClearFilters.BackColor = Color.FromArgb(220, 53, 69);
+            btnClearFilters.ForeColor = Color.White;
+            btnClearFilters.Font = new Font(FontSettings.ButtonFont.FontFamily, 9.5F, FontStyle.Bold);
+            btnClearFilters.FlatStyle = FlatStyle.Flat;
+            btnClearFilters.FlatAppearance.BorderSize = 0;
+            btnClearFilters.Margin = new Padding(6, 4, 6, 4);
+            btnClearFilters.Click += BtnClearFilters_Click;
 
             Label lblHireDate = new Label
             {
                 Text = "📅 تاریخ استخدام",
-                Location = new Point(xPos, yPos),
-                Size = new Size(colWidth, 18),
-                Font = new Font(FontSettings.SubtitleFont.FontFamily, 9F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(0, 102, 204)
+                AutoSize = true,
+                Font = new Font(FontSettings.SubtitleFont.FontFamily, 9.5F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 102, 204),
+                Margin = new Padding(6, 9, 6, 4)
             };
-            panelFilter.Controls.Add(lblHireDate);
 
             chkHireDateFilter = new CheckBox
             {
                 Text = "فعال",
-                Location = new Point(xPos, yPos + 20),
-                Size = new Size(colWidth, 18),
-                Font = new Font(FontSettings.BodyFont.FontFamily, 8F)
+                AutoSize = true,
+                Font = new Font(FontSettings.BodyFont.FontFamily, 9F),
+                Margin = new Padding(6, 9, 6, 4)
             };
             chkHireDateFilter.CheckedChanged += ChkHireDateFilter_CheckedChanged;
-            panelFilter.Controls.Add(chkHireDateFilter);
 
             dtpHireDateFrom = new DateTimePicker
             {
-                Location = new Point(xPos + colWidth + 8, yPos + 20),
-                Size = new Size(colWidth - 10, 22),
-                Font = new Font(FontSettings.TextBoxFont.FontFamily, 8F),
+                Size = new Size(135, 26),
+                Font = new Font(FontSettings.TextBoxFont.FontFamily, 9F),
                 Enabled = false,
                 Value = DateTime.Now.AddYears(-10),
-                Format = DateTimePickerFormat.Short
+                Format = DateTimePickerFormat.Short,
+                Margin = new Padding(6, 6, 6, 4)
             };
-            panelFilter.Controls.Add(dtpHireDateFrom);
 
             Label lblTo = new Label
             {
                 Text = "تا",
-                Location = new Point(xPos + (colWidth + 8) * 2, yPos + 22),
-                Size = new Size(20, 18),
-                Font = new Font(FontSettings.LabelFont.FontFamily, 8F)
+                AutoSize = true,
+                Font = new Font(FontSettings.LabelFont.FontFamily, 9F),
+                Margin = new Padding(6, 9, 6, 4)
             };
-            panelFilter.Controls.Add(lblTo);
 
             dtpHireDateTo = new DateTimePicker
             {
-                Location = new Point(xPos + (colWidth + 8) * 2 + 25, yPos + 20),
-                Size = new Size(colWidth - 10, 22),
-                Font = new Font(FontSettings.TextBoxFont.FontFamily, 8F),
+                Size = new Size(135, 26),
+                Font = new Font(FontSettings.TextBoxFont.FontFamily, 9F),
                 Enabled = false,
                 Value = DateTime.Now,
-                Format = DateTimePickerFormat.Short
+                Format = DateTimePickerFormat.Short,
+                Margin = new Padding(6, 6, 6, 4)
             };
-            panelFilter.Controls.Add(dtpHireDateTo);
 
-            // دکمه پاک کردن
-            btnClearFilters.Text = "🔄 پاک کردن فیلترها";
-            btnClearFilters.Location = new Point(xPos + (colWidth + 8) * 3 + 30, yPos + 18);
-            btnClearFilters.Size = new Size(colWidth + 20, 28);
-            btnClearFilters.BackColor = Color.FromArgb(220, 53, 69);
-            btnClearFilters.ForeColor = Color.White;
-            btnClearFilters.Font = new Font(FontSettings.ButtonFont.FontFamily, 9F, FontStyle.Bold);
-            btnClearFilters.Click += BtnClearFilters_Click;
-            btnClearFilters.FlatStyle = FlatStyle.Flat;
-            panelFilter.Controls.Add(btnClearFilters);
+            rowActions.Controls.Add(btnClearFilters);
+            rowActions.Controls.Add(dtpHireDateTo);
+            rowActions.Controls.Add(lblTo);
+            rowActions.Controls.Add(dtpHireDateFrom);
+            rowActions.Controls.Add(chkHireDateFilter);
+            rowActions.Controls.Add(lblHireDate);
 
-            // اطلاعات فیلتر
             lblFilterInfo.Text = "✓ فیلتری فعال نیست";
-            lblFilterInfo.Location = new Point(10, yPos + 48);
-            lblFilterInfo.Size = new Size(800, 22);
-            lblFilterInfo.Font = new Font(FontSettings.SubtitleFont.FontFamily, 9F, FontStyle.Bold);
+            lblFilterInfo.Dock = DockStyle.Bottom;
+            lblFilterInfo.Height = 26;
+            lblFilterInfo.Font = new Font(FontSettings.SubtitleFont.FontFamily, 9.5F, FontStyle.Bold);
             lblFilterInfo.ForeColor = Color.FromArgb(0, 102, 204);
-            lblFilterInfo.AutoSize = false;
-            panelFilter.Controls.Add(lblFilterInfo);
+            lblFilterInfo.TextAlign = ContentAlignment.MiddleLeft;
 
-            // ========== SplitContainer برای تقسیم صفحه ==========
+            filterBottomPanel.Controls.Add(rowActions);
+            filterBottomPanel.Controls.Add(lblFilterInfo);
+            panelFilter.Controls.Add(filterBottomPanel);
+
+            // ========== SplitContainer: بالا نمودارها (2/3) - پایین جدول‌ها (1/3) ==========
             SplitContainer mainSplit = new SplitContainer
             {
                 Dock = DockStyle.Fill,
-                Orientation = Orientation.Vertical,
-                SplitterDistance = 400 // یک سوم از 1200 پیکسل = 400
+                Orientation = Orientation.Horizontal,
+                FixedPanel = FixedPanel.Panel2,
+                Panel2MinSize = 220,
+                SplitterWidth = 6
             };
 
-            // ========== پنل چپ: جدول آماری/خلاصه آماری ==========
-            Panel leftPanel = new Panel
+            // ========== بالا: نمودارها (TabControl) ==========
+            tabControl.Dock = DockStyle.Fill;
+            tabControl.RightToLeft = RightToLeft.Yes;
+            tabControl.ItemSize = new Size(120, 30);
+            tabControl.Font = FontSettings.BodyFont;
+
+            AddChartTab(tabControl, "📊 ادارات", chartDepartmentPie, dgvDepartmentDetails);
+            AddChartTab(tabControl, "💼 پستها", chartPositionPie, dgvPositionDetails);
+            AddChartTab(tabControl, "👥 جنسیت", chartGenderPie, null);
+            AddChartTab(tabControl, "📈 سطح شغلی", chartJobLevelPie, null);
+            AddChartTab(tabControl, "📋 قرارداد", chartContractTypePie, null);
+            AddChartTab(tabControl, "🗺️ استان", chartProvincePie, null);
+            AddChartTab(tabControl, "📚 تحصیلات", chartEducationPie, null);
+            AddChartTab(tabControl, "🏢 شرکت", chartCompanyPie, null);
+            AddChartTab(tabControl, "⏰ شیفت", chartWorkShiftPie, null);
+
+            mainSplit.Panel1.Controls.Add(tabControl);
+
+            // ========== پایین: جدول آماری/خلاصه ==========
+            Panel statsPanel = new Panel
             {
                 Dock = DockStyle.Fill,
                 BackColor = Color.White,
-                Padding = new Padding(5)
+                Padding = new Padding(6)
             };
 
-            // رادیو باتن‌ها برای انتخاب نمایش
             Panel radioPanel = new Panel
             {
                 Dock = DockStyle.Top,
@@ -278,7 +295,7 @@ namespace PersonnelManagementApp
             rbShowSummary = new RadioButton
             {
                 Text = "📊 خلاصه آماری",
-                Location = new Point(10, 10),
+                Location = new Point(10, 9),
                 Size = new Size(150, 25),
                 Checked = true,
                 Font = FontSettings.ButtonFont
@@ -289,18 +306,15 @@ namespace PersonnelManagementApp
             rbShowFullStats = new RadioButton
             {
                 Text = "📋 جدول کامل آمار",
-                Location = new Point(170, 10),
+                Location = new Point(170, 9),
                 Size = new Size(170, 25),
                 Font = FontSettings.ButtonFont
             };
             rbShowFullStats.CheckedChanged += RbShowFullStats_CheckedChanged;
             radioPanel.Controls.Add(rbShowFullStats);
 
-            leftPanel.Controls.Add(radioPanel);
-
-            // DataGridView برای جدول
             dgvPersonnelStats.Dock = DockStyle.Fill;
-            dgvPersonnelStats.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvPersonnelStats.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
             dgvPersonnelStats.ReadOnly = true;
             dgvPersonnelStats.RightToLeft = RightToLeft.Yes;
             dgvPersonnelStats.BackgroundColor = Color.White;
@@ -312,35 +326,79 @@ namespace PersonnelManagementApp
             dgvPersonnelStats.DefaultCellStyle.BackColor = Color.White;
             dgvPersonnelStats.DefaultCellStyle.Font = FontSettings.BodyFont;
             dgvPersonnelStats.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(240, 248, 255);
-            leftPanel.Controls.Add(dgvPersonnelStats);
 
-            mainSplit.Panel1.Controls.Add(leftPanel);
+            statsPanel.Controls.Add(dgvPersonnelStats);
+            statsPanel.Controls.Add(radioPanel);
 
-            // ========== پنل راست: نمودارها (TabControl) ==========
-            tabControl.Dock = DockStyle.Fill;
-            tabControl.RightToLeft = RightToLeft.Yes;
-            tabControl.ItemSize = new Size(120, 30);
-            tabControl.Font = FontSettings.BodyFont;
-
-            // تمام نمودارها
-            AddChartTab(tabControl, "📊 ادارات", chartDepartmentPie, dgvDepartmentDetails);
-            AddChartTab(tabControl, "💼 پستها", chartPositionPie, dgvPositionDetails);
-            AddChartTab(tabControl, "👥 جنسیت", chartGenderPie, null);
-            AddChartTab(tabControl, "📈 سطح شغلی", chartJobLevelPie, null);
-            AddChartTab(tabControl, "📋 قرارداد", chartContractTypePie, null);
-            AddChartTab(tabControl, "🗺️ استان", chartProvincePie, null);
-            AddChartTab(tabControl, "📚 تحصیلات", chartEducationPie, null);
-            AddChartTab(tabControl, "🏢 شرکت", chartCompanyPie, null);
-            AddChartTab(tabControl, "⏰ شیفت", chartWorkShiftPie, null);
-
-            mainSplit.Panel2.Controls.Add(tabControl);
+            mainSplit.Panel2.Controls.Add(statsPanel);
 
             Controls.Add(mainSplit);
             Controls.Add(panelFilter);
+
+            // تنظیم نسبت 2/3 و 1/3 به صورت داینامیک
+            Shown += (s, e) =>
+            {
+                try
+                {
+                    mainSplit.SplitterDistance = Math.Max(250, (int)(mainSplit.Height * 0.66));
+                }
+                catch { }
+            };
+            Resize += (s, e) =>
+            {
+                try
+                {
+                    mainSplit.SplitterDistance = Math.Max(250, (int)(mainSplit.Height * 0.66));
+                }
+                catch { }
+            };
+        }
+
+        private Panel CreateFilterBox(string title, CheckedListBox clb, ItemCheckEventHandler eventHandler)
+        {
+            Panel box = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Margin = new Padding(5),
+                Padding = new Padding(4),
+                BackColor = Color.FromArgb(245, 252, 255),
+                BorderStyle = BorderStyle.FixedSingle
+            };
+
+            Label lbl = new Label
+            {
+                Text = title,
+                Dock = DockStyle.Top,
+                AutoSize = false,
+                Height = 22,
+                Font = new Font(FontSettings.SubtitleFont.FontFamily, 9.5F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 102, 204),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            SetupFilterCheckedListBox(clb, eventHandler);
+            clb.Dock = DockStyle.Fill;
+
+            box.Controls.Add(clb);
+            box.Controls.Add(lbl);
+            return box;
+        }
+
+        private void SetupFilterCheckedListBox(CheckedListBox clb, ItemCheckEventHandler eventHandler)
+        {
+            clb.RightToLeft = RightToLeft.Yes;
+            clb.ItemCheck -= eventHandler;
+            clb.ItemCheck += eventHandler;
+            clb.BackColor = Color.White;
+            clb.Font = new Font(FontSettings.BodyFont.FontFamily, 9F);
+            clb.IntegralHeight = false;
+            clb.HorizontalScrollbar = true;
+            clb.HorizontalExtent = 2000; // برای اینکه متن‌های طولانی قطع نشوند (با اسکرول افقی)
         }
 
         private void CreateFilterColumn(Panel parent, string title, CheckedListBox clb, int x, int y, int width, int height, ItemCheckEventHandler eventHandler)
         {
+            // (این متد از نسخه قبلی باقی مانده و فعلاً استفاده نمی‌شود)
             Label lbl = new Label
             {
                 Text = title,
@@ -1162,12 +1220,10 @@ namespace PersonnelManagementApp
             };
             dgv.Columns.Add(deleteColumn);
 
-            int rowIndex = 0;
             foreach (var p in personnel)
             {
                 dgv.Rows.Add(p.PersonnelID, p.FirstName, p.LastName, p.PersonnelNumber, p.NationalID, p.PostName,
                     p.DeptName, p.Province, p.ContractType, p.HireDate?.ToString("yyyy/MM/dd"), p.MobileNumber, "ویرایش", "حذف");
-                rowIndex++;
             }
 
             // Event Handler برای کلیک دکمه ها
@@ -1207,7 +1263,6 @@ namespace PersonnelManagementApp
             btnExportExcel.FlatAppearance.BorderSize = 0;
             btnExportExcel.Click += (s, ev) =>
             {
-                // باز کردن فرم انتخاب ستون‌ها
                 using (ExportColumnsForm exportForm = new ExportColumnsForm())
                 {
                     if (exportForm.ShowDialog() == DialogResult.OK)
@@ -1227,18 +1282,15 @@ namespace PersonnelManagementApp
             detailsForm.ShowDialog();
         }
 
-        // =============== متد باز کردن فرم ویرایش ===============
         private void OpenEditForm(int personnelID, Form parentForm)
         {
             try
             {
-                // فرم ویرایش رو باز کنید
                 FormPersonnelEdit editForm = new FormPersonnelEdit();
                 editForm.txtPersonnelID.Text = personnelID.ToString();
                 editForm.BtnLoad_Click(null, EventArgs.Empty);
                 editForm.ShowDialog(parentForm);
-                
-                // بعد از بسته شدن فرم، آپدیت کنید
+
                 RefreshAllCharts();
             }
             catch (Exception ex)
@@ -1247,7 +1299,6 @@ namespace PersonnelManagementApp
             }
         }
 
-        // =============== متد حذف پرسنل ===============
         private void DeletePersonnel(int personnelID, Form parentForm, DataGridView dgv, int rowIndex)
         {
             try
@@ -1260,20 +1311,16 @@ namespace PersonnelManagementApp
 
                 if (result == DialogResult.Yes)
                 {
-                    // دستور حذف از دیتابیس
                     string query = $"DELETE FROM Personnel WHERE PersonnelID = {personnelID}";
                     dbHelper.ExecuteNonQuery(query);
 
                     MessageBox.Show("✅ پرسنل با موفقیت حذف شد.", "موفق", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                    // حذف سطر از جدول
                     dgv.Rows.RemoveAt(rowIndex);
 
-                    // آپدیت نمودارها
                     LoadData();
                     RefreshAllCharts();
 
-                    // اگر جدول خالی شد، فرم رو ببندید
                     if (dgv.Rows.Count == 0)
                     {
                         parentForm.Close();
@@ -1295,7 +1342,6 @@ namespace PersonnelManagementApp
                 dgvPersonnelStats.Columns.Add("Metric", "معیار");
                 dgvPersonnelStats.Columns.Add("Value", "مقدار");
 
-                // خلاصه کلی
                 dgvPersonnelStats.Rows.Add("═══════════════════", "");
                 dgvPersonnelStats.Rows.Add("👥 کل پرسنل", analyticsModel.GetFilteredTotal());
                 dgvPersonnelStats.Rows.Add("🏛️ تعداد ادارهها", analyticsModel.GetFilteredDepartmentCount());
@@ -1307,55 +1353,46 @@ namespace PersonnelManagementApp
                 dgvPersonnelStats.Rows.Add("📚 تعداد مدارک تحصیلی", analyticsModel.EducationCount);
                 dgvPersonnelStats.Rows.Add("⏰ تعداد شیفت‌های کاری", analyticsModel.WorkShiftCount);
 
-                // جنسیت
                 dgvPersonnelStats.Rows.Add("", "");
                 dgvPersonnelStats.Rows.Add("═════ توزیع جنسیت ═════", "");
                 foreach (var g in analyticsModel.GetFilteredGenderStatistics())
                     dgvPersonnelStats.Rows.Add($"  • {g.Name}", g.Count);
 
-                // سطح شغلی
                 dgvPersonnelStats.Rows.Add("", "");
                 dgvPersonnelStats.Rows.Add("════ توزیع سطح شغلی ════", "");
                 foreach (var j in analyticsModel.GetFilteredJobLevelStatistics())
                     dgvPersonnelStats.Rows.Add($"  • {j.Name}", j.Count);
 
-                // نوع قرارداد
                 dgvPersonnelStats.Rows.Add("", "");
                 dgvPersonnelStats.Rows.Add("════ توزیع نوع قرارداد ════", "");
                 foreach (var c in analyticsModel.GetFilteredContractTypeStatistics())
                     dgvPersonnelStats.Rows.Add($"  • {c.Name}", c.Count);
 
-                // ادارات
                 dgvPersonnelStats.Rows.Add("", "");
                 dgvPersonnelStats.Rows.Add("═════════ تمام ادارات ═════════", "");
                 foreach (var d in analyticsModel.GetFilteredDepartmentStatistics())
                     dgvPersonnelStats.Rows.Add($"  • {d.Name}", d.Count);
 
-                // پستها
                 dgvPersonnelStats.Rows.Add("", "");
                 dgvPersonnelStats.Rows.Add("════════ تمام پستهای شغلی ════════", "");
                 foreach (var p in analyticsModel.GetFilteredPositionStatistics())
                     dgvPersonnelStats.Rows.Add($"  • {p.Name}", p.Count);
 
-                // استان‌ها
                 dgvPersonnelStats.Rows.Add("", "");
                 dgvPersonnelStats.Rows.Add("════════════ تمام استان‌ها ════════════", "");
                 foreach (var pr in analyticsModel.GetFilteredProvinceStatistics())
                     dgvPersonnelStats.Rows.Add($"  • {pr.Name}", pr.Count);
 
-                // شرکتها
                 dgvPersonnelStats.Rows.Add("", "");
                 dgvPersonnelStats.Rows.Add("════════════ تمام شرکتها ════════════", "");
                 foreach (var co in analyticsModel.GetFilteredCompanyStatistics())
                     dgvPersonnelStats.Rows.Add($"  • {co.Name}", co.Count);
 
-                // تحصیلات
                 dgvPersonnelStats.Rows.Add("", "");
                 dgvPersonnelStats.Rows.Add("═════════ تمام مدارک تحصیلی ═════════", "");
                 foreach (var e in analyticsModel.GetFilteredEducationStatistics())
                     dgvPersonnelStats.Rows.Add($"  • {e.Name}", e.Count);
 
-                // شیفت کاری
                 dgvPersonnelStats.Rows.Add("", "");
                 dgvPersonnelStats.Rows.Add("═════════ تمام شیفت‌های کاری ═════════", "");
                 foreach (var ws in analyticsModel.GetFilteredWorkShiftStatistics())
