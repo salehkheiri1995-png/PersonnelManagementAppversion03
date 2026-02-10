@@ -118,7 +118,7 @@ namespace PersonnelManagementApp
             Panel panelFilter = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 360,
+                Height = 300,
                 BackColor = Color.FromArgb(230, 240, 250),
                 BorderStyle = BorderStyle.FixedSingle,
                 AutoScroll = true,
@@ -129,7 +129,7 @@ namespace PersonnelManagementApp
             TableLayoutPanel filterGrid = new TableLayoutPanel
             {
                 Dock = DockStyle.Top,
-                Height = 240,
+                Height = 200,
                 ColumnCount = 6,
                 RowCount = 2,
                 RightToLeft = RightToLeft.Yes,
@@ -164,7 +164,7 @@ namespace PersonnelManagementApp
             Panel filterBottomPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 86,
+                Height = 82,
                 BackColor = Color.Transparent,
                 Padding = new Padding(0)
             };
@@ -274,7 +274,7 @@ namespace PersonnelManagementApp
             {
                 Dock = DockStyle.Fill,
                 BackColor = Color.White,
-                Padding = new Padding(6)
+                Padding = new Padding(4)
             };
 
             tabControl.Dock = DockStyle.Fill;
@@ -283,8 +283,9 @@ namespace PersonnelManagementApp
             tabControl.ItemSize = new Size(120, 30);
             tabControl.Font = FontSettings.BodyFont;
 
-            AddChartTab(tabControl, "📊 ادارات", chartDepartmentPie, dgvDepartmentDetails);
-            AddChartTab(tabControl, "💼 پستها", chartPositionPie, dgvPositionDetails);
+            // جدول‌های جزئیاتِ ادارات و پست‌ها از زیر نمودارها حذف شدند و به پنل جدول‌ها (سمت راست) منتقل شدند.
+            AddChartTab(tabControl, "📊 ادارات", chartDepartmentPie, null);
+            AddChartTab(tabControl, "💼 پستها", chartPositionPie, null);
             AddChartTab(tabControl, "👥 جنسیت", chartGenderPie, null);
             AddChartTab(tabControl, "📈 سطح شغلی", chartJobLevelPie, null);
             AddChartTab(tabControl, "📋 قرارداد", chartContractTypePie, null);
@@ -300,7 +301,23 @@ namespace PersonnelManagementApp
             {
                 Dock = DockStyle.Fill,
                 BackColor = Color.White,
-                Padding = new Padding(6)
+                Padding = new Padding(4)
+            };
+
+            // TabControl برای جدول‌ها (آمار + جزئیات ادارات + جزئیات پست‌ها)
+            TabControl tablesTabControl = new TabControl
+            {
+                Dock = DockStyle.Fill,
+                RightToLeft = RightToLeft.Yes,
+                RightToLeftLayout = true,
+                Font = FontSettings.BodyFont,
+                ItemSize = new Size(130, 30)
+            };
+
+            // تب آمار (با رادیوباتن‌ها)
+            TabPage tabStats = new TabPage("📋 آمار")
+            {
+                Padding = new Padding(0)
             };
 
             Panel radioPanel = new Panel
@@ -337,6 +354,8 @@ namespace PersonnelManagementApp
             dgvPersonnelStats.RightToLeft = RightToLeft.Yes;
             dgvPersonnelStats.BackgroundColor = Color.White;
             dgvPersonnelStats.EnableHeadersVisualStyles = false;
+            dgvPersonnelStats.AllowUserToAddRows = false;
+            dgvPersonnelStats.AllowUserToDeleteRows = false;
             dgvPersonnelStats.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 102, 204);
             dgvPersonnelStats.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
             dgvPersonnelStats.ColumnHeadersDefaultCellStyle.Font = FontSettings.SubtitleFont;
@@ -345,8 +364,58 @@ namespace PersonnelManagementApp
             dgvPersonnelStats.DefaultCellStyle.Font = FontSettings.BodyFont;
             dgvPersonnelStats.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(240, 248, 255);
 
-            tablesPanel.Controls.Add(dgvPersonnelStats);
-            tablesPanel.Controls.Add(radioPanel);
+            tabStats.Controls.Add(dgvPersonnelStats);
+            tabStats.Controls.Add(radioPanel);
+
+            // تب جزئیات ادارات
+            TabPage tabDeptDetails = new TabPage("🏛️ جزئیات ادارات")
+            {
+                Padding = new Padding(0)
+            };
+
+            dgvDepartmentDetails.Dock = DockStyle.Fill;
+            dgvDepartmentDetails.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
+            dgvDepartmentDetails.ReadOnly = true;
+            dgvDepartmentDetails.RightToLeft = RightToLeft.Yes;
+            dgvDepartmentDetails.BackgroundColor = Color.White;
+            dgvDepartmentDetails.EnableHeadersVisualStyles = false;
+            dgvDepartmentDetails.AllowUserToAddRows = false;
+            dgvDepartmentDetails.AllowUserToDeleteRows = false;
+            dgvDepartmentDetails.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 102, 204);
+            dgvDepartmentDetails.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            dgvDepartmentDetails.ColumnHeadersDefaultCellStyle.Font = FontSettings.SubtitleFont;
+            dgvDepartmentDetails.ColumnHeadersHeight = 35;
+            dgvDepartmentDetails.DefaultCellStyle.Font = FontSettings.BodyFont;
+            dgvDepartmentDetails.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(240, 248, 255);
+            tabDeptDetails.Controls.Add(dgvDepartmentDetails);
+
+            // تب جزئیات پست‌ها
+            TabPage tabPosDetails = new TabPage("💼 جزئیات پست‌ها")
+            {
+                Padding = new Padding(0)
+            };
+
+            dgvPositionDetails.Dock = DockStyle.Fill;
+            dgvPositionDetails.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
+            dgvPositionDetails.ReadOnly = true;
+            dgvPositionDetails.RightToLeft = RightToLeft.Yes;
+            dgvPositionDetails.BackgroundColor = Color.White;
+            dgvPositionDetails.EnableHeadersVisualStyles = false;
+            dgvPositionDetails.AllowUserToAddRows = false;
+            dgvPositionDetails.AllowUserToDeleteRows = false;
+            dgvPositionDetails.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 102, 204);
+            dgvPositionDetails.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            dgvPositionDetails.ColumnHeadersDefaultCellStyle.Font = FontSettings.SubtitleFont;
+            dgvPositionDetails.ColumnHeadersHeight = 35;
+            dgvPositionDetails.DefaultCellStyle.Font = FontSettings.BodyFont;
+            dgvPositionDetails.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(240, 248, 255);
+            tabPosDetails.Controls.Add(dgvPositionDetails);
+
+            tablesTabControl.TabPages.Add(tabStats);
+            tablesTabControl.TabPages.Add(tabDeptDetails);
+            tablesTabControl.TabPages.Add(tabPosDetails);
+
+            tablesPanel.Controls.Add(tablesTabControl);
 
             mainLayout.Controls.Add(chartsPanel, 0, 0);
             mainLayout.Controls.Add(tablesPanel, 1, 0);
