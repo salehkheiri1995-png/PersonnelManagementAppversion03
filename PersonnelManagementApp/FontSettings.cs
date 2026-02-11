@@ -121,6 +121,9 @@ namespace PersonnelManagementApp
                                 break;
                         }
                     }
+
+                    // 🔥 بررسی مقادیر و تنظیم پیش‌فرض‌ها در صورت نیاز
+                    EnsureValidValues();
                 }
                 else
                 {
@@ -133,6 +136,33 @@ namespace PersonnelManagementApp
                 System.Diagnostics.Debug.WriteLine($"خطا در بارگذاری تنظیمات فونت: {ex.Message}");
                 ResetToDefaults();
             }
+        }
+
+        /// <summary>
+        /// 🔥 بررسی مقادیر و جایگزینی با مقادیر پیش‌فرض در صورت نامعتبر بودن
+        /// </summary>
+        private static void EnsureValidValues()
+        {
+            if (string.IsNullOrWhiteSpace(FontFamilyName))
+                FontFamilyName = DefaultFontFamilyName;
+
+            if (TitleFontSize <= 0)
+                TitleFontSize = DefaultTitleSize;
+
+            if (LabelFontSize <= 0)
+                LabelFontSize = DefaultLabelSize;
+
+            if (TextBoxFontSize <= 0)
+                TextBoxFontSize = DefaultTextBoxSize;
+
+            if (ButtonFontSize <= 0)
+                ButtonFontSize = DefaultButtonSize;
+
+            if (BodyFontSize <= 0)
+                BodyFontSize = DefaultBodySize;
+
+            if (ChartLabelFontSize <= 0)
+                ChartLabelFontSize = DefaultChartLabelSize;
         }
 
         /// <summary>
