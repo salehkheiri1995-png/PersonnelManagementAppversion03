@@ -1587,7 +1587,6 @@ namespace PersonnelManagementApp
                 var items = pie ? stats.Take(20).ToList() : stats.ToList();
                 foreach (var item in items)
                 {
-                {
                     double pct = total > 0 ? (item.Count * 100.0) / total : 0;
                     int idx = series.Points.AddXY(item.Name, item.Count);
                     series.Points[idx].AxisLabel = item.Name;
