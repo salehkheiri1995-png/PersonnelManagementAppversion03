@@ -47,26 +47,26 @@ namespace PersonnelManagementApp
         private readonly Button btnClearFilters;
         private readonly Label lblFilterInfo;
 
-        private DateTimePicker dtpHireDateFrom;
-        private DateTimePicker dtpHireDateTo;
-        private CheckBox chkHireDateFilter;
+        private DateTimePicker? dtpHireDateFrom;
+        private DateTimePicker? dtpHireDateTo;
+        private CheckBox? chkHireDateFilter;
 
-        private NumericUpDown nudMinAge;
-        private NumericUpDown nudMaxAge;
-        private CheckBox chkAgeFilter;
+        private NumericUpDown? nudMinAge;
+        private NumericUpDown? nudMaxAge;
+        private CheckBox? chkAgeFilter;
 
-        private NumericUpDown nudMinExperience;
-        private NumericUpDown nudMaxExperience;
-        private CheckBox chkExperienceFilter;
+        private NumericUpDown? nudMinExperience;
+        private NumericUpDown? nudMaxExperience;
+        private CheckBox? chkExperienceFilter;
 
-        private RadioButton rbShowSummary;
-        private RadioButton rbShowFullStats;
+        private RadioButton? rbShowSummary;
+        private RadioButton? rbShowFullStats;
 
-        private ContextMenuStrip chartTypeMenu;
+        private ContextMenuStrip? chartTypeMenu;
 
         // کنترل انتخاب بازه سنی نمودار
-        private NumericUpDown nudAgeRangeSize;
-        private Label lblAgeRangeSize;
+        private NumericUpDown? nudAgeRangeSize;
+        private Label? lblAgeRangeSize;
 
         public FormPersonnelAnalytics()
         {
@@ -263,8 +263,8 @@ namespace PersonnelManagementApp
             };
             chkAgeFilter.CheckedChanged += (s, e) =>
             {
-                nudMinAge.Enabled = chkAgeFilter.Checked;
-                nudMaxAge.Enabled = chkAgeFilter.Checked;
+                if (nudMinAge != null) nudMinAge.Enabled = chkAgeFilter.Checked;
+                if (nudMaxAge != null) nudMaxAge.Enabled = chkAgeFilter.Checked;
                 UpdateFilters();
                 RefreshAllCharts();
             };
@@ -314,8 +314,8 @@ namespace PersonnelManagementApp
             };
             chkExperienceFilter.CheckedChanged += (s, e) =>
             {
-                nudMinExperience.Enabled = chkExperienceFilter.Checked;
-                nudMaxExperience.Enabled = chkExperienceFilter.Checked;
+                if (nudMinExperience != null) nudMinExperience.Enabled = chkExperienceFilter.Checked;
+                if (nudMaxExperience != null) nudMaxExperience.Enabled = chkExperienceFilter.Checked;
                 UpdateFilters();
                 RefreshAllCharts();
             };
@@ -620,12 +620,14 @@ namespace PersonnelManagementApp
         private void AddChartTypeMenuItem(string text, SeriesChartType type)
         {
             var item = new ToolStripMenuItem(text) { Tag = type };
-            chartTypeMenu.Items.Add(item);
+            if (chartTypeMenu != null)
+                chartTypeMenu.Items.Add(item);
         }
 
-        private void ChartTypeMenu_ItemClicked(object sender, ToolStripItemClickedEventArgs e)
+        private void ChartTypeMenu_ItemClicked(object? sender, ToolStripItemClickedEventArgs e)
         {
-            chartTypeMenu.Hide();
+            if (chartTypeMenu != null)
+                chartTypeMenu.Hide();
 
             if (e.ClickedItem == null || e.ClickedItem.Tag == null)
                 return;
@@ -663,7 +665,6 @@ namespace PersonnelManagementApp
             var area = chart.ChartAreas[0];
             bool pie = IsPieType(type);
 
-            // 3D برای نمودارهای میله‌ای/ستونی باعث "روی هم افتادن" و یکپارچه دیده شدن می‌شود
             area.Area3DStyle.Enable3D = pie;
             if (pie)
             {
@@ -682,23 +683,19 @@ namespace PersonnelManagementApp
             area.AxisX.IsLabelAutoFit = true;
             area.AxisY.IsLabelAutoFit = true;
 
-            // فاصله‌ی دسته‌ها
             if (!pie)
             {
                 if (type == SeriesChartType.Bar || type == SeriesChartType.StackedBar)
                 {
-                    // در Bar دسته‌ها روی AxisY هستند
                     area.AxisY.Interval = 1;
                     area.AxisX.Interval = 0;
                     area.AxisX.LabelStyle.Angle = 0;
                 }
                 else
                 {
-                    // Column/StackedColumn و... دسته‌ها روی AxisX هستند
                     area.AxisX.Interval = 1;
                     area.AxisY.Interval = 0;
 
-                    // اگر تعداد دسته‌ها زیاد باشد، چرخش لیبل‌ها کمک می‌کند
                     if (chart.Series.Count > 0 && chart.Series[0].Points.Count > 10)
                         area.AxisX.LabelStyle.Angle = -45;
                     else
@@ -726,9 +723,8 @@ namespace PersonnelManagementApp
             else
             {
                 series.IsValueShownAsLabel = true;
-                // پاک کردن تنظیمات Pie اگر قبلا بوده
                 if (series.CustomProperties != null && series.CustomProperties.Contains("PieLabelStyle"))
-                    series["PieLabelStyle"] = null;
+                    series["PieLabelStyle"] = "";
             }
         }
 
@@ -768,23 +764,23 @@ namespace PersonnelManagementApp
             ApplyChartTypeFromTag(chartWorkExperiencePie);
         }
 
-        private void RbShowSummary_CheckedChanged(object sender, EventArgs e)
+        private void RbShowSummary_CheckedChanged(object? sender, EventArgs e)
         {
-            if (rbShowSummary.Checked)
+            if (rbShowSummary != null && rbShowSummary.Checked)
             {
                 LoadSummaryTable();
             }
         }
 
-        private void RbShowFullStats_CheckedChanged(object sender, EventArgs e)
+        private void RbShowFullStats_CheckedChanged(object? sender, EventArgs e)
         {
-            if (rbShowFullStats.Checked)
+            if (rbShowFullStats != null && rbShowFullStats.Checked)
             {
                 LoadStatisticalTable();
             }
         }
 
-        private void AddChartTab(TabControl tabControl, string title, Chart chart, DataGridView detailsGrid)
+        private void AddChartTab(TabControl tabControl, string title, Chart chart, DataGridView? detailsGrid)
         {
             TabPage tab = new TabPage(title);
 
@@ -833,7 +829,6 @@ namespace PersonnelManagementApp
                 });
                 chart.MouseClick += Chart_MouseClick;
 
-                // اضافه کردن کنترل بازه سنی فقط برای تب سن
                 if (title == "🎂 سن")
                 {
                     Panel topPanel = new Panel
@@ -948,7 +943,7 @@ namespace PersonnelManagementApp
                 clbGenderFilter.Items.Add(g, false);
 
             clbEducationFilter.Items.Clear();
-            foreach (var e in analyticsModel.GetAllEducations();
+            foreach (var e in analyticsModel.GetAllEducations())
                 clbEducationFilter.Items.Add(e, false);
 
             clbJobLevelFilter.Items.Clear();
@@ -968,7 +963,7 @@ namespace PersonnelManagementApp
                 clbWorkShiftFilter.Items.Add(ws, false);
         }
 
-        private void ClbProvincesFilter_ItemCheck(object sender, ItemCheckEventArgs e)
+        private void ClbProvincesFilter_ItemCheck(object? sender, ItemCheckEventArgs e)
         {
             BeginInvoke((MethodInvoker)delegate
             {
@@ -979,7 +974,7 @@ namespace PersonnelManagementApp
             });
         }
 
-        private void ClbCitiesFilter_ItemCheck(object sender, ItemCheckEventArgs e)
+        private void ClbCitiesFilter_ItemCheck(object? sender, ItemCheckEventArgs e)
         {
             BeginInvoke((MethodInvoker)delegate
             {
@@ -989,7 +984,7 @@ namespace PersonnelManagementApp
             });
         }
 
-        private void ClbAffairsFilter_ItemCheck(object sender, ItemCheckEventArgs e)
+        private void ClbAffairsFilter_ItemCheck(object? sender, ItemCheckEventArgs e)
         {
             BeginInvoke((MethodInvoker)delegate
             {
@@ -999,7 +994,7 @@ namespace PersonnelManagementApp
             });
         }
 
-        private void ClbDepartmentsFilter_ItemCheck(object sender, ItemCheckEventArgs e)
+        private void ClbDepartmentsFilter_ItemCheck(object? sender, ItemCheckEventArgs e)
         {
             BeginInvoke((MethodInvoker)delegate
             {
@@ -1009,7 +1004,7 @@ namespace PersonnelManagementApp
             });
         }
 
-        private void ClbDistrictsFilter_ItemCheck(object sender, ItemCheckEventArgs e)
+        private void ClbDistrictsFilter_ItemCheck(object? sender, ItemCheckEventArgs e)
         {
             BeginInvoke((MethodInvoker)delegate
             {
@@ -1019,7 +1014,7 @@ namespace PersonnelManagementApp
             });
         }
 
-        private void ClbPositionsFilter_ItemCheck(object sender, ItemCheckEventArgs e)
+        private void ClbPositionsFilter_ItemCheck(object? sender, ItemCheckEventArgs e)
         {
             BeginInvoke((MethodInvoker)delegate
             {
@@ -1028,7 +1023,7 @@ namespace PersonnelManagementApp
             });
         }
 
-        private void ClbGenderFilter_ItemCheck(object sender, ItemCheckEventArgs e)
+        private void ClbGenderFilter_ItemCheck(object? sender, ItemCheckEventArgs e)
         {
             BeginInvoke((MethodInvoker)delegate
             {
@@ -1037,7 +1032,7 @@ namespace PersonnelManagementApp
             });
         }
 
-        private void ClbEducationFilter_ItemCheck(object sender, ItemCheckEventArgs e)
+        private void ClbEducationFilter_ItemCheck(object? sender, ItemCheckEventArgs e)
         {
             BeginInvoke((MethodInvoker)delegate
             {
@@ -1046,7 +1041,7 @@ namespace PersonnelManagementApp
             });
         }
 
-        private void ClbJobLevelFilter_ItemCheck(object sender, ItemCheckEventArgs e)
+        private void ClbJobLevelFilter_ItemCheck(object? sender, ItemCheckEventArgs e)
         {
             BeginInvoke((MethodInvoker)delegate
             {
@@ -1055,7 +1050,7 @@ namespace PersonnelManagementApp
             });
         }
 
-        private void ClbContractTypeFilter_ItemCheck(object sender, ItemCheckEventArgs e)
+        private void ClbContractTypeFilter_ItemCheck(object? sender, ItemCheckEventArgs e)
         {
             BeginInvoke((MethodInvoker)delegate
             {
@@ -1064,7 +1059,7 @@ namespace PersonnelManagementApp
             });
         }
 
-        private void ClbCompanyFilter_ItemCheck(object sender, ItemCheckEventArgs e)
+        private void ClbCompanyFilter_ItemCheck(object? sender, ItemCheckEventArgs e)
         {
             BeginInvoke((MethodInvoker)delegate
             {
@@ -1073,7 +1068,7 @@ namespace PersonnelManagementApp
             });
         }
 
-        private void ClbWorkShiftFilter_ItemCheck(object sender, ItemCheckEventArgs e)
+        private void ClbWorkShiftFilter_ItemCheck(object? sender, ItemCheckEventArgs e)
         {
             BeginInvoke((MethodInvoker)delegate
             {
@@ -1082,10 +1077,10 @@ namespace PersonnelManagementApp
             });
         }
 
-        private void ChkHireDateFilter_CheckedChanged(object sender, EventArgs e)
+        private void ChkHireDateFilter_CheckedChanged(object? sender, EventArgs e)
         {
-            dtpHireDateFrom.Enabled = chkHireDateFilter.Checked;
-            dtpHireDateTo.Enabled = chkHireDateFilter.Checked;
+            if (dtpHireDateFrom != null) dtpHireDateFrom.Enabled = chkHireDateFilter?.Checked ?? false;
+            if (dtpHireDateTo != null) dtpHireDateTo.Enabled = chkHireDateFilter?.Checked ?? false;
             BeginInvoke((MethodInvoker)delegate
             {
                 UpdateFilters();
@@ -1108,14 +1103,14 @@ namespace PersonnelManagementApp
             List<string> selectedCompanies = clbCompanyFilter.CheckedItems.Cast<string>().ToList();
             List<string> selectedWorkShifts = clbWorkShiftFilter.CheckedItems.Cast<string>().ToList();
 
-            DateTime? hireFromDate = chkHireDateFilter.Checked ? dtpHireDateFrom.Value : (DateTime?)null;
-            DateTime? hireToDate = chkHireDateFilter.Checked ? dtpHireDateTo.Value : (DateTime?)null;
+            DateTime? hireFromDate = (chkHireDateFilter?.Checked ?? false) ? dtpHireDateFrom?.Value : null;
+            DateTime? hireToDate = (chkHireDateFilter?.Checked ?? false) ? dtpHireDateTo?.Value : null;
 
-            int? minAgeValue = chkAgeFilter.Checked ? (int)nudMinAge.Value : (int?)null;
-            int? maxAgeValue = chkAgeFilter.Checked ? (int)nudMaxAge.Value : (int?)null;
+            int? minAgeValue = (chkAgeFilter?.Checked ?? false) ? (int?)nudMinAge?.Value : null;
+            int? maxAgeValue = (chkAgeFilter?.Checked ?? false) ? (int?)nudMaxAge?.Value : null;
 
-            int? minExpValue = chkExperienceFilter.Checked ? (int)nudMinExperience.Value : (int?)null;
-            int? maxExpValue = chkExperienceFilter.Checked ? (int)nudMaxExperience.Value : (int?)null;
+            int? minExpValue = (chkExperienceFilter?.Checked ?? false) ? (int?)nudMinExperience?.Value : null;
+            int? maxExpValue = (chkExperienceFilter?.Checked ?? false) ? (int?)nudMaxExperience?.Value : null;
 
             analyticsModel.SetFilters(selectedProvinces, selectedCities, selectedAffairs, selectedDepts,
                 selectedDistricts, selectedPositions, selectedGenders, selectedEducations, selectedJobLevels,
@@ -1126,7 +1121,7 @@ namespace PersonnelManagementApp
                 selectedDepts.Count + selectedDistricts.Count + selectedPositions.Count +
                 selectedGenders.Count + selectedEducations.Count + selectedJobLevels.Count +
                 selectedContractTypes.Count + selectedCompanies.Count + selectedWorkShifts.Count +
-                (chkHireDateFilter.Checked ? 1 : 0) + (chkAgeFilter.Checked ? 1 : 0) + (chkExperienceFilter.Checked ? 1 : 0);
+                ((chkHireDateFilter?.Checked ?? false) ? 1 : 0) + ((chkAgeFilter?.Checked ?? false) ? 1 : 0) + ((chkExperienceFilter?.Checked ?? false) ? 1 : 0);
 
             lblFilterInfo.Text = filterCount > 0 ? $"🔴 {filterCount} فیلتر فعال" : "✓ فیلتری فعال نیست";
         }
@@ -1229,7 +1224,7 @@ namespace PersonnelManagementApp
             }
         }
 
-        private void BtnClearFilters_Click(object sender, EventArgs e)
+        private void BtnClearFilters_Click(object? sender, EventArgs e)
         {
             for (int i = 0; i < clbProvincesFilter.Items.Count; i++) clbProvincesFilter.SetItemChecked(i, false);
             for (int i = 0; i < clbCitiesFilter.Items.Count; i++) clbCitiesFilter.SetItemChecked(i, false);
@@ -1243,9 +1238,9 @@ namespace PersonnelManagementApp
             for (int i = 0; i < clbContractTypeFilter.Items.Count; i++) clbContractTypeFilter.SetItemChecked(i, false);
             for (int i = 0; i < clbCompanyFilter.Items.Count; i++) clbCompanyFilter.SetItemChecked(i, false);
             for (int i = 0; i < clbWorkShiftFilter.Items.Count; i++) clbWorkShiftFilter.SetItemChecked(i, false);
-            chkHireDateFilter.Checked = false;
-            chkAgeFilter.Checked = false;
-            chkExperienceFilter.Checked = false;
+            if (chkHireDateFilter != null) chkHireDateFilter.Checked = false;
+            if (chkAgeFilter != null) chkAgeFilter.Checked = false;
+            if (chkExperienceFilter != null) chkExperienceFilter.Checked = false;
 
             analyticsModel.ClearFilters();
             lblFilterInfo.Text = "✓ فیلتری فعال نیست";
@@ -1255,7 +1250,7 @@ namespace PersonnelManagementApp
 
         private void RefreshAllCharts()
         {
-            if (rbShowSummary.Checked)
+            if (rbShowSummary?.Checked ?? true)
                 LoadSummaryTable();
             else
                 LoadStatisticalTable();
@@ -1722,11 +1717,11 @@ namespace PersonnelManagementApp
             catch (Exception ex) { MessageBox.Show($"❌ خطا: {ex.Message}"); }
         }
 
-        private void Chart_MouseClick(object sender, MouseEventArgs e)
+        private void Chart_MouseClick(object? sender, MouseEventArgs e)
         {
             try
             {
-                Chart chart = sender as Chart;
+                Chart? chart = sender as Chart;
                 if (chart == null) return;
 
                 HitTestResult result = chart.HitTest(e.X, e.Y);
@@ -1737,7 +1732,6 @@ namespace PersonnelManagementApp
 
                     string itemName = point.AxisLabel;
 
-                    // برای نمودار سن باید بازه رو ارسال کنیم
                     List<PersonnelDetail> personnel;
                     if (chart == chartAgePie)
                     {
@@ -1843,7 +1837,7 @@ namespace PersonnelManagementApp
             foreach (var p in personnel)
             {
                 dgv.Rows.Add(p.PersonnelID, p.FirstName, p.LastName, p.PersonnelNumber, p.NationalID, p.PostName,
-                    p.DeptName, p.Province, p.ContractType, p.HireDate?.ToString("yyyy/MM/dd"), p.MobileNumber, "ویرایش", "حذف");
+                    p.DeptName, p.Province, p.ContractType, p.HireDate?.ToString("yyyy/MM/dd") ?? "", p.MobileNumber, "ویرایش", "حذف");
             }
 
             dgv.CellClick += (sender, e) =>
