@@ -202,7 +202,6 @@ namespace PersonnelManagementApp
                 { "education", "🎓 نمودار تحصیلات" },
                 { "employment", "💼 نمودار وضعیت استخدام" },
                 { "jobtype", "👔 نمودار نوع شغل" },
-                { "military", "🪖 نمودار وضعیت نظام وظیفه" },
                 { "age", "📅 نمودار سنی" },
                 { "gender", "👤 نمودار جنسیت" },
                 { "marital", "💑 نمودار وضعیت تاهل" }
@@ -233,8 +232,6 @@ namespace PersonnelManagementApp
                 selectedChartType = "employment";
             else if (selected.Contains("نوع شغل"))
                 selectedChartType = "jobtype";
-            else if (selected.Contains("نظام"))
-                selectedChartType = "military";
             else if (selected.Contains("سنی"))
                 selectedChartType = "age";
             else if (selected.Contains("جنسیت"))
@@ -258,32 +255,28 @@ namespace PersonnelManagementApp
                 string chartTitle = "";
                 string displayName = "";
 
+                // 🔥 استفاده از نام‌های انگلیسی ستون‌ها
                 switch (selectedChartType)
                 {
                     case "department":
-                        query = "SELECT [نام اداره], COUNT(*) as تعداد FROM Personnel GROUP BY [نام اداره]";
+                        query = "SELECT DeptName, COUNT(*) as تعداد FROM Personnel GROUP BY DeptName";
                         chartTitle = "توزیع پرسنل بر اساس اداره";
                         displayName = "اداره";
                         break;
                     case "education":
-                        query = "SELECT [مدرک تحصیلی], COUNT(*) as تعداد FROM Personnel GROUP BY [مدرک تحصیلی]";
+                        query = "SELECT Education, COUNT(*) as تعداد FROM Personnel GROUP BY Education";
                         chartTitle = "توزیع پرسنل بر اساس تحصیلات";
                         displayName = "تحصیلات";
                         break;
                     case "employment":
-                        query = "SELECT [وضعیت استخدام], COUNT(*) as تعداد FROM Personnel GROUP BY [وضعیت استخدام]";
+                        query = "SELECT ContractType, COUNT(*) as تعداد FROM Personnel GROUP BY ContractType";
                         chartTitle = "توزیع پرسنل بر اساس وضعیت استخدام";
                         displayName = "وضعیت";
                         break;
                     case "jobtype":
-                        query = "SELECT [نوع شغل], COUNT(*) as تعداد FROM Personnel GROUP BY [نوع شغل]";
+                        query = "SELECT PostName, COUNT(*) as تعداد FROM Personnel GROUP BY PostName";
                         chartTitle = "توزیع پرسنل بر اساس نوع شغل";
                         displayName = "نوع شغل";
-                        break;
-                    case "military":
-                        query = "SELECT [وضعیت نظام وظیفه], COUNT(*) as تعداد FROM Personnel GROUP BY [وضعیت نظام وظیفه]";
-                        chartTitle = "توزیع پرسنل بر اساس وضعیت نظام وظیفه";
-                        displayName = "وضعیت";
                         break;
                     case "age":
                         query = @"SELECT 
@@ -292,18 +285,18 @@ namespace PersonnelManagementApp
                                     IIF(Age >= 35 AND Age < 45, '35-44 سال',
                                     IIF(Age >= 45 AND Age < 55, '45-54 سال', '55 سال به بالا')))) as [گروه سنی],
                                     COUNT(*) as تعداد
-                                  FROM (SELECT YEAR(Date()) - YEAR([تاریخ تولد]) as Age FROM Personnel)
+                                  FROM (SELECT YEAR(Date()) - YEAR(BirthDate) as Age FROM Personnel WHERE BirthDate IS NOT NULL)
                                   GROUP BY [گروه سنی]";
                         chartTitle = "توزیع پرسنل بر اساس گروه‌های سنی";
                         displayName = "گروه سنی";
                         break;
                     case "gender":
-                        query = "SELECT [جنسیت], COUNT(*) as تعداد FROM Personnel GROUP BY [جنسیت]";
+                        query = "SELECT Gender, COUNT(*) as تعداد FROM Personnel GROUP BY Gender";
                         chartTitle = "توزیع پرسنل بر اساس جنسیت";
                         displayName = "جنسیت";
                         break;
                     case "marital":
-                        query = "SELECT [وضعیت تاهل], COUNT(*) as تعداد FROM Personnel GROUP BY [وضعیت تاهل]";
+                        query = "SELECT MaritalStatus, COUNT(*) as تعداد FROM Personnel GROUP BY MaritalStatus";
                         chartTitle = "توزیع پرسنل بر اساس وضعیت تاهل";
                         displayName = "وضعیت";
                         break;
