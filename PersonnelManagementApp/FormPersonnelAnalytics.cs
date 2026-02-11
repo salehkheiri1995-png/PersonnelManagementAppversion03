@@ -716,6 +716,7 @@ namespace PersonnelManagementApp
             series.XValueType = ChartValueType.String;
             series.YValueType = ChartValueType.Int32;
             series.IsXValueIndexed = true;
+            series.Font = FontSettings.ChartLabelFont;
 
             if (IsPieType(type))
             {
@@ -947,7 +948,7 @@ namespace PersonnelManagementApp
                 clbGenderFilter.Items.Add(g, false);
 
             clbEducationFilter.Items.Clear();
-            foreach (var e in analyticsModel.GetAllEducations())
+            foreach (var e in analyticsModel.GetAllEducations();
                 clbEducationFilter.Items.Add(e, false);
 
             clbJobLevelFilter.Items.Clear();
@@ -1321,6 +1322,7 @@ namespace PersonnelManagementApp
                     int idx = series.Points.AddXY(item.Name, item.Count);
                     series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
+                    series.Points[idx].Font = FontSettings.ChartLabelFont;
 
                     if (pie)
                         series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
@@ -1368,6 +1370,7 @@ namespace PersonnelManagementApp
                     int idx = series.Points.AddXY(item.Name, item.Count);
                     series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
+                    series.Points[idx].Font = FontSettings.ChartLabelFont;
 
                     if (pie)
                         series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
@@ -1414,6 +1417,7 @@ namespace PersonnelManagementApp
                     int idx = series.Points.AddXY(item.Name, item.Count);
                     series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
+                    series.Points[idx].Font = FontSettings.ChartLabelFont;
 
                     if (pie)
                         series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
@@ -1449,6 +1453,7 @@ namespace PersonnelManagementApp
                     int idx = series.Points.AddXY(item.Name, item.Count);
                     series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
+                    series.Points[idx].Font = FontSettings.ChartLabelFont;
 
                     if (pie)
                         series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
@@ -1484,6 +1489,7 @@ namespace PersonnelManagementApp
                     int idx = series.Points.AddXY(item.Name, item.Count);
                     series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
+                    series.Points[idx].Font = FontSettings.ChartLabelFont;
 
                     if (pie)
                         series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
@@ -1520,6 +1526,7 @@ namespace PersonnelManagementApp
                     int idx = series.Points.AddXY(item.Name, item.Count);
                     series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
+                    series.Points[idx].Font = FontSettings.ChartLabelFont;
 
                     if (pie)
                         series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
@@ -1555,6 +1562,7 @@ namespace PersonnelManagementApp
                     int idx = series.Points.AddXY(item.Name, item.Count);
                     series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
+                    series.Points[idx].Font = FontSettings.ChartLabelFont;
 
                     if (pie)
                         series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
@@ -1590,6 +1598,7 @@ namespace PersonnelManagementApp
                     int idx = series.Points.AddXY(item.Name, item.Count);
                     series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
+                    series.Points[idx].Font = FontSettings.ChartLabelFont;
 
                     if (pie)
                         series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
@@ -1625,6 +1634,7 @@ namespace PersonnelManagementApp
                     int idx = series.Points.AddXY(item.Name, item.Count);
                     series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
+                    series.Points[idx].Font = FontSettings.ChartLabelFont;
 
                     if (pie)
                         series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
@@ -1661,6 +1671,7 @@ namespace PersonnelManagementApp
                     int idx = series.Points.AddXY(item.Name, item.Count);
                     series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
+                    series.Points[idx].Font = FontSettings.ChartLabelFont;
 
                     if (pie)
                         series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
@@ -1696,6 +1707,7 @@ namespace PersonnelManagementApp
                     int idx = series.Points.AddXY(item.Name, item.Count);
                     series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
+                    series.Points[idx].Font = FontSettings.ChartLabelFont;
 
                     if (pie)
                         series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
