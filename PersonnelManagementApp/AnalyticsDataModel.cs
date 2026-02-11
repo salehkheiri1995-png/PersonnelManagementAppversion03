@@ -108,7 +108,7 @@ namespace PersonnelManagementApp
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"❌ خطا در بارگذاری دادهها: {ex.Message}");
+                MessageBox.Show($"❌ خطا در بارگذاری دادهها: {ex.Message}\n\n{ex.StackTrace}", "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
         }
@@ -118,26 +118,31 @@ namespace PersonnelManagementApp
 
         private void LoadAllCaches(DbHelper dbHelper)
         {
-            LoadCache(dbHelper, "SELECT ProvinceID, ProvinceName FROM Provinces", provinceCache);
-            LoadCache(dbHelper, "SELECT CityID, CityName FROM Cities", cityCache);
-            LoadCache(dbHelper, "SELECT AffairID, AffairName FROM TransferAffairs", affairCache);
-            LoadCache(dbHelper, "SELECT DeptID, DeptName FROM OperationDepartments", departmentCache);
-            LoadCache(dbHelper, "SELECT DistrictID, DistrictName FROM Districts", districtCache);
-            LoadCache(dbHelper, "SELECT PostNameID, PostName FROM PostsNames", positionCache);
-            LoadCache(dbHelper, "SELECT GenderID, GenderName FROM Gender", genderCache);
-            LoadCache(dbHelper, "SELECT DegreeID, DegreeName FROM Degree", degreeCache);
-            LoadCache(dbHelper, "SELECT JobLevelID, JobLevelName FROM JobLevel", jobLevelCache);
-            LoadCache(dbHelper, "SELECT ContractTypeID, ContractTypeName FROM ContractType", contractTypeCache);
-            LoadCache(dbHelper, "SELECT CompanyID, CompanyName FROM Company", companyCache);
-            LoadCache(dbHelper, "SELECT WorkShiftID, WorkShiftName FROM WorkShift", workShiftCache);
+            // 🔥 Load با error handling دقیق
+            LoadCacheSafe(dbHelper, "Provinces", "SELECT ProvinceID, ProvinceName FROM Provinces", provinceCache);
+            LoadCacheSafe(dbHelper, "Cities", "SELECT CityID, CityName FROM Cities", cityCache);
+            LoadCacheSafe(dbHelper, "TransferAffairs", "SELECT AffairID, AffairName FROM TransferAffairs", affairCache);
+            LoadCacheSafe(dbHelper, "OperationDepartments", "SELECT DeptID, DeptName FROM OperationDepartments", departmentCache);
+            LoadCacheSafe(dbHelper, "Districts", "SELECT DistrictID, DistrictName FROM Districts", districtCache);
+            LoadCacheSafe(dbHelper, "PostsNames", "SELECT PostNameID, PostName FROM PostsNames", positionCache);
+            LoadCacheSafe(dbHelper, "Gender", "SELECT GenderID, GenderName FROM Gender", genderCache);
+            LoadCacheSafe(dbHelper, "Degree", "SELECT DegreeID, DegreeName FROM Degree", degreeCache);
+            LoadCacheSafe(dbHelper, "JobLevel", "SELECT JobLevelID, JobLevelName FROM JobLevel", jobLevelCache);
+            LoadCacheSafe(dbHelper, "ContractType", "SELECT ContractTypeID, ContractTypeName FROM ContractType", contractTypeCache);
+            LoadCacheSafe(dbHelper, "Company", "SELECT CompanyID, CompanyName FROM Company", companyCache);
+            LoadCacheSafe(dbHelper, "WorkShift", "SELECT WorkShiftID, WorkShiftName FROM WorkShift", workShiftCache);
         }
 
-        private void LoadCache(DbHelper dbHelper, string query, Dictionary<int, string> cache)
+        private void LoadCacheSafe(DbHelper dbHelper, string tableName, string query, Dictionary<int, string> cache)
         {
             try
             {
                 DataTable dt = dbHelper.ExecuteQuery(query);
-                if (dt == null) return;
+                if (dt == null || dt.Rows.Count == 0)
+                {
+                    // ⚠️ اگر جدول خالیه، فقط هشدار بده ولی error نده
+                    return;
+                }
 
                 string keyColumn = dt.Columns[0].ColumnName;
                 string valueColumn = dt.Columns[1].ColumnName;
@@ -146,10 +151,16 @@ namespace PersonnelManagementApp
                 {
                     int key = Convert.ToInt32(row[keyColumn]);
                     string value = row[valueColumn]?.ToString() ?? "";
-                    cache[key] = value;
+                    if (!cache.ContainsKey(key))
+                        cache[key] = value;
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                // 🔥 نمایش دقیق error برای هر جدول
+                MessageBox.Show($"❌ خطا در بارگذاری جدول {tableName}:\n\nQuery: {query}\n\nError: {ex.Message}", 
+                    "خطای دیتابیس", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void CalculateStatistics()
