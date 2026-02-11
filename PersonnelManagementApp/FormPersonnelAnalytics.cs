@@ -64,6 +64,10 @@ namespace PersonnelManagementApp
 
         private ContextMenuStrip chartTypeMenu;
 
+        // کنترل انتخاب بازه سنی نمودار
+        private NumericUpDown nudAgeRangeSize;
+        private Label lblAgeRangeSize;
+
         public FormPersonnelAnalytics()
         {
             dbHelper = new DbHelper();
@@ -827,7 +831,48 @@ namespace PersonnelManagementApp
                     Area3DStyle = { Enable3D = true, Inclination = 15, Rotation = 45 }
                 });
                 chart.MouseClick += Chart_MouseClick;
-                tab.Controls.Add(chart);
+
+                // اضافه کردن کنترل بازه سنی فقط برای تب سن
+                if (title == "🎂 سن")
+                {
+                    Panel topPanel = new Panel
+                    {
+                        Dock = DockStyle.Top,
+                        Height = 45,
+                        BackColor = Color.FromArgb(230, 240, 250),
+                        Padding = new Padding(10, 8, 10, 8)
+                    };
+
+                    lblAgeRangeSize = new Label
+                    {
+                        Text = "📊 بازه سنی (سال):",
+                        AutoSize = true,
+                        Font = new Font(FontSettings.SubtitleFont.FontFamily, 10F, FontStyle.Bold),
+                        ForeColor = Color.FromArgb(0, 102, 204),
+                        Location = new Point(10, 12)
+                    };
+
+                    nudAgeRangeSize = new NumericUpDown
+                    {
+                        Minimum = 1,
+                        Maximum = 10,
+                        Value = 10,
+                        Width = 70,
+                        Font = new Font(FontSettings.TextBoxFont.FontFamily, 10F),
+                        Location = new Point(150, 9)
+                    };
+                    nudAgeRangeSize.ValueChanged += (s, e) => LoadAgePieChart();
+
+                    topPanel.Controls.Add(nudAgeRangeSize);
+                    topPanel.Controls.Add(lblAgeRangeSize);
+
+                    tab.Controls.Add(chart);
+                    tab.Controls.Add(topPanel);
+                }
+                else
+                {
+                    tab.Controls.Add(chart);
+                }
             }
 
             tabControl.TabPages.Add(tab);
@@ -1599,7 +1644,8 @@ namespace PersonnelManagementApp
             try
             {
                 chartAgePie.Series.Clear();
-                var stats = analyticsModel.GetFilteredAgeStatistics();
+                int rangeSize = nudAgeRangeSize != null ? (int)nudAgeRangeSize.Value : 10;
+                var stats = analyticsModel.GetFilteredAgeStatistics(rangeSize);
                 int total = stats.Sum(x => x.Count);
 
                 var type = GetChartTypeOrDefault(chartAgePie);
@@ -1624,7 +1670,7 @@ namespace PersonnelManagementApp
 
                 chartAgePie.Series.Add(series);
                 chartAgePie.Titles.Clear();
-                chartAgePie.Titles.Add(new Title("🎂 توزیع بر اساس سن") { Font = FontSettings.HeaderFont });
+                chartAgePie.Titles.Add(new Title($"🎂 توزیع بر اساس سن (بازه: {rangeSize} سال)") { Font = FontSettings.HeaderFont });
             }
             catch (Exception ex) { MessageBox.Show($"❌ خطا: {ex.Message}"); }
         }
@@ -1677,10 +1723,20 @@ namespace PersonnelManagementApp
                     int pointIndex = result.PointIndex;
                     DataPoint point = result.Series.Points[pointIndex];
 
-                    // برای نمودارهای Bar/Column از AxisLabel استفاده می‌کنیم و برای Pie هم به صورت دستی ست شده
                     string itemName = point.AxisLabel;
 
-                    var personnel = analyticsModel.GetPersonnelByFilter(itemName, chart);
+                    // برای نمودار سن باید بازه رو ارسال کنیم
+                    List<PersonnelDetail> personnel;
+                    if (chart == chartAgePie)
+                    {
+                        int rangeSize = nudAgeRangeSize != null ? (int)nudAgeRangeSize.Value : 10;
+                        personnel = analyticsModel.GetPersonnelByFilter(itemName, chart, rangeSize);
+                    }
+                    else
+                    {
+                        personnel = analyticsModel.GetPersonnelByFilter(itemName, chart);
+                    }
+
                     if (personnel.Count > 0)
                         ShowPersonnelDetails(itemName, personnel);
                     else
