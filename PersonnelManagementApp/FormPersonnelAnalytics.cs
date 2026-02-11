@@ -119,7 +119,7 @@ namespace PersonnelManagementApp
 
         private void BuildUI()
         {
-            Text = "🎯 تحلیل دادههای پرسنل - سیستم پیشرفته";
+            Text = "🎯 تحلیل داده‌های پرسنل - سیستم پیشرفته";
             WindowState = FormWindowState.Maximized;
             RightToLeft = RightToLeft.Yes;
             RightToLeftLayout = true;
@@ -394,7 +394,7 @@ namespace PersonnelManagementApp
                 Padding = new Padding(4)
             };
 
-            // 🔥 دکمه Export بالای نمودارها
+            // 🔥 حذف دکمه بالایی - فقط عنوان باقی می‌مونه
             Panel chartHeaderPanel = new Panel
             {
                 Dock = DockStyle.Top,
@@ -408,29 +408,9 @@ namespace PersonnelManagementApp
                 Text = "📊 نمودارهای آماری",
                 Font = new Font(FontSettings.HeaderFont.FontFamily, 12F, FontStyle.Bold),
                 ForeColor = Color.White,
-                AutoSize = true,
-                Location = new Point(chartHeaderPanel.Width - 200, 12)
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleRight
             };
-
-            Button btnExportCharts = new Button
-            {
-                Text = "📤 خروجی نمودارها",
-                Location = new Point(15, 8),
-                Size = new Size(160, 34),
-                BackColor = Color.FromArgb(40, 167, 69),
-                ForeColor = Color.White,
-                Font = new Font(FontSettings.ButtonFont.FontFamily, 9.5F, FontStyle.Bold),
-                FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand
-            };
-            btnExportCharts.FlatAppearance.BorderSize = 0;
-            btnExportCharts.Click += (s, e) =>
-            {
-                FormExportCharts exportForm = new FormExportCharts();
-                exportForm.ShowDialog();
-            };
-
-            chartHeaderPanel.Controls.Add(btnExportCharts);
             chartHeaderPanel.Controls.Add(lblChartsTitle);
 
             tabControl.Dock = DockStyle.Fill;
@@ -951,13 +931,13 @@ namespace PersonnelManagementApp
 
                 if (!analyticsModel.LoadData(dbHelper))
                 {
-                    MessageBox.Show("❌ خطا در بارگذاری دادهها.", "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("❌ خطا در بارگذاری داده‌ها.", "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
                 LoadFilterOptions();
                 RefreshAllCharts();
-                MessageBox.Show($"✅ دادهها با موفقیت بارگذاری شدند.\n👥 تعداد پرسنل: {analyticsModel.TotalPersonnel}", "موفق", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show($"✅ داده‌ها با موفقیت بارگذاری شدند.\n👥 تعداد پرسنل: {analyticsModel.TotalPersonnel}", "موفق", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
@@ -1606,6 +1586,7 @@ namespace PersonnelManagementApp
 
                 var items = pie ? stats.Take(20).ToList() : stats.ToList();
                 foreach (var item in items)
+                {
                 {
                     double pct = total > 0 ? (item.Count * 100.0) / total : 0;
                     int idx = series.Points.AddXY(item.Name, item.Count);
