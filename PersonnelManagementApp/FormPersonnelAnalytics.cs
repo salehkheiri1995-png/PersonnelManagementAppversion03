@@ -64,7 +64,6 @@ namespace PersonnelManagementApp
 
         private ContextMenuStrip? chartTypeMenu;
 
-        // کنترل انتخاب بازه سنی نمودار
         private NumericUpDown? nudAgeRangeSize;
         private Label? lblAgeRangeSize;
 
@@ -713,7 +712,9 @@ namespace PersonnelManagementApp
             series.XValueType = ChartValueType.String;
             series.YValueType = ChartValueType.Int32;
             series.IsXValueIndexed = true;
-            series.Font = FontSettings.ChartLabelFont;
+            
+            // 🎯 Safe font fallback
+            series.Font = FontSettings.ChartLabelFont ?? new Font("Tahoma", 9F);
 
             if (IsPieType(type))
             {
@@ -1300,6 +1301,11 @@ namespace PersonnelManagementApp
             try
             {
                 chartDepartmentPie.Series.Clear();
+                
+                // 🎯 Safe font with fallback
+                Font safeFont = FontSettings.ChartLabelFont ?? new Font("Tahoma", 9F);
+                Font safeTitleFont = FontSettings.HeaderFont ?? new Font("Tahoma", 11F, FontStyle.Bold);
+                
                 var stats = analyticsModel.GetFilteredDepartmentStatistics();
                 int total = stats.Sum(x => x.Count);
 
@@ -1317,7 +1323,7 @@ namespace PersonnelManagementApp
                     int idx = series.Points.AddXY(item.Name, item.Count);
                     series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
-                    series.Points[idx].Font = FontSettings.ChartLabelFont;
+                    series.Points[idx].Font = safeFont;
 
                     if (pie)
                         series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
@@ -1327,7 +1333,7 @@ namespace PersonnelManagementApp
 
                 chartDepartmentPie.Series.Add(series);
                 chartDepartmentPie.Titles.Clear();
-                chartDepartmentPie.Titles.Add(new Title("📊 توزیع پرسنل در ادارهها") { Font = FontSettings.HeaderFont });
+                chartDepartmentPie.Titles.Add(new Title("📊 توزیع پرسنل در ادارهها") { Font = safeTitleFont });
 
                 dgvDepartmentDetails.DataSource = null;
                 dgvDepartmentDetails.Columns.Clear();
@@ -1348,6 +1354,10 @@ namespace PersonnelManagementApp
             try
             {
                 chartPositionPie.Series.Clear();
+                
+                Font safeFont = FontSettings.ChartLabelFont ?? new Font("Tahoma", 9F);
+                Font safeTitleFont = FontSettings.HeaderFont ?? new Font("Tahoma", 11F, FontStyle.Bold);
+                
                 var stats = analyticsModel.GetFilteredPositionStatistics();
                 int total = stats.Sum(x => x.Count);
 
@@ -1365,7 +1375,7 @@ namespace PersonnelManagementApp
                     int idx = series.Points.AddXY(item.Name, item.Count);
                     series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
-                    series.Points[idx].Font = FontSettings.ChartLabelFont;
+                    series.Points[idx].Font = safeFont;
 
                     if (pie)
                         series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
@@ -1375,7 +1385,7 @@ namespace PersonnelManagementApp
 
                 chartPositionPie.Series.Add(series);
                 chartPositionPie.Titles.Clear();
-                chartPositionPie.Titles.Add(new Title("💼 توزیع پستهای شغلی") { Font = FontSettings.HeaderFont });
+                chartPositionPie.Titles.Add(new Title("💼 توزیع پستهای شغلی") { Font = safeTitleFont });
 
                 dgvPositionDetails.DataSource = null;
                 dgvPositionDetails.Columns.Clear();
@@ -1396,6 +1406,10 @@ namespace PersonnelManagementApp
             try
             {
                 chartGenderPie.Series.Clear();
+                
+                Font safeFont = FontSettings.ChartLabelFont ?? new Font("Tahoma", 9F);
+                Font safeTitleFont = FontSettings.HeaderFont ?? new Font("Tahoma", 11F, FontStyle.Bold);
+                
                 var stats = analyticsModel.GetFilteredGenderStatistics();
                 int total = stats.Sum(x => x.Count);
 
@@ -1412,7 +1426,7 @@ namespace PersonnelManagementApp
                     int idx = series.Points.AddXY(item.Name, item.Count);
                     series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
-                    series.Points[idx].Font = FontSettings.ChartLabelFont;
+                    series.Points[idx].Font = safeFont;
 
                     if (pie)
                         series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
@@ -1422,7 +1436,7 @@ namespace PersonnelManagementApp
 
                 chartGenderPie.Series.Add(series);
                 chartGenderPie.Titles.Clear();
-                chartGenderPie.Titles.Add(new Title("👥 توزیع جنسیت") { Font = FontSettings.HeaderFont });
+                chartGenderPie.Titles.Add(new Title("👥 توزیع جنسیت") { Font = safeTitleFont });
             }
             catch (Exception ex) { MessageBox.Show($"❌ خطا: {ex.Message}"); }
         }
@@ -1432,6 +1446,10 @@ namespace PersonnelManagementApp
             try
             {
                 chartJobLevelPie.Series.Clear();
+                
+                Font safeFont = FontSettings.ChartLabelFont ?? new Font("Tahoma", 9F);
+                Font safeTitleFont = FontSettings.HeaderFont ?? new Font("Tahoma", 11F, FontStyle.Bold);
+                
                 var stats = analyticsModel.GetFilteredJobLevelStatistics();
                 int total = stats.Sum(x => x.Count);
 
@@ -1448,7 +1466,7 @@ namespace PersonnelManagementApp
                     int idx = series.Points.AddXY(item.Name, item.Count);
                     series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
-                    series.Points[idx].Font = FontSettings.ChartLabelFont;
+                    series.Points[idx].Font = safeFont;
 
                     if (pie)
                         series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
@@ -1458,7 +1476,7 @@ namespace PersonnelManagementApp
 
                 chartJobLevelPie.Series.Add(series);
                 chartJobLevelPie.Titles.Clear();
-                chartJobLevelPie.Titles.Add(new Title("📈 توزیع سطح شغلی") { Font = FontSettings.HeaderFont });
+                chartJobLevelPie.Titles.Add(new Title("📈 توزیع سطح شغلی") { Font = safeTitleFont });
             }
             catch (Exception ex) { MessageBox.Show($"❌ خطا: {ex.Message}"); }
         }
@@ -1468,6 +1486,10 @@ namespace PersonnelManagementApp
             try
             {
                 chartContractTypePie.Series.Clear();
+                
+                Font safeFont = FontSettings.ChartLabelFont ?? new Font("Tahoma", 9F);
+                Font safeTitleFont = FontSettings.HeaderFont ?? new Font("Tahoma", 11F, FontStyle.Bold);
+                
                 var stats = analyticsModel.GetFilteredContractTypeStatistics();
                 int total = stats.Sum(x => x.Count);
 
@@ -1484,7 +1506,7 @@ namespace PersonnelManagementApp
                     int idx = series.Points.AddXY(item.Name, item.Count);
                     series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
-                    series.Points[idx].Font = FontSettings.ChartLabelFont;
+                    series.Points[idx].Font = safeFont;
 
                     if (pie)
                         series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
@@ -1494,7 +1516,7 @@ namespace PersonnelManagementApp
 
                 chartContractTypePie.Series.Add(series);
                 chartContractTypePie.Titles.Clear();
-                chartContractTypePie.Titles.Add(new Title("📋 توزیع نوع قرارداد") { Font = FontSettings.HeaderFont });
+                chartContractTypePie.Titles.Add(new Title("📋 توزیع نوع قرارداد") { Font = safeTitleFont });
             }
             catch (Exception ex) { MessageBox.Show($"❌ خطا: {ex.Message}"); }
         }
@@ -1504,6 +1526,10 @@ namespace PersonnelManagementApp
             try
             {
                 chartProvincePie.Series.Clear();
+                
+                Font safeFont = FontSettings.ChartLabelFont ?? new Font("Tahoma", 9F);
+                Font safeTitleFont = FontSettings.HeaderFont ?? new Font("Tahoma", 11F, FontStyle.Bold);
+                
                 var stats = analyticsModel.GetFilteredProvinceStatistics();
                 int total = stats.Sum(x => x.Count);
 
@@ -1521,7 +1547,7 @@ namespace PersonnelManagementApp
                     int idx = series.Points.AddXY(item.Name, item.Count);
                     series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
-                    series.Points[idx].Font = FontSettings.ChartLabelFont;
+                    series.Points[idx].Font = safeFont;
 
                     if (pie)
                         series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
@@ -1531,7 +1557,7 @@ namespace PersonnelManagementApp
 
                 chartProvincePie.Series.Add(series);
                 chartProvincePie.Titles.Clear();
-                chartProvincePie.Titles.Add(new Title("🗺️ توزیع بر اساس استان") { Font = FontSettings.HeaderFont });
+                chartProvincePie.Titles.Add(new Title("🗺️ توزیع بر اساس استان") { Font = safeTitleFont });
             }
             catch (Exception ex) { MessageBox.Show($"❌ خطا: {ex.Message}"); }
         }
@@ -1541,6 +1567,10 @@ namespace PersonnelManagementApp
             try
             {
                 chartEducationPie.Series.Clear();
+                
+                Font safeFont = FontSettings.ChartLabelFont ?? new Font("Tahoma", 9F);
+                Font safeTitleFont = FontSettings.HeaderFont ?? new Font("Tahoma", 11F, FontStyle.Bold);
+                
                 var stats = analyticsModel.GetFilteredEducationStatistics();
                 int total = stats.Sum(x => x.Count);
 
@@ -1557,7 +1587,7 @@ namespace PersonnelManagementApp
                     int idx = series.Points.AddXY(item.Name, item.Count);
                     series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
-                    series.Points[idx].Font = FontSettings.ChartLabelFont;
+                    series.Points[idx].Font = safeFont;
 
                     if (pie)
                         series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
@@ -1567,7 +1597,7 @@ namespace PersonnelManagementApp
 
                 chartEducationPie.Series.Add(series);
                 chartEducationPie.Titles.Clear();
-                chartEducationPie.Titles.Add(new Title("📚 توزیع مدارک تحصیلی") { Font = FontSettings.HeaderFont });
+                chartEducationPie.Titles.Add(new Title("📚 توزیع مدارک تحصیلی") { Font = safeTitleFont });
             }
             catch (Exception ex) { MessageBox.Show($"❌ خطا: {ex.Message}"); }
         }
@@ -1577,6 +1607,10 @@ namespace PersonnelManagementApp
             try
             {
                 chartCompanyPie.Series.Clear();
+                
+                Font safeFont = FontSettings.ChartLabelFont ?? new Font("Tahoma", 9F);
+                Font safeTitleFont = FontSettings.HeaderFont ?? new Font("Tahoma", 11F, FontStyle.Bold);
+                
                 var stats = analyticsModel.GetFilteredCompanyStatistics();
                 int total = stats.Sum(x => x.Count);
 
@@ -1593,7 +1627,7 @@ namespace PersonnelManagementApp
                     int idx = series.Points.AddXY(item.Name, item.Count);
                     series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
-                    series.Points[idx].Font = FontSettings.ChartLabelFont;
+                    series.Points[idx].Font = safeFont;
 
                     if (pie)
                         series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
@@ -1603,7 +1637,7 @@ namespace PersonnelManagementApp
 
                 chartCompanyPie.Series.Add(series);
                 chartCompanyPie.Titles.Clear();
-                chartCompanyPie.Titles.Add(new Title("🏢 توزیع شرکتها") { Font = FontSettings.HeaderFont });
+                chartCompanyPie.Titles.Add(new Title("🏢 توزیع شرکتها") { Font = safeTitleFont });
             }
             catch (Exception ex) { MessageBox.Show($"❌ خطا: {ex.Message}"); }
         }
@@ -1613,6 +1647,10 @@ namespace PersonnelManagementApp
             try
             {
                 chartWorkShiftPie.Series.Clear();
+                
+                Font safeFont = FontSettings.ChartLabelFont ?? new Font("Tahoma", 9F);
+                Font safeTitleFont = FontSettings.HeaderFont ?? new Font("Tahoma", 11F, FontStyle.Bold);
+                
                 var stats = analyticsModel.GetFilteredWorkShiftStatistics();
                 int total = stats.Sum(x => x.Count);
 
@@ -1629,7 +1667,7 @@ namespace PersonnelManagementApp
                     int idx = series.Points.AddXY(item.Name, item.Count);
                     series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
-                    series.Points[idx].Font = FontSettings.ChartLabelFont;
+                    series.Points[idx].Font = safeFont;
 
                     if (pie)
                         series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
@@ -1639,7 +1677,7 @@ namespace PersonnelManagementApp
 
                 chartWorkShiftPie.Series.Add(series);
                 chartWorkShiftPie.Titles.Clear();
-                chartWorkShiftPie.Titles.Add(new Title("⏰ توزیع شیفت‌های کاری") { Font = FontSettings.HeaderFont });
+                chartWorkShiftPie.Titles.Add(new Title("⏰ توزیع شیفت‌های کاری") { Font = safeTitleFont });
             }
             catch (Exception ex) { MessageBox.Show($"❌ خطا: {ex.Message}"); }
         }
@@ -1649,6 +1687,10 @@ namespace PersonnelManagementApp
             try
             {
                 chartAgePie.Series.Clear();
+                
+                Font safeFont = FontSettings.ChartLabelFont ?? new Font("Tahoma", 9F);
+                Font safeTitleFont = FontSettings.HeaderFont ?? new Font("Tahoma", 11F, FontStyle.Bold);
+                
                 int rangeSize = nudAgeRangeSize != null ? (int)nudAgeRangeSize.Value : 10;
                 var stats = analyticsModel.GetFilteredAgeStatistics(rangeSize);
                 int total = stats.Sum(x => x.Count);
@@ -1666,7 +1708,7 @@ namespace PersonnelManagementApp
                     int idx = series.Points.AddXY(item.Name, item.Count);
                     series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
-                    series.Points[idx].Font = FontSettings.ChartLabelFont;
+                    series.Points[idx].Font = safeFont;
 
                     if (pie)
                         series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
@@ -1676,7 +1718,7 @@ namespace PersonnelManagementApp
 
                 chartAgePie.Series.Add(series);
                 chartAgePie.Titles.Clear();
-                chartAgePie.Titles.Add(new Title($"🎂 توزیع بر اساس سن (بازه: {rangeSize} سال)") { Font = FontSettings.HeaderFont });
+                chartAgePie.Titles.Add(new Title($"🎂 توزیع بر اساس سن (بازه: {rangeSize} سال)") { Font = safeTitleFont });
             }
             catch (Exception ex) { MessageBox.Show($"❌ خطا: {ex.Message}"); }
         }
@@ -1686,6 +1728,10 @@ namespace PersonnelManagementApp
             try
             {
                 chartWorkExperiencePie.Series.Clear();
+                
+                Font safeFont = FontSettings.ChartLabelFont ?? new Font("Tahoma", 9F);
+                Font safeTitleFont = FontSettings.HeaderFont ?? new Font("Tahoma", 11F, FontStyle.Bold);
+                
                 var stats = analyticsModel.GetFilteredWorkExperienceStatistics();
                 int total = stats.Sum(x => x.Count);
 
@@ -1702,7 +1748,7 @@ namespace PersonnelManagementApp
                     int idx = series.Points.AddXY(item.Name, item.Count);
                     series.Points[idx].AxisLabel = item.Name;
                     series.Points[idx].ToolTip = $"{item.Name}: {item.Count} نفر ({pct:F1}%)";
-                    series.Points[idx].Font = FontSettings.ChartLabelFont;
+                    series.Points[idx].Font = safeFont;
 
                     if (pie)
                         series.Points[idx].Label = $"{item.Name}\n{item.Count} نفر ({pct:F1}%)";
@@ -1712,7 +1758,7 @@ namespace PersonnelManagementApp
 
                 chartWorkExperiencePie.Series.Add(series);
                 chartWorkExperiencePie.Titles.Clear();
-                chartWorkExperiencePie.Titles.Add(new Title("💼 توزیع بر اساس سابقه کاری") { Font = FontSettings.HeaderFont });
+                chartWorkExperiencePie.Titles.Add(new Title("💼 توزیع بر اساس سابقه کاری") { Font = safeTitleFont });
             }
             catch (Exception ex) { MessageBox.Show($"❌ خطا: {ex.Message}"); }
         }
