@@ -309,8 +309,8 @@ namespace PersonnelManagementApp
                         break;
                 }
 
-                // 🔥 استفاده از DatabaseHelper به جای AppSettings.ConnectionString
-                string connectionString = DatabaseHelper.GetConnectionString();
+                // 🔥 ساخت connection string از DatabasePath
+                string connectionString = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={AppSettings.DatabasePath};Persist Security Info=False;";
                 
                 using (OleDbConnection conn = new OleDbConnection(connectionString))
                 {
