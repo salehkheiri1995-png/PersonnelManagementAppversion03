@@ -620,8 +620,17 @@ namespace PersonnelManagementApp
             PostName = positionCache.ContainsKey(p.PostNameID) ? positionCache[p.PostNameID] : "",
             DeptName = departmentCache.ContainsKey(p.DeptID) ? departmentCache[p.DeptID] : "",
             Province = provinceCache.ContainsKey(p.ProvinceID) ? provinceCache[p.ProvinceID] : "",
+            City = cityCache.ContainsKey(p.CityID) ? cityCache[p.CityID] : "",
+            Affair = affairCache.ContainsKey(p.AffairID) ? affairCache[p.AffairID] : "",
+            District = districtCache.ContainsKey(p.DistrictID) ? districtCache[p.DistrictID] : "",
             ContractType = contractTypeCache.ContainsKey(p.ContractTypeID) ? contractTypeCache[p.ContractTypeID] : "",
+            Gender = genderCache.ContainsKey(p.GenderID) ? genderCache[p.GenderID] : "",
+            Education = degreeCache.ContainsKey(p.DegreeID) ? degreeCache[p.DegreeID] : "",
+            JobLevel = jobLevelCache.ContainsKey(p.JobLevelID) ? jobLevelCache[p.JobLevelID] : "",
+            Company = companyCache.ContainsKey(p.CompanyID) ? companyCache[p.CompanyID] : "",
+            WorkShift = workShiftCache.ContainsKey(p.WorkShiftID) ? workShiftCache[p.WorkShiftID] : "",
             HireDate = p.HireDate,
+            BirthDate = p.BirthDate,
             MobileNumber = p.MobileNumber
         };
     }
@@ -676,8 +685,20 @@ namespace PersonnelManagementApp
         public string PostName { get; set; }
         public string DeptName { get; set; }
         public string Province { get; set; }
+        public string City { get; set; }
+        public string Affair { get; set; }
+        public string District { get; set; }
         public string ContractType { get; set; }
+        public string Gender { get; set; }
+        public string Education { get; set; }
+        public string JobLevel { get; set; }
+        public string Company { get; set; }
+        public string WorkShift { get; set; }
         public DateTime? HireDate { get; set; }
+        public DateTime? BirthDate { get; set; }
         public string MobileNumber { get; set; }
+        public decimal Salary { get; set; }
+        public string Email { get; set; }
+        public string Address { get; set; }
     }
 }
