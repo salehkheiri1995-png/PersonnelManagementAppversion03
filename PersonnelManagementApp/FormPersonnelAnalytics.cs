@@ -1016,7 +1016,7 @@ namespace PersonnelManagementApp
                 clbJobLevelFilter.Items.Add(j, false);
 
             clbContractTypeFilter.Items.Clear();
-            foreach (var c in analyticsModel.GetAllContractTypes();
+            foreach (var c in analyticsModel.GetAllContractTypes())
                 clbContractTypeFilter.Items.Add(c, false);
 
             clbCompanyFilter.Items.Clear();
