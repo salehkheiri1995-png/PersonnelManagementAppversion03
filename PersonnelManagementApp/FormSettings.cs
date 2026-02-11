@@ -20,9 +20,11 @@ namespace PersonnelManagementApp
         private NumericUpDown numTextBoxSize;
         private NumericUpDown numButtonSize;
         private NumericUpDown numBodySize;
+        private NumericUpDown numChartLabelSize;  // 🔥 اضافه شد
         private CheckBox chkBoldTitle;
         private CheckBox chkBoldLabel;
         private CheckBox chkBoldButton;
+        private CheckBox chkBoldChartLabel;  // 🔥 اضافه شد
 
         // Panels برای هر بخش
         private Panel pnlDatabaseContent;
@@ -578,7 +580,7 @@ namespace PersonnelManagementApp
             Panel card = new Panel
             {
                 Location = new Point(10, 10),
-                Size = new Size(690, 400),
+                Size = new Size(690, 450),  // 🔥 افزایش ارتفاع کارت
                 BackColor = CardBackground
             };
             ApplyRoundedCorners(card, 10);
@@ -675,6 +677,10 @@ namespace PersonnelManagementApp
             // ردیف 2
             AddFontSizeRowCompactNoCheckbox(card, "متن:", col1X, yPos, labelW, out numTextBoxSize, numW, checkW, 11);
             AddFontSizeRowCompactNoCheckbox(card, "متن عادی:", col2X, yPos, labelW, out numBodySize, numW, checkW, 10);
+            yPos += 40;
+
+            // 🔥 ردیف 3 - فونت نمودارها (Chart)
+            AddFontSizeRowCompact(card, "نمودارها:", col1X, yPos, labelW, out numChartLabelSize, out chkBoldChartLabel, numW, checkW, 10);
 
             content.Controls.Add(card);
             return content;
@@ -819,9 +825,11 @@ namespace PersonnelManagementApp
             numTextBoxSize.Value = (decimal)FontSettings.TextBoxFontSize;
             numButtonSize.Value = (decimal)FontSettings.ButtonFontSize;
             numBodySize.Value = (decimal)FontSettings.BodyFontSize;
+            numChartLabelSize.Value = (decimal)FontSettings.ChartLabelFontSize;  // 🔥 اضافه شد
             chkBoldTitle.Checked = FontSettings.TitleFontBold;
             chkBoldLabel.Checked = FontSettings.LabelFontBold;
             chkBoldButton.Checked = FontSettings.ButtonFontBold;
+            chkBoldChartLabel.Checked = FontSettings.ChartLabelFontBold;  // 🔥 اضافه شد
         }
 
         private void BtnBrowseDatabase_Click(object sender, EventArgs e)
@@ -899,9 +907,11 @@ namespace PersonnelManagementApp
                 FontSettings.TextBoxFontSize = (float)numTextBoxSize.Value;
                 FontSettings.ButtonFontSize = (float)numButtonSize.Value;
                 FontSettings.BodyFontSize = (float)numBodySize.Value;
+                FontSettings.ChartLabelFontSize = (float)numChartLabelSize.Value;  // 🔥 اضافه شد
                 FontSettings.TitleFontBold = chkBoldTitle.Checked;
                 FontSettings.LabelFontBold = chkBoldLabel.Checked;
                 FontSettings.ButtonFontBold = chkBoldButton.Checked;
+                FontSettings.ChartLabelFontBold = chkBoldChartLabel.Checked;  // 🔥 اضافه شد
 
                 FontSettings.SaveSettings();
 
