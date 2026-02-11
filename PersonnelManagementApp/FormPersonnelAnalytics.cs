@@ -394,24 +394,7 @@ namespace PersonnelManagementApp
                 Padding = new Padding(4)
             };
 
-            // 🔥 حذف دکمه بالایی - فقط عنوان باقی می‌مونه
-            Panel chartHeaderPanel = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = 50,
-                BackColor = Color.FromArgb(0, 102, 204),
-                Padding = new Padding(10, 8, 10, 8)
-            };
-
-            Label lblChartsTitle = new Label
-            {
-                Text = "📊 نمودارهای آماری",
-                Font = new Font(FontSettings.HeaderFont.FontFamily, 12F, FontStyle.Bold),
-                ForeColor = Color.White,
-                Dock = DockStyle.Fill,
-                TextAlign = ContentAlignment.MiddleRight
-            };
-            chartHeaderPanel.Controls.Add(lblChartsTitle);
+            // ✅ عنوان "📊 نمودارهای آماری" حذف شد - نمودارها بزرگتر دیده میشن
 
             tabControl.Dock = DockStyle.Fill;
             tabControl.RightToLeft = RightToLeft.Yes;
@@ -432,7 +415,6 @@ namespace PersonnelManagementApp
             AddChartTab(tabControl, "💼 سابقه کاری", chartWorkExperiencePie, null);
 
             chartsPanel.Controls.Add(tabControl);
-            chartsPanel.Controls.Add(chartHeaderPanel);
 
             Panel tablesPanel = new Panel
             {
