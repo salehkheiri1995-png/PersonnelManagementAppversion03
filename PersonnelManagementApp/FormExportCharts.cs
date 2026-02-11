@@ -13,14 +13,13 @@ namespace PersonnelManagementApp
 {
     public partial class FormExportCharts : Form
     {
-        private Panel pnlChartList;
-        private Panel pnlPreview;
-        private Chart previewChart;
-        private RichTextBox txtStats;
-        private ComboBox cmbChartType;
-        private Button btnExportPDF;
-        private Button btnExportImage;
-        private Button btnPrint;
+        private Panel pnlChartList = null!;
+        private Chart previewChart = null!;
+        private RichTextBox txtStats = null!;
+        private ComboBox cmbChartType = null!;
+        private Button btnExportPDF = null!;
+        private Button btnExportImage = null!;
+        private Button btnPrint = null!;
 
         // رنگ‌های مدرن
         private readonly Color PrimaryColor = Color.FromArgb(33, 150, 243);
@@ -219,11 +218,12 @@ namespace PersonnelManagementApp
                 cmbChartType.SelectedIndex = 0;
         }
 
-        private void CmbChartType_SelectedIndexChanged(object sender, EventArgs e)
+        private void CmbChartType_SelectedIndexChanged(object? sender, EventArgs e)
         {
             if (cmbChartType.SelectedIndex < 0) return;
 
-            string selected = cmbChartType.SelectedItem.ToString();
+            string? selected = cmbChartType.SelectedItem?.ToString();
+            if (string.IsNullOrEmpty(selected)) return;
             
             if (selected.Contains("اداره"))
                 selectedChartType = "department";
@@ -256,7 +256,6 @@ namespace PersonnelManagementApp
 
                 string query = "";
                 string chartTitle = "";
-                string fieldName = "";
                 string displayName = "";
 
                 switch (selectedChartType)
@@ -264,31 +263,26 @@ namespace PersonnelManagementApp
                     case "department":
                         query = "SELECT [نام اداره], COUNT(*) as تعداد FROM Personnel GROUP BY [نام اداره]";
                         chartTitle = "توزیع پرسنل بر اساس اداره";
-                        fieldName = "نام اداره";
                         displayName = "اداره";
                         break;
                     case "education":
                         query = "SELECT [مدرک تحصیلی], COUNT(*) as تعداد FROM Personnel GROUP BY [مدرک تحصیلی]";
                         chartTitle = "توزیع پرسنل بر اساس تحصیلات";
-                        fieldName = "مدرک تحصیلی";
                         displayName = "تحصیلات";
                         break;
                     case "employment":
                         query = "SELECT [وضعیت استخدام], COUNT(*) as تعداد FROM Personnel GROUP BY [وضعیت استخدام]";
                         chartTitle = "توزیع پرسنل بر اساس وضعیت استخدام";
-                        fieldName = "وضعیت استخدام";
                         displayName = "وضعیت";
                         break;
                     case "jobtype":
                         query = "SELECT [نوع شغل], COUNT(*) as تعداد FROM Personnel GROUP BY [نوع شغل]";
                         chartTitle = "توزیع پرسنل بر اساس نوع شغل";
-                        fieldName = "نوع شغل";
                         displayName = "نوع شغل";
                         break;
                     case "military":
                         query = "SELECT [وضعیت نظام وظیفه], COUNT(*) as تعداد FROM Personnel GROUP BY [وضعیت نظام وظیفه]";
                         chartTitle = "توزیع پرسنل بر اساس وضعیت نظام وظیفه";
-                        fieldName = "وضعیت نظام وظیفه";
                         displayName = "وضعیت";
                         break;
                     case "age":
@@ -301,24 +295,24 @@ namespace PersonnelManagementApp
                                   FROM (SELECT YEAR(Date()) - YEAR([تاریخ تولد]) as Age FROM Personnel)
                                   GROUP BY [گروه سنی]";
                         chartTitle = "توزیع پرسنل بر اساس گروه‌های سنی";
-                        fieldName = "گروه سنی";
                         displayName = "گروه سنی";
                         break;
                     case "gender":
                         query = "SELECT [جنسیت], COUNT(*) as تعداد FROM Personnel GROUP BY [جنسیت]";
                         chartTitle = "توزیع پرسنل بر اساس جنسیت";
-                        fieldName = "جنسیت";
                         displayName = "جنسیت";
                         break;
                     case "marital":
                         query = "SELECT [وضعیت تاهل], COUNT(*) as تعداد FROM Personnel GROUP BY [وضعیت تاهل]";
                         chartTitle = "توزیع پرسنل بر اساس وضعیت تاهل";
-                        fieldName = "وضعیت تاهل";
                         displayName = "وضعیت";
                         break;
                 }
 
-                using (OleDbConnection conn = new OleDbConnection(AppSettings.ConnectionString))
+                // 🔥 استفاده از DatabaseHelper به جای AppSettings.ConnectionString
+                string connectionString = DatabaseHelper.GetConnectionString();
+                
+                using (OleDbConnection conn = new OleDbConnection(connectionString))
                 {
                     conn.Open();
                     using (OleDbCommand cmd = new OleDbCommand(query, conn))
@@ -391,7 +385,7 @@ namespace PersonnelManagementApp
             txtStats.AppendText($"\n\nتاریخ تولید: {DateTime.Now:yyyy/MM/dd - HH:mm}");
         }
 
-        private void BtnExportPDF_Click(object sender, EventArgs e)
+        private void BtnExportPDF_Click(object? sender, EventArgs e)
         {
             if (previewChart.Series.Count == 0)
             {
@@ -408,7 +402,7 @@ namespace PersonnelManagementApp
             );
         }
 
-        private void BtnExportImage_Click(object sender, EventArgs e)
+        private void BtnExportImage_Click(object? sender, EventArgs e)
         {
             if (previewChart.Series.Count == 0)
             {
@@ -460,7 +454,7 @@ namespace PersonnelManagementApp
             }
         }
 
-        private void BtnPrint_Click(object sender, EventArgs e)
+        private void BtnPrint_Click(object? sender, EventArgs e)
         {
             if (previewChart.Series.Count == 0)
             {
