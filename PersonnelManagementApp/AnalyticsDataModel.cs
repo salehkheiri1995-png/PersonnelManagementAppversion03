@@ -463,34 +463,37 @@ namespace PersonnelManagementApp
                 }).OrderByDescending(x => x.Count).ToList();
         }
 
-        public List<StatisticItem> GetFilteredAgeStatistics()
+        public List<StatisticItem> GetFilteredAgeStatistics(int rangeSize = 10)
         {
             var filtered = GetFiltered().Where(p => p.BirthDate.HasValue).ToList();
-            var ageGroups = new Dictionary<string, int>
-            {
-                {"10-20 سال", 0},
-                {"21-30 سال", 0},
-                {"31-40 سال", 0},
-                {"41-50 سال", 0},
-                {"51-60 سال", 0},
-                {"61-70 سال", 0},
-                {"71-80 سال", 0},
-                {"81-90 سال", 0},
-                {"91-100 سال", 0}
-            };
+            var ageGroups = new Dictionary<string, int>();
 
+            // ساخت دینامیک گروه‌های سنی بر اساس rangeSize
+            int minAge = 0;
+            int maxAge = 100;
+
+            for (int start = minAge; start <= maxAge; start += rangeSize)
+            {
+                int end = start + rangeSize - 1;
+                if (end > maxAge) end = maxAge;
+                string label = $"{start}-{end} سال";
+                ageGroups[label] = 0;
+            }
+
+            // شمارش افراد در هر گروه
             foreach (var person in filtered)
             {
                 int age = CalculateAge(person.BirthDate);
-                if (age >= 10 && age <= 20) ageGroups["10-20 سال"]++;
-                else if (age >= 21 && age <= 30) ageGroups["21-30 سال"]++;
-                else if (age >= 31 && age <= 40) ageGroups["31-40 سال"]++;
-                else if (age >= 41 && age <= 50) ageGroups["41-50 سال"]++;
-                else if (age >= 51 && age <= 60) ageGroups["51-60 سال"]++;
-                else if (age >= 61 && age <= 70) ageGroups["61-70 سال"]++;
-                else if (age >= 71 && age <= 80) ageGroups["71-80 سال"]++;
-                else if (age >= 81 && age <= 90) ageGroups["81-90 سال"]++;
-                else if (age >= 91 && age <= 100) ageGroups["91-100 سال"]++;
+                if (age < minAge || age > maxAge) continue;
+
+                int groupIndex = age / rangeSize;
+                int start = groupIndex * rangeSize;
+                int end = start + rangeSize - 1;
+                if (end > maxAge) end = maxAge;
+                string label = $"{start}-{end} سال";
+
+                if (ageGroups.ContainsKey(label))
+                    ageGroups[label]++;
             }
 
             return ageGroups.Where(x => x.Value > 0).Select(x => new StatisticItem { Name = x.Key, Count = x.Value }).ToList();
@@ -529,7 +532,7 @@ namespace PersonnelManagementApp
             return expGroups.Where(x => x.Value > 0).Select(x => new StatisticItem { Name = x.Key, Count = x.Value }).ToList();
         }
 
-        public List<PersonnelDetail> GetPersonnelByFilter(string filterValue, Chart chart)
+        public List<PersonnelDetail> GetPersonnelByFilter(string filterValue, Chart chart, int ageRangeSize = 10)
         {
             var filtered = GetFiltered();
 
@@ -573,20 +576,17 @@ namespace PersonnelManagementApp
 
             if (title.Contains("سن"))
             {
-                return filtered.Where(p => p.BirthDate.HasValue).Where(p =>
+                // استخراج بازه سنی از filterValue
+                var parts = filterValue.Replace(" سال", "").Split('-');
+                if (parts.Length == 2 && int.TryParse(parts[0], out int startAge) && int.TryParse(parts[1], out int endAge))
                 {
-                    int age = CalculateAge(p.BirthDate);
-                    if (filterValue == "10-20 سال") return age >= 10 && age <= 20;
-                    if (filterValue == "21-30 سال") return age >= 21 && age <= 30;
-                    if (filterValue == "31-40 سال") return age >= 31 && age <= 40;
-                    if (filterValue == "41-50 سال") return age >= 41 && age <= 50;
-                    if (filterValue == "51-60 سال") return age >= 51 && age <= 60;
-                    if (filterValue == "61-70 سال") return age >= 61 && age <= 70;
-                    if (filterValue == "71-80 سال") return age >= 71 && age <= 80;
-                    if (filterValue == "81-90 سال") return age >= 81 && age <= 90;
-                    if (filterValue == "91-100 سال") return age >= 91 && age <= 100;
-                    return false;
-                }).Select(ToDetail).ToList();
+                    return filtered.Where(p => p.BirthDate.HasValue).Where(p =>
+                    {
+                        int age = CalculateAge(p.BirthDate);
+                        return age >= startAge && age <= endAge;
+                    }).Select(ToDetail).ToList();
+                }
+                return new List<PersonnelDetail>();
             }
 
             if (title.Contains("سابقه"))
