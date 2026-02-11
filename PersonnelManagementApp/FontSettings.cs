@@ -22,6 +22,7 @@ namespace PersonnelManagementApp
         private const float DefaultTextBoxSize = 11f;
         private const float DefaultButtonSize = 12f;
         private const float DefaultBodySize = 10f;
+        private const float DefaultChartLabelSize = 10f;
 
         // Propertyهای عمومی برای دسترسی
         public static string FontFamilyName { get; set; }
@@ -30,9 +31,11 @@ namespace PersonnelManagementApp
         public static float TextBoxFontSize { get; set; }
         public static float ButtonFontSize { get; set; }
         public static float BodyFontSize { get; set; }
+        public static float ChartLabelFontSize { get; set; }
         public static bool TitleFontBold { get; set; }
         public static bool LabelFontBold { get; set; }
         public static bool ButtonFontBold { get; set; }
+        public static bool ChartLabelFontBold { get; set; }
 
         // فونت‌های آماده
         public static Font TitleFont { get; private set; }
@@ -42,6 +45,7 @@ namespace PersonnelManagementApp
         public static Font ButtonFont { get; private set; }
         public static Font LabelFont { get; private set; }
         public static Font TextBoxFont { get; private set; }
+        public static Font ChartLabelFont { get; private set; }
 
         // رویداد تغییر فونت
         public static event EventHandler FontChanged;
@@ -99,6 +103,10 @@ namespace PersonnelManagementApp
                                 if (float.TryParse(value, out float bodySize))
                                     BodyFontSize = bodySize;
                                 break;
+                            case "ChartLabelFontSize":
+                                if (float.TryParse(value, out float chartLabelSize))
+                                    ChartLabelFontSize = chartLabelSize;
+                                break;
                             case "TitleFontBold":
                                 TitleFontBold = value.ToLower() == "true";
                                 break;
@@ -107,6 +115,9 @@ namespace PersonnelManagementApp
                                 break;
                             case "ButtonFontBold":
                                 ButtonFontBold = value.ToLower() == "true";
+                                break;
+                            case "ChartLabelFontBold":
+                                ChartLabelFontBold = value.ToLower() == "true";
                                 break;
                         }
                     }
@@ -140,7 +151,9 @@ namespace PersonnelManagementApp
                     $"TextBoxFontSize={TextBoxFontSize}\n" +
                     $"ButtonFontSize={ButtonFontSize}\n" +
                     $"ButtonFontBold={ButtonFontBold.ToString().ToLower()}\n" +
-                    $"BodyFontSize={BodyFontSize}\n";
+                    $"BodyFontSize={BodyFontSize}\n" +
+                    $"ChartLabelFontSize={ChartLabelFontSize}\n" +
+                    $"ChartLabelFontBold={ChartLabelFontBold.ToString().ToLower()}\n";
 
                 File.WriteAllText(ConfigFilePath, content);
                 UpdateFonts();
@@ -165,9 +178,11 @@ namespace PersonnelManagementApp
             TextBoxFontSize = DefaultTextBoxSize;
             ButtonFontSize = DefaultButtonSize;
             BodyFontSize = DefaultBodySize;
+            ChartLabelFontSize = DefaultChartLabelSize;
             TitleFontBold = true;
             LabelFontBold = false;
             ButtonFontBold = true;
+            ChartLabelFontBold = false;
 
             UpdateFonts();
         }
@@ -226,6 +241,13 @@ namespace PersonnelManagementApp
                     FontFamilyName, 
                     TextBoxFontSize, 
                     FontStyle.Regular
+                );
+
+                // فونت متن داخل نمودارها (Chart Labels)
+                ChartLabelFont = new Font(
+                    FontFamilyName, 
+                    ChartLabelFontSize, 
+                    ChartLabelFontBold ? FontStyle.Bold : FontStyle.Regular
                 );
             }
             catch (Exception ex)
