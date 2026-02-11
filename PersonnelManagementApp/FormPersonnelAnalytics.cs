@@ -394,6 +394,45 @@ namespace PersonnelManagementApp
                 Padding = new Padding(4)
             };
 
+            // 🔥 دکمه Export بالای نمودارها
+            Panel chartHeaderPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 50,
+                BackColor = Color.FromArgb(0, 102, 204),
+                Padding = new Padding(10, 8, 10, 8)
+            };
+
+            Label lblChartsTitle = new Label
+            {
+                Text = "📊 نمودارهای آماری",
+                Font = new Font(FontSettings.HeaderFont.FontFamily, 12F, FontStyle.Bold),
+                ForeColor = Color.White,
+                AutoSize = true,
+                Location = new Point(chartHeaderPanel.Width - 200, 12)
+            };
+
+            Button btnExportCharts = new Button
+            {
+                Text = "📤 خروجی نمودارها",
+                Location = new Point(15, 8),
+                Size = new Size(160, 34),
+                BackColor = Color.FromArgb(40, 167, 69),
+                ForeColor = Color.White,
+                Font = new Font(FontSettings.ButtonFont.FontFamily, 9.5F, FontStyle.Bold),
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            btnExportCharts.FlatAppearance.BorderSize = 0;
+            btnExportCharts.Click += (s, e) =>
+            {
+                FormExportCharts exportForm = new FormExportCharts();
+                exportForm.ShowDialog();
+            };
+
+            chartHeaderPanel.Controls.Add(btnExportCharts);
+            chartHeaderPanel.Controls.Add(lblChartsTitle);
+
             tabControl.Dock = DockStyle.Fill;
             tabControl.RightToLeft = RightToLeft.Yes;
             tabControl.RightToLeftLayout = true;
@@ -413,6 +452,7 @@ namespace PersonnelManagementApp
             AddChartTab(tabControl, "💼 سابقه کاری", chartWorkExperiencePie, null);
 
             chartsPanel.Controls.Add(tabControl);
+            chartsPanel.Controls.Add(chartHeaderPanel);
 
             Panel tablesPanel = new Panel
             {
@@ -820,6 +860,26 @@ namespace PersonnelManagementApp
             }
             else
             {
+                // 🔥 دکمه Export کوچیک گوشه نمودار
+                Button btnExportThis = new Button
+                {
+                    Text = "📤",
+                    Size = new Size(40, 35),
+                    BackColor = Color.FromArgb(40, 167, 69),
+                    ForeColor = Color.White,
+                    Font = new Font("Segoe UI Emoji", 11F),
+                    FlatStyle = FlatStyle.Flat,
+                    Cursor = Cursors.Hand,
+                    Anchor = AnchorStyles.Top | AnchorStyles.Left
+                };
+                btnExportThis.FlatAppearance.BorderSize = 0;
+                btnExportThis.Location = new Point(10, 10);
+                btnExportThis.Click += (s, e) =>
+                {
+                    FormExportCharts exportForm = new FormExportCharts();
+                    exportForm.ShowDialog();
+                };
+
                 chart.Dock = DockStyle.Fill;
                 chart.BackColor = Color.White;
                 chart.MinimumSize = new Size(100, 100);
@@ -865,10 +925,14 @@ namespace PersonnelManagementApp
 
                     tab.Controls.Add(chart);
                     tab.Controls.Add(topPanel);
+                    tab.Controls.Add(btnExportThis);
+                    btnExportThis.BringToFront();
                 }
                 else
                 {
                     tab.Controls.Add(chart);
+                    tab.Controls.Add(btnExportThis);
+                    btnExportThis.BringToFront();
                 }
             }
 
@@ -952,7 +1016,7 @@ namespace PersonnelManagementApp
                 clbJobLevelFilter.Items.Add(j, false);
 
             clbContractTypeFilter.Items.Clear();
-            foreach (var c in analyticsModel.GetAllContractTypes())
+            foreach (var c in analyticsModel.GetAllContractTypes();
                 clbContractTypeFilter.Items.Add(c, false);
 
             clbCompanyFilter.Items.Clear();
