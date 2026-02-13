@@ -2,6 +2,7 @@ using System;
 using System.Windows.Forms;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.IO;
 //using PostDatabaseManager;
 
 namespace PersonnelManagementApp
@@ -13,6 +14,35 @@ namespace PersonnelManagementApp
             InitializeComponent();
             // اعمال فونت‌های تنظیم‌شده
             FontSettings.ApplyFontToForm(this);
+            // بارگذاری آیکون برنامه
+            LoadApplicationIcon();
+        }
+
+        /// <summary>
+        /// بارگذاری آیکون برنامه
+        /// </summary>
+        private void LoadApplicationIcon()
+        {
+            try
+            {
+                string iconPath = Path.Combine(Application.StartupPath, "app_icon.ico");
+                
+                if (File.Exists(iconPath))
+                {
+                    this.Icon = new Icon(iconPath);
+                }
+                else
+                {
+                    // اگر فایل پیدا نشد، از آیکون پیش‌فرض استفاده می‌شود
+                    this.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+                }
+            }
+            catch (Exception ex)
+            {
+                // در صورت بروز خطا، آیکون پیش‌فرض باقی می‌ماند
+                // می‌توانید این خط را برای debug فعال کنید:
+                // MessageBox.Show($"خطا در بارگذاری آیکون: {ex.Message}", "هشدار", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
 
         private void InitializeComponent()
