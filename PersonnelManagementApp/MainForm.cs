@@ -19,7 +19,7 @@ namespace PersonnelManagementApp
         }
 
         /// <summary>
-        /// بارگذاری آیکون برنامه
+        /// بارگذاری ایکون برنامه با سایز مناسب
         /// </summary>
         private void LoadApplicationIcon()
         {
@@ -29,18 +29,36 @@ namespace PersonnelManagementApp
                 
                 if (File.Exists(iconPath))
                 {
-                    this.Icon = new Icon(iconPath);
+                    // بارگذاری آیکون با سایز بزرگ (256x256 پیکسل)
+                    using (Icon originalIcon = new Icon(iconPath))
+                    {
+                        // استخراج بزرگترین سایز موجود
+                        this.Icon = new Icon(originalIcon, new Size(256, 256));
+                    }
                 }
                 else
                 {
-                    // اگر فایل پیدا نشد، از آیکون پیش‌فرض استفاده می‌شود
-                    this.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+                    // جستجو در مسیر BaseDirectory
+                    string resourcePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_icon.ico");
+                    if (File.Exists(resourcePath))
+                    {
+                        using (Icon originalIcon = new Icon(resourcePath))
+                        {
+                            this.Icon = new Icon(originalIcon, new Size(256, 256));
+                        }
+                    }
+                    else
+                    {
+                        // اگر فایل پیدا نشد، از آیکون پیش‌فرض استفاده می‌شود
+                        this.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+                    }
                 }
             }
             catch (Exception ex)
             {
                 // در صورت بروز خطا، آیکون پیش‌فرض باقی می‌ماند
-                // می‌توانید این خط را برای debug فعال کنید:
+                System.Diagnostics.Debug.WriteLine($"خطا در بارگذاری آیکون: {ex.Message}");
+                // برای تست و دیباگ می‌توانید این خط را فعال کنید:
                 // MessageBox.Show($"خطا در بارگذاری آیکون: {ex.Message}", "هشدار", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
