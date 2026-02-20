@@ -33,7 +33,7 @@ namespace PersonnelManagementApp
                     using (Icon originalIcon = new Icon(iconPath))
                     {
                         // استخراج بزرگترین سایز موجود
-                        this.Icon = new Icon(originalIcon, new Size(256, 256));
+                        this.Icon = new Icon(originalIcon, new Size(512, 512));
                     }
                 }
                 else
@@ -44,7 +44,7 @@ namespace PersonnelManagementApp
                     {
                         using (Icon originalIcon = new Icon(resourcePath))
                         {
-                            this.Icon = new Icon(originalIcon, new Size(256, 256));
+                            this.Icon = new Icon(originalIcon, new Size(512, 512));
                         }
                     }
                     else
