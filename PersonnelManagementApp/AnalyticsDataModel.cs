@@ -43,6 +43,10 @@ namespace PersonnelManagementApp
         private readonly Dictionary<int, string> companyCache = new Dictionary<int, string>();
         private readonly Dictionary<int, string> workShiftCache = new Dictionary<int, string>();
 
+        // ✅ تقویم شمسی ثابت برای پارس و محاسبه صحیح تاریخ، مستقل از تنظیمات منطقه‌ای سیستم
+        private static readonly System.Globalization.PersianCalendar _persianCalendar =
+            new System.Globalization.PersianCalendar();
+
         public int TotalPersonnel { get; private set; }
         public int DepartmentCount { get; private set; }
         public int PositionCount { get; private set; }
@@ -108,17 +112,59 @@ namespace PersonnelManagementApp
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"❌ خطا در بارگذاری دادهها: {ex.Message}\n\n{ex.StackTrace}", "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"\u274c خطا در بارگذاری داده\u200cها: {ex.Message}\n\n{ex.StackTrace}", "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
         }
 
         private int GetIntValue(object value) => value != DBNull.Value && value != null ? Convert.ToInt32(value) : 0;
-        private DateTime? GetDateValue(object value) => value != DBNull.Value && value != null ? Convert.ToDateTime(value) : (DateTime?)null;
+
+        // ✅ FIX: پارس تاریخ شمسی از دیتابیس - مستقل از تقویم سیستم (میلادی یا شمسی)
+        private DateTime? GetDateValue(object value)
+        {
+            if (value == DBNull.Value || value == null) return null;
+
+            // اگر قبلاً DateTime هست، مستقیم برگردان
+            if (value is DateTime dt) return dt;
+
+            string dateStr = value.ToString().Trim();
+            if (string.IsNullOrEmpty(dateStr)) return null;
+
+            // تلاش برای پارس تاریخ شمسی (مثلاً 1365/06/12 یا 1365-06-12)
+            try
+            {
+                string[] parts = dateStr.Split(new char[] { '/', '-', '.' });
+                if (parts.Length == 3 &&
+                    int.TryParse(parts[0].Trim(), out int year) &&
+                    int.TryParse(parts[1].Trim(), out int month) &&
+                    int.TryParse(parts[2].Trim(), out int day))
+                {
+                    // بازه سال شمسی: اگر سال بین 1300 و 1500 بود، تاریخ شمسی است
+                    if (year >= 1300 && year <= 1500 &&
+                        month >= 1 && month <= 12 &&
+                        day >= 1 && day <= 31)
+                    {
+                        return _persianCalendar.ToDateTime(year, month, day, 0, 0, 0, 0);
+                    }
+                }
+            }
+            catch { }
+
+            // تلاش با InvariantCulture (برای تاریخ‌های میلادی احتمالی)
+            if (DateTime.TryParse(dateStr,
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None,
+                out DateTime parsedDt))
+                return parsedDt;
+
+            // آخرین راه‌حل: Convert.ToDateTime
+            try { return Convert.ToDateTime(value); }
+            catch { return null; }
+        }
 
         private void LoadAllCaches(DbHelper dbHelper)
         {
-            // 🔥 Load با error handling دقیق
+            // \ud83d\udd25 Load با error handling دقیق
             LoadCacheSafe(dbHelper, "Provinces", "SELECT ProvinceID, ProvinceName FROM Provinces", provinceCache);
             LoadCacheSafe(dbHelper, "Cities", "SELECT CityID, CityName FROM Cities", cityCache);
             LoadCacheSafe(dbHelper, "TransferAffairs", "SELECT AffairID, AffairName FROM TransferAffairs", affairCache);
@@ -140,7 +186,7 @@ namespace PersonnelManagementApp
                 DataTable dt = dbHelper.ExecuteQuery(query);
                 if (dt == null || dt.Rows.Count == 0)
                 {
-                    // ⚠️ اگر جدول خالیه، فقط هشدار بده ولی error نده
+                    // \u26a0\ufe0f اگر جدول خالیه، فقط هشدار بده ولی error نده
                     return;
                 }
 
@@ -150,15 +196,15 @@ namespace PersonnelManagementApp
                 foreach (DataRow row in dt.Rows)
                 {
                     int key = Convert.ToInt32(row[keyColumn]);
-                    string value = row[valueColumn]?.ToString() ?? "";
+                    string val = row[valueColumn]?.ToString() ?? "";
                     if (!cache.ContainsKey(key))
-                        cache[key] = value;
+                        cache[key] = val;
                 }
             }
             catch (Exception ex)
             {
-                // 🔥 نمایش دقیق error برای هر جدول
-                MessageBox.Show($"❌ خطا در بارگذاری جدول {tableName}:\n\nQuery: {query}\n\nError: {ex.Message}", 
+                // \ud83d\udd25 نمایش دقیق error برای هر جدول
+                MessageBox.Show($"\u274c خطا در بارگذاری جدول {tableName}:\n\nQuery: {query}\n\nError: {ex.Message}",
                     "خطای دیتابیس", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -181,7 +227,7 @@ namespace PersonnelManagementApp
         public void SetFilters(List<string> provinces, List<string> cities, List<string> affairs, List<string> depts,
             List<string> districts, List<string> positions, List<string> genders, List<string> educations,
             List<string> jobLevels, List<string> contractTypes, List<string> companies, List<string> workShifts,
-            DateTime? hireFrom, DateTime? hireTo, int? ageMin = null, int? ageMax = null, 
+            DateTime? hireFrom, DateTime? hireTo, int? ageMin = null, int? ageMax = null,
             int? expMin = null, int? expMax = null)
         {
             filteredProvinces = provinces ?? new List<string>();
@@ -226,22 +272,66 @@ namespace PersonnelManagementApp
             maxExperience = null;
         }
 
+        // ✅ FIX: محاسبه سن با تقویم شمسی - مستقل از تقویم سیستم
         private int CalculateAge(DateTime? birthDate)
         {
             if (!birthDate.HasValue) return 0;
-            var today = DateTime.Today;
-            int age = today.Year - birthDate.Value.Year;
-            if (birthDate.Value.Date > today.AddYears(-age)) age--;
-            return age;
+            try
+            {
+                var today = DateTime.Today;
+                int todayYear  = _persianCalendar.GetYear(today);
+                int todayMonth = _persianCalendar.GetMonth(today);
+                int todayDay   = _persianCalendar.GetDayOfMonth(today);
+
+                int birthYear  = _persianCalendar.GetYear(birthDate.Value);
+                int birthMonth = _persianCalendar.GetMonth(birthDate.Value);
+                int birthDay   = _persianCalendar.GetDayOfMonth(birthDate.Value);
+
+                int age = todayYear - birthYear;
+                if (todayMonth < birthMonth || (todayMonth == birthMonth && todayDay < birthDay))
+                    age--;
+
+                return age < 0 ? 0 : age;
+            }
+            catch
+            {
+                // fallback به میلادی
+                var today = DateTime.Today;
+                int age = today.Year - birthDate.Value.Year;
+                if (birthDate.Value.Date > today.AddYears(-age)) age--;
+                return age < 0 ? 0 : age;
+            }
         }
 
+        // ✅ FIX: محاسبه سابقه کار با تقویم شمسی - مستقل از تقویم سیستم
         private int CalculateWorkExperience(DateTime? hireDate)
         {
             if (!hireDate.HasValue) return 0;
-            var today = DateTime.Today;
-            int years = today.Year - hireDate.Value.Year;
-            if (hireDate.Value.Date > today.AddYears(-years)) years--;
-            return years < 0 ? 0 : years;
+            try
+            {
+                var today = DateTime.Today;
+                int todayYear  = _persianCalendar.GetYear(today);
+                int todayMonth = _persianCalendar.GetMonth(today);
+                int todayDay   = _persianCalendar.GetDayOfMonth(today);
+
+                int hireYear  = _persianCalendar.GetYear(hireDate.Value);
+                int hireMonth = _persianCalendar.GetMonth(hireDate.Value);
+                int hireDay   = _persianCalendar.GetDayOfMonth(hireDate.Value);
+
+                int years = todayYear - hireYear;
+                if (todayMonth < hireMonth || (todayMonth == hireMonth && todayDay < hireDay))
+                    years--;
+
+                return years < 0 ? 0 : years;
+            }
+            catch
+            {
+                // fallback به میلادی
+                var today = DateTime.Today;
+                int years = today.Year - hireDate.Value.Year;
+                if (hireDate.Value.Date > today.AddYears(-years)) years--;
+                return years < 0 ? 0 : years;
+            }
         }
 
         private List<PersonnelRecord> GetFiltered()
@@ -381,7 +471,7 @@ namespace PersonnelManagementApp
             return filtered.Where(p => p.DeptID > 0).GroupBy(p => p.DeptID)
                 .Select(g => new StatisticItem
                 {
-                    Name = departmentCache.ContainsKey(g.Key) ? departmentCache[g.Key] : $"اداره {g.Key}",
+                    Name = departmentCache.ContainsKey(g.Key) ? departmentCache[g.Key] : $"\u0627\u062f\u0627\u0631\u0647 {g.Key}",
                     Count = g.Count()
                 }).OrderByDescending(x => x.Count).ToList();
         }
@@ -392,7 +482,7 @@ namespace PersonnelManagementApp
             return filtered.Where(p => p.PostNameID > 0).GroupBy(p => p.PostNameID)
                 .Select(g => new StatisticItem
                 {
-                    Name = positionCache.ContainsKey(g.Key) ? positionCache[g.Key] : $"پست {g.Key}",
+                    Name = positionCache.ContainsKey(g.Key) ? positionCache[g.Key] : $"\u067e\u0633\u062a {g.Key}",
                     Count = g.Count()
                 }).OrderByDescending(x => x.Count).ToList();
         }
@@ -403,7 +493,7 @@ namespace PersonnelManagementApp
             return filtered.Where(p => p.GenderID > 0).GroupBy(p => p.GenderID)
                 .Select(g => new StatisticItem
                 {
-                    Name = genderCache.ContainsKey(g.Key) ? genderCache[g.Key] : $"جنسیت {g.Key}",
+                    Name = genderCache.ContainsKey(g.Key) ? genderCache[g.Key] : $"\u062c\u0646\u0633\u06cc\u062a {g.Key}",
                     Count = g.Count()
                 }).OrderByDescending(x => x.Count).ToList();
         }
@@ -414,7 +504,7 @@ namespace PersonnelManagementApp
             return filtered.Where(p => p.JobLevelID > 0).GroupBy(p => p.JobLevelID)
                 .Select(g => new StatisticItem
                 {
-                    Name = jobLevelCache.ContainsKey(g.Key) ? jobLevelCache[g.Key] : $"سطح {g.Key}",
+                    Name = jobLevelCache.ContainsKey(g.Key) ? jobLevelCache[g.Key] : $"\u0633\u0637\u062d {g.Key}",
                     Count = g.Count()
                 }).OrderByDescending(x => x.Count).ToList();
         }
@@ -425,7 +515,7 @@ namespace PersonnelManagementApp
             return filtered.Where(p => p.ContractTypeID > 0).GroupBy(p => p.ContractTypeID)
                 .Select(g => new StatisticItem
                 {
-                    Name = contractTypeCache.ContainsKey(g.Key) ? contractTypeCache[g.Key] : $"قرارداد {g.Key}",
+                    Name = contractTypeCache.ContainsKey(g.Key) ? contractTypeCache[g.Key] : $"\u0642\u0631\u0627\u0631\u062f\u0627\u062f {g.Key}",
                     Count = g.Count()
                 }).OrderByDescending(x => x.Count).ToList();
         }
@@ -436,7 +526,7 @@ namespace PersonnelManagementApp
             return filtered.Where(p => p.ProvinceID > 0).GroupBy(p => p.ProvinceID)
                 .Select(g => new StatisticItem
                 {
-                    Name = provinceCache.ContainsKey(g.Key) ? provinceCache[g.Key] : $"استان {g.Key}",
+                    Name = provinceCache.ContainsKey(g.Key) ? provinceCache[g.Key] : $"\u0627\u0633\u062a\u0627\u0646 {g.Key}",
                     Count = g.Count()
                 }).OrderByDescending(x => x.Count).ToList();
         }
@@ -447,7 +537,7 @@ namespace PersonnelManagementApp
             return filtered.Where(p => p.DegreeID > 0).GroupBy(p => p.DegreeID)
                 .Select(g => new StatisticItem
                 {
-                    Name = degreeCache.ContainsKey(g.Key) ? degreeCache[g.Key] : $"مدرک {g.Key}",
+                    Name = degreeCache.ContainsKey(g.Key) ? degreeCache[g.Key] : $"\u0645\u062f\u0631\u06a9 {g.Key}",
                     Count = g.Count()
                 }).OrderByDescending(x => x.Count).ToList();
         }
@@ -458,7 +548,7 @@ namespace PersonnelManagementApp
             return filtered.Where(p => p.CompanyID > 0).GroupBy(p => p.CompanyID)
                 .Select(g => new StatisticItem
                 {
-                    Name = companyCache.ContainsKey(g.Key) ? companyCache[g.Key] : $"شرکت {g.Key}",
+                    Name = companyCache.ContainsKey(g.Key) ? companyCache[g.Key] : $"\u0634\u0631\u06a9\u062a {g.Key}",
                     Count = g.Count()
                 }).OrderByDescending(x => x.Count).ToList();
         }
@@ -469,7 +559,7 @@ namespace PersonnelManagementApp
             return filtered.Where(p => p.WorkShiftID > 0).GroupBy(p => p.WorkShiftID)
                 .Select(g => new StatisticItem
                 {
-                    Name = workShiftCache.ContainsKey(g.Key) ? workShiftCache[g.Key] : $"شیفت {g.Key}",
+                    Name = workShiftCache.ContainsKey(g.Key) ? workShiftCache[g.Key] : $"\u0634\u06cc\u0641\u062a {g.Key}",
                     Count = g.Count()
                 }).OrderByDescending(x => x.Count).ToList();
         }
@@ -479,29 +569,27 @@ namespace PersonnelManagementApp
             var filtered = GetFiltered().Where(p => p.BirthDate.HasValue).ToList();
             var ageGroups = new Dictionary<string, int>();
 
-            // ساخت دینامیک گروه‌های سنی بر اساس rangeSize
-            int minAge = 0;
-            int maxAge = 100;
+            int minAgeVal = 0;
+            int maxAgeVal = 100;
 
-            for (int start = minAge; start <= maxAge; start += rangeSize)
+            for (int start = minAgeVal; start <= maxAgeVal; start += rangeSize)
             {
                 int end = start + rangeSize - 1;
-                if (end > maxAge) end = maxAge;
-                string label = $"{start}-{end} سال";
+                if (end > maxAgeVal) end = maxAgeVal;
+                string label = $"{start}-{end} \u0633\u0627\u0644";
                 ageGroups[label] = 0;
             }
 
-            // شمارش افراد در هر گروه
             foreach (var person in filtered)
             {
                 int age = CalculateAge(person.BirthDate);
-                if (age < minAge || age > maxAge) continue;
+                if (age < minAgeVal || age > maxAgeVal) continue;
 
                 int groupIndex = age / rangeSize;
                 int start = groupIndex * rangeSize;
                 int end = start + rangeSize - 1;
-                if (end > maxAge) end = maxAge;
-                string label = $"{start}-{end} سال";
+                if (end > maxAgeVal) end = maxAgeVal;
+                string label = $"{start}-{end} \u0633\u0627\u0644";
 
                 if (ageGroups.ContainsKey(label))
                     ageGroups[label]++;
@@ -515,29 +603,29 @@ namespace PersonnelManagementApp
             var filtered = GetFiltered().Where(p => p.HireDate.HasValue).ToList();
             var expGroups = new Dictionary<string, int>
             {
-                {"0-5 سال", 0},
-                {"6-10 سال", 0},
-                {"11-15 سال", 0},
-                {"16-20 سال", 0},
-                {"21-25 سال", 0},
-                {"26-30 سال", 0},
-                {"31-35 سال", 0},
-                {"36-40 سال", 0},
-                {"بیش از 40 سال", 0}
+                {"0-5 \u0633\u0627\u0644", 0},
+                {"6-10 \u0633\u0627\u0644", 0},
+                {"11-15 \u0633\u0627\u0644", 0},
+                {"16-20 \u0633\u0627\u0644", 0},
+                {"21-25 \u0633\u0627\u0644", 0},
+                {"26-30 \u0633\u0627\u0644", 0},
+                {"31-35 \u0633\u0627\u0644", 0},
+                {"36-40 \u0633\u0627\u0644", 0},
+                {"\u0628\u06cc\u0634 \u0627\u0632 40 \u0633\u0627\u0644", 0}
             };
 
             foreach (var person in filtered)
             {
                 int exp = CalculateWorkExperience(person.HireDate);
-                if (exp >= 0 && exp <= 5) expGroups["0-5 سال"]++;
-                else if (exp >= 6 && exp <= 10) expGroups["6-10 سال"]++;
-                else if (exp >= 11 && exp <= 15) expGroups["11-15 سال"]++;
-                else if (exp >= 16 && exp <= 20) expGroups["16-20 سال"]++;
-                else if (exp >= 21 && exp <= 25) expGroups["21-25 سال"]++;
-                else if (exp >= 26 && exp <= 30) expGroups["26-30 سال"]++;
-                else if (exp >= 31 && exp <= 35) expGroups["31-35 سال"]++;
-                else if (exp >= 36 && exp <= 40) expGroups["36-40 سال"]++;
-                else if (exp > 40) expGroups["بیش از 40 سال"]++;
+                if (exp >= 0 && exp <= 5) expGroups["0-5 \u0633\u0627\u0644"]++;
+                else if (exp >= 6 && exp <= 10) expGroups["6-10 \u0633\u0627\u0644"]++;
+                else if (exp >= 11 && exp <= 15) expGroups["11-15 \u0633\u0627\u0644"]++;
+                else if (exp >= 16 && exp <= 20) expGroups["16-20 \u0633\u0627\u0644"]++;
+                else if (exp >= 21 && exp <= 25) expGroups["21-25 \u0633\u0627\u0644"]++;
+                else if (exp >= 26 && exp <= 30) expGroups["26-30 \u0633\u0627\u0644"]++;
+                else if (exp >= 31 && exp <= 35) expGroups["31-35 \u0633\u0627\u0644"]++;
+                else if (exp >= 36 && exp <= 40) expGroups["36-40 \u0633\u0627\u0644"]++;
+                else if (exp > 40) expGroups["\u0628\u06cc\u0634 \u0627\u0632 40 \u0633\u0627\u0644"]++;
             }
 
             return expGroups.Where(x => x.Value > 0).Select(x => new StatisticItem { Name = x.Key, Count = x.Value }).ToList();
@@ -549,46 +637,45 @@ namespace PersonnelManagementApp
 
             string title = chart.Titles.Count > 0 ? chart.Titles[0].Text : "";
 
-            if (title.Contains("اداره"))
+            if (title.Contains("\u0627\u062f\u0627\u0631\u0647"))
                 return filtered.Where(p => p.DeptID > 0 && departmentCache.ContainsKey(p.DeptID) && departmentCache[p.DeptID] == filterValue)
                     .Select(ToDetail).ToList();
 
-            if (title.Contains("پست"))
+            if (title.Contains("\u067e\u0633\u062a"))
                 return filtered.Where(p => p.PostNameID > 0 && positionCache.ContainsKey(p.PostNameID) && positionCache[p.PostNameID] == filterValue)
                     .Select(ToDetail).ToList();
 
-            if (title.Contains("جنسیت"))
+            if (title.Contains("\u062c\u0646\u0633\u06cc\u062a"))
                 return filtered.Where(p => p.GenderID > 0 && genderCache.ContainsKey(p.GenderID) && genderCache[p.GenderID] == filterValue)
                     .Select(ToDetail).ToList();
 
-            if (title.Contains("سطح"))
+            if (title.Contains("\u0633\u0637\u062d"))
                 return filtered.Where(p => p.JobLevelID > 0 && jobLevelCache.ContainsKey(p.JobLevelID) && jobLevelCache[p.JobLevelID] == filterValue)
                     .Select(ToDetail).ToList();
 
-            if (title.Contains("قرارداد"))
+            if (title.Contains("\u0642\u0631\u0627\u0631\u062f\u0627\u062f"))
                 return filtered.Where(p => p.ContractTypeID > 0 && contractTypeCache.ContainsKey(p.ContractTypeID) && contractTypeCache[p.ContractTypeID] == filterValue)
                     .Select(ToDetail).ToList();
 
-            if (title.Contains("استان"))
+            if (title.Contains("\u0627\u0633\u062a\u0627\u0646"))
                 return filtered.Where(p => p.ProvinceID > 0 && provinceCache.ContainsKey(p.ProvinceID) && provinceCache[p.ProvinceID] == filterValue)
                     .Select(ToDetail).ToList();
 
-            if (title.Contains("مدارک") || title.Contains("تحصیلات"))
+            if (title.Contains("\u0645\u062f\u0627\u0631\u06a9") || title.Contains("\u062a\u062d\u0635\u06cc\u0644\u0627\u062a"))
                 return filtered.Where(p => p.DegreeID > 0 && degreeCache.ContainsKey(p.DegreeID) && degreeCache[p.DegreeID] == filterValue)
                     .Select(ToDetail).ToList();
 
-            if (title.Contains("شرکت"))
+            if (title.Contains("\u0634\u0631\u06a9\u062a"))
                 return filtered.Where(p => p.CompanyID > 0 && companyCache.ContainsKey(p.CompanyID) && companyCache[p.CompanyID] == filterValue)
                     .Select(ToDetail).ToList();
 
-            if (title.Contains("شیفت"))
+            if (title.Contains("\u0634\u06cc\u0641\u062a"))
                 return filtered.Where(p => p.WorkShiftID > 0 && workShiftCache.ContainsKey(p.WorkShiftID) && workShiftCache[p.WorkShiftID] == filterValue)
                     .Select(ToDetail).ToList();
 
-            if (title.Contains("سن"))
+            if (title.Contains("\u0633\u0646"))
             {
-                // استخراج بازه سنی از filterValue
-                var parts = filterValue.Replace(" سال", "").Split('-');
+                var parts = filterValue.Replace(" \u0633\u0627\u0644", "").Split('-');
                 if (parts.Length == 2 && int.TryParse(parts[0], out int startAge) && int.TryParse(parts[1], out int endAge))
                 {
                     return filtered.Where(p => p.BirthDate.HasValue).Where(p =>
@@ -600,20 +687,20 @@ namespace PersonnelManagementApp
                 return new List<PersonnelDetail>();
             }
 
-            if (title.Contains("سابقه"))
+            if (title.Contains("\u0633\u0627\u0628\u0642\u0647"))
             {
                 return filtered.Where(p => p.HireDate.HasValue).Where(p =>
                 {
                     int exp = CalculateWorkExperience(p.HireDate);
-                    if (filterValue == "0-5 سال") return exp >= 0 && exp <= 5;
-                    if (filterValue == "6-10 سال") return exp >= 6 && exp <= 10;
-                    if (filterValue == "11-15 سال") return exp >= 11 && exp <= 15;
-                    if (filterValue == "16-20 سال") return exp >= 16 && exp <= 20;
-                    if (filterValue == "21-25 سال") return exp >= 21 && exp <= 25;
-                    if (filterValue == "26-30 سال") return exp >= 26 && exp <= 30;
-                    if (filterValue == "31-35 سال") return exp >= 31 && exp <= 35;
-                    if (filterValue == "36-40 سال") return exp >= 36 && exp <= 40;
-                    if (filterValue == "بیش از 40 سال") return exp > 40;
+                    if (filterValue == "0-5 \u0633\u0627\u0644") return exp >= 0 && exp <= 5;
+                    if (filterValue == "6-10 \u0633\u0627\u0644") return exp >= 6 && exp <= 10;
+                    if (filterValue == "11-15 \u0633\u0627\u0644") return exp >= 11 && exp <= 15;
+                    if (filterValue == "16-20 \u0633\u0627\u0644") return exp >= 16 && exp <= 20;
+                    if (filterValue == "21-25 \u0633\u0627\u0644") return exp >= 21 && exp <= 25;
+                    if (filterValue == "26-30 \u0633\u0627\u0644") return exp >= 26 && exp <= 30;
+                    if (filterValue == "31-35 \u0633\u0627\u0644") return exp >= 31 && exp <= 35;
+                    if (filterValue == "36-40 \u0633\u0627\u0644") return exp >= 36 && exp <= 40;
+                    if (filterValue == "\u0628\u06cc\u0634 \u0627\u0632 40 \u0633\u0627\u0644") return exp > 40;
                     return false;
                 }).Select(ToDetail).ToList();
             }
