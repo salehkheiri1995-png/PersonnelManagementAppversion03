@@ -20,17 +20,18 @@ namespace PersonnelManagementApp
         private NumericUpDown numTextBoxSize;
         private NumericUpDown numButtonSize;
         private NumericUpDown numBodySize;
-        private NumericUpDown numChartLabelSize;  // 🔥 اضافه شد
+        private NumericUpDown numChartLabelSize;
         private CheckBox chkBoldTitle;
         private CheckBox chkBoldLabel;
         private CheckBox chkBoldButton;
-        private CheckBox chkBoldChartLabel;  // 🔥 اضافه شد
+        private CheckBox chkBoldChartLabel;
 
         // Panels برای هر بخش
         private Panel pnlDatabaseContent;
         private Panel pnlPhotosContent;
         private Panel pnlFontContent;
         private Panel pnlMissingPhotosContent;
+        private Panel pnlExcelImportContent;   // ✅ جدید
         private Panel pnlCurrentContent;
 
         // دکمه‌منوها
@@ -38,174 +39,170 @@ namespace PersonnelManagementApp
         private Panel btnMenuPhotos;
         private Panel btnMenuFont;
         private Panel btnMenuMissingPhotos;
+        private Panel btnMenuExcelImport;      // ✅ جدید
         private Panel selectedMenuButton;
 
         // رنگ‌های مدرن
-        private readonly Color PrimaryColor = Color.FromArgb(33, 150, 243);
-        private readonly Color PrimaryDark = Color.FromArgb(25, 118, 210);
-        private readonly Color AccentColor = Color.FromArgb(76, 175, 80);
+        private readonly Color PrimaryColor    = Color.FromArgb(33, 150, 243);
+        private readonly Color PrimaryDark     = Color.FromArgb(25, 118, 210);
+        private readonly Color AccentColor     = Color.FromArgb(76, 175, 80);
         private readonly Color BackgroundColor = Color.FromArgb(250, 250, 250);
-        private readonly Color SidebarColor = Color.FromArgb(248, 249, 250);
-        private readonly Color CardBackground = Color.White;
-        private readonly Color TextPrimary = Color.FromArgb(33, 33, 33);
-        private readonly Color TextSecondary = Color.FromArgb(117, 117, 117);
-        private readonly Color DangerColor = Color.FromArgb(244, 67, 54);
-        private readonly Color WarningColor = Color.FromArgb(255, 152, 0);
-        private readonly Color MenuHover = Color.FromArgb(240, 240, 240);
-        private readonly Color MenuSelected = Color.FromArgb(33, 150, 243);
+        private readonly Color SidebarColor    = Color.FromArgb(248, 249, 250);
+        private readonly Color CardBackground  = Color.White;
+        private readonly Color TextPrimary     = Color.FromArgb(33, 33, 33);
+        private readonly Color TextSecondary   = Color.FromArgb(117, 117, 117);
+        private readonly Color DangerColor     = Color.FromArgb(244, 67, 54);
+        private readonly Color WarningColor    = Color.FromArgb(255, 152, 0);
+        private readonly Color MenuHover       = Color.FromArgb(240, 240, 240);
+        private readonly Color MenuSelected    = Color.FromArgb(33, 150, 243);
+        private readonly Color ImportColor     = Color.FromArgb(0, 150, 136);  // ✅ رنگ سبز-آبی برای import
 
         public FormSettings()
         {
             InitializeComponent();
             FontSettings.ApplyFontToForm(this);
             LoadCurrentSettings();
-            // نمایش پیش‌فرض بخش دیتابیس بعد از نمایش فرم تا رندر صحیح انجام شود
             this.Shown += (s, e) => ShowContent(pnlDatabaseContent, btnMenuDatabase);
         }
 
-        // متد کمکی برای گرفتن فونت با فالبک
         private Font GetSafeFont(string familyName, float size, FontStyle style = FontStyle.Regular)
         {
-            try
-            {
-                return new Font(familyName, size, style);
-            }
-            catch
-            {
-                return new Font("Tahoma", size, style);
-            }
+            try   { return new Font(familyName, size, style); }
+            catch { return new Font("Tahoma",    size, style); }
         }
 
         private void InitializeComponent()
         {
-            this.Text = "⚙️ تنظیمات برنامه";
-            this.Size = new Size(1000, 720);
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.RightToLeft = RightToLeft.Yes;
-            this.FormBorderStyle = FormBorderStyle.FixedDialog;
-            this.MaximizeBox = false;
-            this.MinimizeBox = false;
-            this.BackColor = BackgroundColor;
-            this.Padding = new Padding(15);
+            this.Text             = "\u2699\ufe0f تنظیمات برنامه";
+            this.Size             = new Size(1000, 760);   // ✅ ارتفاع کمی بیشتر برای منوی جدید
+            this.StartPosition    = FormStartPosition.CenterScreen;
+            this.RightToLeft      = RightToLeft.Yes;
+            this.FormBorderStyle  = FormBorderStyle.FixedDialog;
+            this.MaximizeBox      = false;
+            this.MinimizeBox      = false;
+            this.BackColor        = BackgroundColor;
+            this.Padding          = new Padding(15);
 
-            // ========== هدر ==========
+            // هدر
             Panel headerPanel = CreateHeaderPanel();
             this.Controls.Add(headerPanel);
 
-            // ========== Content Area (سمت چپ) ==========
+            // Content Area
             Panel contentArea = new Panel
             {
-                Location = new Point(15, 95),
-                Size = new Size(720, 490),
+                Location  = new Point(15, 95),
+                Size      = new Size(720, 530),
                 BackColor = BackgroundColor
             };
             this.Controls.Add(contentArea);
 
             // ساخت محتواها
-            pnlDatabaseContent = CreateDatabaseContent();
-            pnlPhotosContent = CreatePhotosContent();
-            pnlFontContent = CreateFontContent();
+            pnlDatabaseContent      = CreateDatabaseContent();
+            pnlPhotosContent        = CreatePhotosContent();
+            pnlFontContent          = CreateFontContent();
             pnlMissingPhotosContent = CreateMissingPhotosContent();
+            pnlExcelImportContent   = CreateExcelImportContent();   // ✅
 
-            // اضافه کردن به contentArea بدون Dock
             contentArea.Controls.Add(pnlDatabaseContent);
             contentArea.Controls.Add(pnlPhotosContent);
             contentArea.Controls.Add(pnlFontContent);
             contentArea.Controls.Add(pnlMissingPhotosContent);
+            contentArea.Controls.Add(pnlExcelImportContent);        // ✅
 
-            // همه بخش‌ها را نمایان نگه‌دار (برای جلوگیری از مشکلات رندر هنگام نمایش مجدد)
-            pnlDatabaseContent.Visible = true;
-            pnlPhotosContent.Visible = true;
-            pnlFontContent.Visible = true;
+            pnlDatabaseContent.Visible      = true;
+            pnlPhotosContent.Visible        = true;
+            pnlFontContent.Visible          = true;
             pnlMissingPhotosContent.Visible = true;
+            pnlExcelImportContent.Visible   = true;                 // ✅
 
-            // ========== Sidebar (منوی سمت راست) ==========
+            // Sidebar
             Panel sidebarPanel = CreateSidebar();
             this.Controls.Add(sidebarPanel);
 
-            // ========== دکمه‌های پایین ==========
+            // دکمه‌های پایین
             Panel buttonPanel = CreateButtonPanel();
             this.Controls.Add(buttonPanel);
         }
 
+        // ─────────────────────────────────────────────
+        // Header
+        // ─────────────────────────────────────────────
         private Panel CreateHeaderPanel()
         {
             Panel panel = new Panel
             {
-                Location = new Point(15, 15),
-                Size = new Size(950, 65),
+                Location  = new Point(15, 15),
+                Size      = new Size(950, 65),
                 BackColor = PrimaryColor
             };
             ApplyRoundedCorners(panel, 12);
 
-            Label lblTitle = new Label
+            panel.Controls.Add(new Label
             {
-                Text = "⚙️ تنظیمات برنامه",
-                Font = GetSafeFont(FontSettings.TitleFont?.FontFamily.Name ?? "Tahoma", 18, FontStyle.Bold),
+                Text      = "\u2699\ufe0f تنظیمات برنامه",
+                Font      = GetSafeFont(FontSettings.TitleFont?.FontFamily.Name ?? "Tahoma", 18, FontStyle.Bold),
                 ForeColor = Color.White,
-                Location = new Point(20, 12),
-                Size = new Size(400, 35),
+                Location  = new Point(20, 12),
+                Size      = new Size(400, 35),
                 TextAlign = ContentAlignment.MiddleRight
-            };
-            panel.Controls.Add(lblTitle);
-
-            Label lblSubtitle = new Label
+            });
+            panel.Controls.Add(new Label
             {
-                Text = "مدیریت تنظیمات مسیرها، فونت‌ها و سایر موارد",
-                Font = GetSafeFont(FontSettings.BodyFont?.FontFamily.Name ?? "Tahoma", 9),
+                Text      = "مدیریت تنظیمات مسیرها، فونت‌ها و سایر موارد",
+                Font      = GetSafeFont(FontSettings.BodyFont?.FontFamily.Name ?? "Tahoma", 9),
                 ForeColor = Color.FromArgb(230, 240, 255),
-                Location = new Point(20, 42),
-                Size = new Size(400, 18),
+                Location  = new Point(20, 42),
+                Size      = new Size(400, 18),
                 TextAlign = ContentAlignment.TopRight
-            };
-            panel.Controls.Add(lblSubtitle);
-
+            });
             return panel;
         }
 
+        // ─────────────────────────────────────────────
+        // Sidebar  (✅ منوی جدید اضافه شد)
+        // ─────────────────────────────────────────────
         private Panel CreateSidebar()
         {
             Panel sidebar = new Panel
             {
-                Location = new Point(755, 95),
-                Size = new Size(210, 490),
+                Location  = new Point(755, 95),
+                Size      = new Size(210, 530),
                 BackColor = SidebarColor
             };
             ApplyRoundedCorners(sidebar, 10);
 
             int yPos = 20;
 
-            // عنوان منو
-            Label lblMenuTitle = new Label
+            sidebar.Controls.Add(new Label
             {
-                Text = "بخش‌ها",
-                Font = GetSafeFont(FontSettings.LabelFont?.FontFamily.Name ?? "Tahoma", 10, FontStyle.Bold),
+                Text      = "بخش‌ها",
+                Font      = GetSafeFont(FontSettings.LabelFont?.FontFamily.Name ?? "Tahoma", 10, FontStyle.Bold),
                 ForeColor = TextSecondary,
-                Location = new Point(15, yPos),
-                Size = new Size(180, 25),
+                Location  = new Point(15, yPos),
+                Size      = new Size(180, 25),
                 TextAlign = ContentAlignment.MiddleRight
-            };
-            sidebar.Controls.Add(lblMenuTitle);
+            });
             yPos += 40;
 
-            // دکمه دیتابیس
-            btnMenuDatabase = CreateMenuButton("💾 تنظیمات دیتابیس", yPos, pnlDatabaseContent);
+            btnMenuDatabase = CreateMenuButton("\ud83d\udcbe تنظیمات دیتابیس", yPos, pnlDatabaseContent);
             sidebar.Controls.Add(btnMenuDatabase);
             yPos += 55;
 
-            // دکمه عکس‌ها
-            btnMenuPhotos = CreateMenuButton("🖼️ تنظیمات عکس‌ها", yPos, pnlPhotosContent);
+            btnMenuPhotos = CreateMenuButton("\ud83d\uddbc\ufe0f تنظیمات عکس‌ها", yPos, pnlPhotosContent);
             sidebar.Controls.Add(btnMenuPhotos);
             yPos += 55;
 
-            // دکمه فونت
-            btnMenuFont = CreateMenuButton("🔤 تنظیمات فونت", yPos, pnlFontContent);
+            btnMenuFont = CreateMenuButton("\ud83d\udd24 تنظیمات فونت", yPos, pnlFontContent);
             sidebar.Controls.Add(btnMenuFont);
             yPos += 55;
 
-            // دکمه پرسنل بدون عکس
-            btnMenuMissingPhotos = CreateMenuButton("📸 پرسنل بدون عکس", yPos, pnlMissingPhotosContent);
+            btnMenuMissingPhotos = CreateMenuButton("\ud83d\udcf8 پرسنل بدون عکس", yPos, pnlMissingPhotosContent);
             sidebar.Controls.Add(btnMenuMissingPhotos);
+            yPos += 55;
+
+            // ✅ منوی جدید وارد کردن از اکسل
+            btnMenuExcelImport = CreateMenuButton("\ud83d\udce5 وارد کردن از اکسل", yPos, pnlExcelImportContent);
+            sidebar.Controls.Add(btnMenuExcelImport);
 
             return sidebar;
         }
@@ -214,74 +211,47 @@ namespace PersonnelManagementApp
         {
             Panel btn = new Panel
             {
-                Location = new Point(10, yPos),
-                Size = new Size(190, 45),
+                Location  = new Point(10, yPos),
+                Size      = new Size(190, 45),
                 BackColor = Color.Transparent,
-                Cursor = Cursors.Hand,
-                Tag = "menu"
+                Cursor    = Cursors.Hand,
+                Tag       = "menu"
             };
             ApplyRoundedCorners(btn, 8);
 
             Label lbl = new Label
             {
-                Text = text,
-                Font = GetSafeFont(FontSettings.LabelFont?.FontFamily.Name ?? "Tahoma", 10),
+                Text      = text,
+                Font      = GetSafeFont(FontSettings.LabelFont?.FontFamily.Name ?? "Tahoma", 10),
                 ForeColor = TextPrimary,
-                Location = new Point(10, 0),
-                Size = new Size(170, 45),
+                Location  = new Point(10, 0),
+                Size      = new Size(170, 45),
                 TextAlign = ContentAlignment.MiddleRight,
-                Cursor = Cursors.Hand
+                Cursor    = Cursors.Hand
             };
             btn.Controls.Add(lbl);
 
-            // رویداد Click برای Panel
             EventHandler clickHandler = (s, e) => ShowContent(targetContent, btn);
             btn.Click += clickHandler;
+            lbl.Click += clickHandler;
 
-            // رویدادهای Hover
-            btn.MouseEnter += (s, e) => {
-                if (selectedMenuButton != btn)
-                {
-                    btn.BackColor = MenuHover;
-                }
-            };
-            btn.MouseLeave += (s, e) => {
-                if (selectedMenuButton != btn)
-                {
-                    btn.BackColor = Color.Transparent;
-                }
-            };
-
+            btn.MouseEnter += (s, e) => { if (selectedMenuButton != btn) btn.BackColor = MenuHover; };
+            btn.MouseLeave += (s, e) => { if (selectedMenuButton != btn) btn.BackColor = Color.Transparent; };
             lbl.MouseEnter += (s, e) => btn.BackColor = selectedMenuButton == btn ? MenuSelected : MenuHover;
             lbl.MouseLeave += (s, e) => btn.BackColor = selectedMenuButton == btn ? MenuSelected : Color.Transparent;
-
-            // وقتی روی label کلیک می‌شه، همون handler رو صدا می‌زنیم
-            lbl.Click += clickHandler;
 
             return btn;
         }
 
         private void ShowContent(Panel contentPanel, Panel menuButton)
         {
-            // مخفی کردن همه محتواها
-            if (pnlDatabaseContent != null)
-            {
-                pnlDatabaseContent.Visible = false;
-            }
-            if (pnlPhotosContent != null)
-            {
-                pnlPhotosContent.Visible = false;
-            }
-            if (pnlFontContent != null)
-            {
-                pnlFontContent.Visible = false;
-            }
-            if (pnlMissingPhotosContent != null)
-            {
-                pnlMissingPhotosContent.Visible = false;
-            }
+            // مخفی کردن همه
+            pnlDatabaseContent?.let(p      => p.Visible = false);
+            pnlPhotosContent?.let(p        => p.Visible = false);
+            pnlFontContent?.let(p          => p.Visible = false);
+            pnlMissingPhotosContent?.let(p => p.Visible = false);
+            pnlExcelImportContent?.let(p   => p.Visible = false);   // ✅
 
-            // نمایش محتوای انتخابی
             if (contentPanel != null)
             {
                 contentPanel.Visible = true;
@@ -291,15 +261,12 @@ namespace PersonnelManagementApp
                 pnlCurrentContent = contentPanel;
             }
 
-            // برداشتن هایلایت از همه دکمه‌ها
+            // برداشتن هایلایت
             if (selectedMenuButton != null)
             {
                 selectedMenuButton.BackColor = Color.Transparent;
                 foreach (Control c in selectedMenuButton.Controls)
-                {
-                    if (c is Label lbl)
-                        lbl.ForeColor = TextPrimary;
-                }
+                    if (c is Label l) l.ForeColor = TextPrimary;
             }
 
             // هایلایت دکمه انتخابی
@@ -307,76 +274,202 @@ namespace PersonnelManagementApp
             {
                 menuButton.BackColor = MenuSelected;
                 foreach (Control c in menuButton.Controls)
-                {
-                    if (c is Label lbl)
-                        lbl.ForeColor = Color.White;
-                }
+                    if (c is Label l) l.ForeColor = Color.White;
                 selectedMenuButton = menuButton;
             }
         }
 
-        private Panel CreateMissingPhotosContent()
+        // ─────────────────────────────────────────────
+        // ✅ محتوای بخش وارد کردن از اکسل
+        // ─────────────────────────────────────────────
+        private Panel CreateExcelImportContent()
         {
             Panel content = new Panel
             {
-                Location = new Point(0, 0),
-                Size = new Size(720, 490),
-                BackColor = Color.Transparent,
+                Location   = new Point(0, 0),
+                Size       = new Size(720, 530),
+                BackColor  = Color.Transparent,
                 AutoScroll = false
             };
 
             Panel card = new Panel
             {
-                Location = new Point(10, 10),
-                Size = new Size(690, 280),
+                Location  = new Point(10, 10),
+                Size      = new Size(690, 340),
                 BackColor = CardBackground
             };
             ApplyRoundedCorners(card, 10);
             ApplyCardShadow(card);
 
             // عنوان
-            Label lblTitle = new Label
+            card.Controls.Add(new Label
             {
-                Text = "📸 بررسی پرسنل بدون عکس",
-                Font = GetSafeFont(FontSettings.LabelFont?.FontFamily.Name ?? "Tahoma", 14, FontStyle.Bold),
+                Text      = "\ud83d\udce5 وارد کردن اطلاعات از اکسل",
+                Font      = GetSafeFont(FontSettings.LabelFont?.FontFamily.Name ?? "Tahoma", 14, FontStyle.Bold),
                 ForeColor = TextPrimary,
-                Location = new Point(420, 20),
-                Size = new Size(250, 35),
+                Location  = new Point(270, 20),
+                Size      = new Size(400, 35),
                 TextAlign = ContentAlignment.MiddleRight
-            };
-            card.Controls.Add(lblTitle);
+            });
 
-            Label lblDesc = new Label
+            card.Controls.Add(new Label
             {
-                Text = "لیست پرسنلی که عکس پرسنلی ندارند را مشاهده کنید\nو اقدامات لازم را انجام دهید.",
-                Font = GetSafeFont(FontSettings.BodyFont?.FontFamily.Name ?? "Tahoma", 9),
+                Text      = "اطلاعات پرسنلی را از فایل اکسل به دیتابیس وارد کنید",
+                Font      = GetSafeFont(FontSettings.BodyFont?.FontFamily.Name ?? "Tahoma", 9),
                 ForeColor = TextSecondary,
-                Location = new Point(380, 55),
-                Size = new Size(290, 40),
+                Location  = new Point(230, 55),
+                Size      = new Size(440, 20),
                 TextAlign = ContentAlignment.TopRight
-            };
-            card.Controls.Add(lblDesc);
+            });
 
-            // توضیحات قابلیت‌ها
-            Label lblFeatures = new Label
+            // جدول ستون‌های مورد انتظار
+            Panel infoBox = new Panel
             {
-                Text = "✅ مشاهده لیست کامل پرسنل بدون عکس\n" +
-                       "✅ خروجی اکسل برای گزارش‌گیری\n" +
-                       "✅ امکان ویرایش و حذف مستقیم\n" +
-                       "✅ بروزرسانی لحظه‌ای اطلاعات",
-                Font = GetSafeFont(FontSettings.BodyFont?.FontFamily.Name ?? "Tahoma", 9.5f),
-                ForeColor = TextSecondary,
-                Location = new Point(380, 105),
-                Size = new Size(290, 90),
-                TextAlign = ContentAlignment.TopRight
+                Location  = new Point(15, 88),
+                Size      = new Size(658, 135),
+                BackColor = Color.FromArgb(232, 248, 232)
             };
-            card.Controls.Add(lblFeatures);
+            ApplyRoundedCorners(infoBox, 8);
 
-            // دکمه باز کردن فرم
-            Button btnOpenMissingPhotos = CreateModernButton("📋 مشاهده لیست پرسنل بدون عکس", AccentColor, 320, 50);
+            infoBox.Controls.Add(new Label
+            {
+                Text      = "\u2139\ufe0f  ستون‌های مورد انتظار در فایل اکسل (ردیف اول = سرستون):",
+                Font      = GetSafeFont(FontSettings.LabelFont?.FontFamily.Name ?? "Tahoma", 9, FontStyle.Bold),
+                ForeColor = Color.FromArgb(27, 94, 32),
+                Location  = new Point(10, 8),
+                Size      = new Size(638, 20),
+                TextAlign = ContentAlignment.MiddleRight
+            });
+
+            infoBox.Controls.Add(new Label
+            {
+                Text =
+                    "استان | شهر | امور انتقال | اداره | ناحیه | نام پست | سطح ولتاژ | شیفت | جنسیت\n" +
+                    "نام | نام خانوادگی | نام پدر | ش.پرسنلی | کدملی | موبایل\n" +
+                    "تاریخ تولد | تاریخ استخدام | تاریخ شروع بکار | نوع قرارداد | سطح شغل\n" +
+                    "شرکت | مدرک تحصیلی | رشته تحصیلی | عنوان شغلی اصلی | فعالیت فعلی | وضعیت",
+                Font      = GetSafeFont(FontSettings.BodyFont?.FontFamily.Name ?? "Tahoma", 8.5f),
+                ForeColor = Color.FromArgb(46, 125, 50),
+                Location  = new Point(10, 32),
+                Size      = new Size(638, 96),
+                TextAlign = ContentAlignment.TopRight
+            });
+
+            card.Controls.Add(infoBox);
+
+            // قوانین پیش‌فرض
+            Panel rulesBox = new Panel
+            {
+                Location  = new Point(15, 233),
+                Size      = new Size(658, 70),
+                BackColor = Color.FromArgb(255, 243, 224)
+            };
+            ApplyRoundedCorners(rulesBox, 8);
+
+            rulesBox.Controls.Add(new Label
+            {
+                Text =
+                    "\u26a0\ufe0f  قوانین پیش‌فرض هنگام وارد کردن:\n" +
+                    "• تاریخ خالی ← 1300/01/01     • عنوان شغل خالی ← غیرمرتبط     • سایر فیلدهای خالی ← داده‌ای وجود ندارد\n" +
+                    "• کدملی تکراری: ردیف نادیده گرفته می‌شود     • تاریخ میلادی: به شمسی تبدیل می‌شود",
+                Font      = GetSafeFont(FontSettings.BodyFont?.FontFamily.Name ?? "Tahoma", 8.5f),
+                ForeColor = Color.FromArgb(230, 81, 0),
+                Location  = new Point(8, 6),
+                Size      = new Size(642, 60),
+                TextAlign = ContentAlignment.TopRight
+            });
+
+            card.Controls.Add(rulesBox);
+
+            // دکمه باز کردن فرم import
+            Button btnOpen = CreateModernButton("\ud83d\udce5  باز کردن پنجره وارد کردن از اکسل", ImportColor, 380, 46);
+            btnOpen.Location = new Point(155, 288);
+            btnOpen.Font     = GetSafeFont(FontSettings.ButtonFont?.FontFamily.Name ?? "Tahoma", 11, FontStyle.Bold);
+            btnOpen.Click   += BtnOpenExcelImport_Click;
+            card.Controls.Add(btnOpen);
+
+            content.Controls.Add(card);
+            return content;
+        }
+
+        private void BtnOpenExcelImport_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                DbHelper db = new DbHelper();
+                using (FormExcelImport frm = new FormExcelImport(db))
+                {
+                    frm.ShowDialog(this);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"\u274c خطا در باز کردن فرم وارد کردن:\n\n{ex.Message}\n\n{ex.StackTrace}",
+                    "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // ─────────────────────────────────────────────
+        // بخش پرسنل بدون عکس
+        // ─────────────────────────────────────────────
+        private Panel CreateMissingPhotosContent()
+        {
+            Panel content = new Panel
+            {
+                Location   = new Point(0, 0),
+                Size       = new Size(720, 530),
+                BackColor  = Color.Transparent,
+                AutoScroll = false
+            };
+
+            Panel card = new Panel
+            {
+                Location  = new Point(10, 10),
+                Size      = new Size(690, 280),
+                BackColor = CardBackground
+            };
+            ApplyRoundedCorners(card, 10);
+            ApplyCardShadow(card);
+
+            card.Controls.Add(new Label
+            {
+                Text      = "\ud83d\udcf8 بررسی پرسنل بدون عکس",
+                Font      = GetSafeFont(FontSettings.LabelFont?.FontFamily.Name ?? "Tahoma", 14, FontStyle.Bold),
+                ForeColor = TextPrimary,
+                Location  = new Point(420, 20),
+                Size      = new Size(250, 35),
+                TextAlign = ContentAlignment.MiddleRight
+            });
+
+            card.Controls.Add(new Label
+            {
+                Text      = "لیست پرسنلی که عکس پرسنلی ندارند را مشاهده کنید\nو اقدامات لازم را انجام دهید.",
+                Font      = GetSafeFont(FontSettings.BodyFont?.FontFamily.Name ?? "Tahoma", 9),
+                ForeColor = TextSecondary,
+                Location  = new Point(380, 55),
+                Size      = new Size(290, 40),
+                TextAlign = ContentAlignment.TopRight
+            });
+
+            card.Controls.Add(new Label
+            {
+                Text =
+                    "\u2705 مشاهده لیست کامل پرسنل بدون عکس\n" +
+                    "\u2705 خروجی اکسل برای گزارش‌گیری\n" +
+                    "\u2705 امکان ویرایش و حذف مستقیم\n" +
+                    "\u2705 بروزرسانی لحظه‌ای اطلاعات",
+                Font      = GetSafeFont(FontSettings.BodyFont?.FontFamily.Name ?? "Tahoma", 9.5f),
+                ForeColor = TextSecondary,
+                Location  = new Point(380, 105),
+                Size      = new Size(290, 90),
+                TextAlign = ContentAlignment.TopRight
+            });
+
+            Button btnOpenMissingPhotos = CreateModernButton("\ud83d\udccb مشاهده لیست پرسنل بدون عکس", AccentColor, 320, 50);
             btnOpenMissingPhotos.Location = new Point(185, 210);
-            btnOpenMissingPhotos.Font = GetSafeFont(FontSettings.ButtonFont?.FontFamily.Name ?? "Tahoma", 11, FontStyle.Bold);
-            btnOpenMissingPhotos.Click += BtnOpenMissingPhotos_Click;
+            btnOpenMissingPhotos.Font     = GetSafeFont(FontSettings.ButtonFont?.FontFamily.Name ?? "Tahoma", 11, FontStyle.Bold);
+            btnOpenMissingPhotos.Click   += BtnOpenMissingPhotos_Click;
             card.Controls.Add(btnOpenMissingPhotos);
 
             content.Controls.Add(card);
@@ -393,91 +486,85 @@ namespace PersonnelManagementApp
             catch (Exception ex)
             {
                 MessageBox.Show(
-                    $"❌ خطا در باز کردن فرم:\n\n{ex.Message}\n\n{ex.StackTrace}",
-                    "خطا",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error
-                );
+                    $"\u274c خطا در باز کردن فرم:\n\n{ex.Message}\n\n{ex.StackTrace}",
+                    "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
+        // ─────────────────────────────────────────────
+        // بخش دیتابیس
+        // ─────────────────────────────────────────────
         private Panel CreateDatabaseContent()
         {
             Panel content = new Panel
             {
-                Location = new Point(0, 0),
-                Size = new Size(720, 490),
-                BackColor = Color.Transparent,
+                Location   = new Point(0, 0),
+                Size       = new Size(720, 530),
+                BackColor  = Color.Transparent,
                 AutoScroll = false
             };
 
             Panel card = new Panel
             {
-                Location = new Point(10, 10),
-                Size = new Size(690, 180),
+                Location  = new Point(10, 10),
+                Size      = new Size(690, 180),
                 BackColor = CardBackground
             };
             ApplyRoundedCorners(card, 10);
             ApplyCardShadow(card);
 
-            // عنوان
-            Label lblTitle = new Label
+            card.Controls.Add(new Label
             {
-                Text = "💾 تنظیمات دیتابیس",
-                Font = GetSafeFont(FontSettings.LabelFont?.FontFamily.Name ?? "Tahoma", 14, FontStyle.Bold),
+                Text      = "\ud83d\udcbe تنظیمات دیتابیس",
+                Font      = GetSafeFont(FontSettings.LabelFont?.FontFamily.Name ?? "Tahoma", 14, FontStyle.Bold),
                 ForeColor = TextPrimary,
-                Location = new Point(480, 20),
-                Size = new Size(190, 35),
+                Location  = new Point(480, 20),
+                Size      = new Size(190, 35),
                 TextAlign = ContentAlignment.MiddleRight
-            };
-            card.Controls.Add(lblTitle);
+            });
 
-            Label lblDesc = new Label
+            card.Controls.Add(new Label
             {
-                Text = "مسیر فایل دیتابیس Access را انتخاب کنید",
-                Font = GetSafeFont(FontSettings.BodyFont?.FontFamily.Name ?? "Tahoma", 9),
+                Text      = "مسیر فایل دیتابیس Access را انتخاب کنید",
+                Font      = GetSafeFont(FontSettings.BodyFont?.FontFamily.Name ?? "Tahoma", 9),
                 ForeColor = TextSecondary,
-                Location = new Point(480, 50),
-                Size = new Size(190, 20),
+                Location  = new Point(480, 50),
+                Size      = new Size(190, 20),
                 TextAlign = ContentAlignment.TopRight
-            };
-            card.Controls.Add(lblDesc);
+            });
 
-            // لیبل
-            Label lblPath = new Label
+            card.Controls.Add(new Label
             {
-                Text = "مسیر فایل:",
-                Font = GetSafeFont(FontSettings.LabelFont?.FontFamily.Name ?? "Tahoma", 10, FontStyle.Bold),
+                Text      = "مسیر فایل:",
+                Font      = GetSafeFont(FontSettings.LabelFont?.FontFamily.Name ?? "Tahoma", 10, FontStyle.Bold),
                 ForeColor = TextPrimary,
-                Location = new Point(600, 90),
-                Size = new Size(70, 25),
+                Location  = new Point(600, 90),
+                Size      = new Size(70, 25),
                 TextAlign = ContentAlignment.MiddleRight
-            };
-            card.Controls.Add(lblPath);
+            });
 
             txtDatabasePath = new TextBox
             {
-                Location = new Point(122, 92),
-                Size = new Size(470, 28),
-                Font = GetSafeFont(FontSettings.TextBoxFont?.FontFamily.Name ?? "Tahoma", 9),
-                ReadOnly = true,
-                BackColor = Color.FromArgb(248, 249, 250),
+                Location    = new Point(122, 92),
+                Size        = new Size(470, 28),
+                Font        = GetSafeFont(FontSettings.TextBoxFont?.FontFamily.Name ?? "Tahoma", 9),
+                ReadOnly    = true,
+                BackColor   = Color.FromArgb(248, 249, 250),
                 BorderStyle = BorderStyle.FixedSingle
             };
             card.Controls.Add(txtDatabasePath);
 
-            Button btnBrowse = CreateModernButton("🔍 جستجو", PrimaryColor, 100, 28);
+            Button btnBrowse = CreateModernButton("\ud83d\udd0d جستجو", PrimaryColor, 100, 28);
             btnBrowse.Location = new Point(15, 92);
-            btnBrowse.Click += BtnBrowseDatabase_Click;
+            btnBrowse.Click   += BtnBrowseDatabase_Click;
             card.Controls.Add(btnBrowse);
 
             lblCurrentDatabase = new Label
             {
-                Location = new Point(122, 125),
-                Size = new Size(470, 20),
-                Font = GetSafeFont(FontSettings.BodyFont?.FontFamily.Name ?? "Tahoma", 7.5f),
-                ForeColor = TextSecondary,
-                Text = ""
+                Location  = new Point(122, 125),
+                Size      = new Size(470, 20),
+                Font      = GetSafeFont(FontSettings.BodyFont?.FontFamily.Name ?? "Tahoma", 7.5f),
+                ForeColor = TextSecondary
             };
             card.Controls.Add(lblCurrentDatabase);
 
@@ -485,81 +572,80 @@ namespace PersonnelManagementApp
             return content;
         }
 
+        // ─────────────────────────────────────────────
+        // بخش عکس‌ها
+        // ─────────────────────────────────────────────
         private Panel CreatePhotosContent()
         {
             Panel content = new Panel
             {
-                Location = new Point(0, 0),
-                Size = new Size(720, 490),
-                BackColor = Color.Transparent,
+                Location   = new Point(0, 0),
+                Size       = new Size(720, 530),
+                BackColor  = Color.Transparent,
                 AutoScroll = false
             };
 
             Panel card = new Panel
             {
-                Location = new Point(10, 10),
-                Size = new Size(690, 180),
+                Location  = new Point(10, 10),
+                Size      = new Size(690, 180),
                 BackColor = CardBackground
             };
             ApplyRoundedCorners(card, 10);
             ApplyCardShadow(card);
 
-            Label lblTitle = new Label
+            card.Controls.Add(new Label
             {
-                Text = "🖼️ تنظیمات عکس‌ها",
-                Font = GetSafeFont(FontSettings.LabelFont?.FontFamily.Name ?? "Tahoma", 14, FontStyle.Bold),
+                Text      = "\ud83d\uddbc\ufe0f تنظیمات عکس‌ها",
+                Font      = GetSafeFont(FontSettings.LabelFont?.FontFamily.Name ?? "Tahoma", 14, FontStyle.Bold),
                 ForeColor = TextPrimary,
-                Location = new Point(480, 20),
-                Size = new Size(190, 35),
+                Location  = new Point(480, 20),
+                Size      = new Size(190, 35),
                 TextAlign = ContentAlignment.MiddleRight
-            };
-            card.Controls.Add(lblTitle);
+            });
 
-            Label lblDesc = new Label
+            card.Controls.Add(new Label
             {
-                Text = "پوشه ذخیره عکس پرسنل را مشخص کنید",
-                Font = GetSafeFont(FontSettings.BodyFont?.FontFamily.Name ?? "Tahoma", 9),
+                Text      = "پوشه ذخیره عکس پرسنل را مشخص کنید",
+                Font      = GetSafeFont(FontSettings.BodyFont?.FontFamily.Name ?? "Tahoma", 9),
                 ForeColor = TextSecondary,
-                Location = new Point(480, 50),
-                Size = new Size(190, 20),
+                Location  = new Point(480, 50),
+                Size      = new Size(190, 20),
                 TextAlign = ContentAlignment.TopRight
-            };
-            card.Controls.Add(lblDesc);
+            });
 
-            Label lblPath = new Label
+            card.Controls.Add(new Label
             {
-                Text = "مسیر پوشه:",
-                Font = GetSafeFont(FontSettings.LabelFont?.FontFamily.Name ?? "Tahoma", 10, FontStyle.Bold),
+                Text      = "مسیر پوشه:",
+                Font      = GetSafeFont(FontSettings.LabelFont?.FontFamily.Name ?? "Tahoma", 10, FontStyle.Bold),
                 ForeColor = TextPrimary,
-                Location = new Point(600, 90),
-                Size = new Size(70, 25),
+                Location  = new Point(600, 90),
+                Size      = new Size(70, 25),
                 TextAlign = ContentAlignment.MiddleRight
-            };
-            card.Controls.Add(lblPath);
+            });
 
             txtPhotosFolder = new TextBox
             {
-                Location = new Point(122, 92),
-                Size = new Size(470, 28),
-                Font = GetSafeFont(FontSettings.TextBoxFont?.FontFamily.Name ?? "Tahoma", 9),
-                ReadOnly = true,
-                BackColor = Color.FromArgb(248, 249, 250),
+                Location    = new Point(122, 92),
+                Size        = new Size(470, 28),
+                Font        = GetSafeFont(FontSettings.TextBoxFont?.FontFamily.Name ?? "Tahoma", 9),
+                ReadOnly    = true,
+                BackColor   = Color.FromArgb(248, 249, 250),
                 BorderStyle = BorderStyle.FixedSingle
             };
             card.Controls.Add(txtPhotosFolder);
 
-            Button btnBrowse = CreateModernButton("🔍 جستجو", PrimaryColor, 100, 28);
+            Button btnBrowse = CreateModernButton("\ud83d\udd0d جستجو", PrimaryColor, 100, 28);
             btnBrowse.Location = new Point(15, 92);
-            btnBrowse.Click += BtnBrowsePhotos_Click;
+            btnBrowse.Click   += BtnBrowsePhotos_Click;
             card.Controls.Add(btnBrowse);
 
             lblCurrentPhotos = new Label
             {
-                Location = new Point(122, 125),
-                Size = new Size(470, 20),
-                Font = GetSafeFont(FontSettings.BodyFont?.FontFamily.Name ?? "Tahoma", 7.5f),
-                ForeColor = TextSecondary,
-                Text = ""
+                Location  = new Point(122, 125),
+                Size      = new Size(470, 20),
+                Font      = GetSafeFont(FontSettings.BodyFont?.FontFamily.Name ?? "Tahoma", 7.5f),
+                ForeColor = TextSecondary
             };
             card.Controls.Add(lblCurrentPhotos);
 
@@ -567,68 +653,67 @@ namespace PersonnelManagementApp
             return content;
         }
 
+        // ─────────────────────────────────────────────
+        // بخش فونت
+        // ─────────────────────────────────────────────
         private Panel CreateFontContent()
         {
             Panel content = new Panel
             {
-                Location = new Point(0, 0),
-                Size = new Size(720, 490),
-                BackColor = Color.Transparent,
+                Location   = new Point(0, 0),
+                Size       = new Size(720, 530),
+                BackColor  = Color.Transparent,
                 AutoScroll = false
             };
 
             Panel card = new Panel
             {
-                Location = new Point(10, 10),
-                Size = new Size(690, 450),  // 🔥 افزایش ارتفاع کارت
+                Location  = new Point(10, 10),
+                Size      = new Size(690, 450),
                 BackColor = CardBackground
             };
             ApplyRoundedCorners(card, 10);
             ApplyCardShadow(card);
 
-            Label lblTitle = new Label
+            card.Controls.Add(new Label
             {
-                Text = "🔤 تنظیمات فونت",
-                Font = GetSafeFont(FontSettings.LabelFont?.FontFamily.Name ?? "Tahoma", 14, FontStyle.Bold),
+                Text      = "\ud83d\udd24 تنظیمات فونت",
+                Font      = GetSafeFont(FontSettings.LabelFont?.FontFamily.Name ?? "Tahoma", 14, FontStyle.Bold),
                 ForeColor = TextPrimary,
-                Location = new Point(480, 20),
-                Size = new Size(190, 35),
+                Location  = new Point(480, 20),
+                Size      = new Size(190, 35),
                 TextAlign = ContentAlignment.MiddleRight
-            };
-            card.Controls.Add(lblTitle);
+            });
 
-            Label lblDesc = new Label
+            card.Controls.Add(new Label
             {
-                Text = "نوع و اندازه فونت‌های برنامه را تنظیم کنید",
-                Font = GetSafeFont(FontSettings.BodyFont?.FontFamily.Name ?? "Tahoma", 9),
+                Text      = "نوع و اندازه فونت‌های برنامه را تنظیم کنید",
+                Font      = GetSafeFont(FontSettings.BodyFont?.FontFamily.Name ?? "Tahoma", 9),
                 ForeColor = TextSecondary,
-                Location = new Point(430, 50),
-                Size = new Size(240, 20),
+                Location  = new Point(430, 50),
+                Size      = new Size(240, 20),
                 TextAlign = ContentAlignment.TopRight
-            };
-            card.Controls.Add(lblDesc);
+            });
 
             int yPos = 85;
 
-            // نوع فونت
-            Label lblFontFamily = new Label
+            card.Controls.Add(new Label
             {
-                Text = "نوع فونت:",
-                Font = GetSafeFont(FontSettings.LabelFont?.FontFamily.Name ?? "Tahoma", 10, FontStyle.Bold),
+                Text      = "نوع فونت:",
+                Font      = GetSafeFont(FontSettings.LabelFont?.FontFamily.Name ?? "Tahoma", 10, FontStyle.Bold),
                 ForeColor = TextPrimary,
-                Location = new Point(600, yPos),
-                Size = new Size(70, 25),
+                Location  = new Point(600, yPos),
+                Size      = new Size(70, 25),
                 TextAlign = ContentAlignment.MiddleRight
-            };
-            card.Controls.Add(lblFontFamily);
+            });
 
             cmbFontFamily = new ComboBox
             {
-                Location = new Point(350, yPos),
-                Size = new Size(240, 28),
-                Font = GetSafeFont(FontSettings.TextBoxFont?.FontFamily.Name ?? "Tahoma", 9),
+                Location      = new Point(350, yPos),
+                Size          = new Size(240, 28),
+                Font          = GetSafeFont(FontSettings.TextBoxFont?.FontFamily.Name ?? "Tahoma", 9),
                 DropDownStyle = ComboBoxStyle.DropDownList,
-                FlatStyle = FlatStyle.Flat
+                FlatStyle     = FlatStyle.Flat
             };
             cmbFontFamily.Items.AddRange(new string[] {
                 "Tahoma", "Arial", "Segoe UI", "Calibri", "Times New Roman",
@@ -637,49 +722,32 @@ namespace PersonnelManagementApp
             card.Controls.Add(cmbFontFamily);
             yPos += 50;
 
-            // خط جداکننده
-            Panel divider = new Panel
-            {
-                Location = new Point(30, yPos),
-                Size = new Size(630, 1),
-                BackColor = Color.FromArgb(230, 230, 230)
-            };
+            Panel divider = new Panel { Location = new Point(30, yPos), Size = new Size(630, 1), BackColor = Color.FromArgb(230, 230, 230) };
             card.Controls.Add(divider);
             yPos += 20;
 
-            // عنوان اندازه‌ها
-            Label lblSizesTitle = new Label
+            card.Controls.Add(new Label
             {
-                Text = "اندازه فونت‌ها:",
-                Font = GetSafeFont(FontSettings.LabelFont?.FontFamily.Name ?? "Tahoma", 10, FontStyle.Bold),
+                Text      = "اندازه فونت‌ها:",
+                Font      = GetSafeFont(FontSettings.LabelFont?.FontFamily.Name ?? "Tahoma", 10, FontStyle.Bold),
                 ForeColor = TextPrimary,
-                Location = new Point(555, yPos),
-                Size = new Size(115, 25),
+                Location  = new Point(555, yPos),
+                Size      = new Size(115, 25),
                 TextAlign = ContentAlignment.MiddleRight
-            };
-            card.Controls.Add(lblSizesTitle);
+            });
             yPos += 35;
 
-            // Grid فونت‌ها - 3 ستونی
-            int col1X = 460;
-            int col2X = 250;
-            int col3X = 40;
-            int labelW = 90;
-            int numW = 60;
-            int checkW = 60;
+            int col1X = 460, col2X = 250, col3X = 40, labelW = 90, numW = 60, checkW = 60;
 
-            // ردیف 1
-            AddFontSizeRowCompact(card, "سرتیتر:", col1X, yPos, labelW, out numTitleSize, out chkBoldTitle, numW, checkW, 16);
-            AddFontSizeRowCompact(card, "برچسب:", col2X, yPos, labelW, out numLabelSize, out chkBoldLabel, numW, checkW, 12);
-            AddFontSizeRowCompact(card, "دکمه:", col3X, yPos, labelW, out numButtonSize, out chkBoldButton, numW, checkW, 12);
+            AddFontSizeRowCompact(card, "سرتیتر:",   col1X, yPos, labelW, out numTitleSize,    out chkBoldTitle,      numW, checkW, 16);
+            AddFontSizeRowCompact(card, "برچسب:",    col2X, yPos, labelW, out numLabelSize,    out chkBoldLabel,      numW, checkW, 12);
+            AddFontSizeRowCompact(card, "دکمه:",     col3X, yPos, labelW, out numButtonSize,   out chkBoldButton,     numW, checkW, 12);
             yPos += 40;
 
-            // ردیف 2
-            AddFontSizeRowCompactNoCheckbox(card, "متن:", col1X, yPos, labelW, out numTextBoxSize, numW, checkW, 11);
-            AddFontSizeRowCompactNoCheckbox(card, "متن عادی:", col2X, yPos, labelW, out numBodySize, numW, checkW, 10);
+            AddFontSizeRowCompactNoCheckbox(card, "متن:",      col1X, yPos, labelW, out numTextBoxSize, numW, checkW, 11);
+            AddFontSizeRowCompactNoCheckbox(card, "متن عادی:", col2X, yPos, labelW, out numBodySize,    numW, checkW, 10);
             yPos += 40;
 
-            // 🔥 ردیف 3 - فونت نمودارها (Chart)
             AddFontSizeRowCompact(card, "نمودارها:", col1X, yPos, labelW, out numChartLabelSize, out chkBoldChartLabel, numW, checkW, 10);
 
             content.Controls.Add(card);
@@ -689,35 +757,32 @@ namespace PersonnelManagementApp
         private void AddFontSizeRowCompact(Panel parent, string label, int x, int y, int labelW,
             out NumericUpDown numeric, out CheckBox checkbox, int numW, int checkW, int defaultValue)
         {
-            Label lbl = new Label
+            parent.Controls.Add(new Label
             {
-                Text = label,
-                Location = new Point(x + numW + checkW + 5, y + 2),
-                Size = new Size(labelW, 22),
-                Font = GetSafeFont(FontSettings.LabelFont?.FontFamily.Name ?? "Tahoma", 9),
+                Text      = label,
+                Location  = new Point(x + numW + checkW + 5, y + 2),
+                Size      = new Size(labelW, 22),
+                Font      = GetSafeFont(FontSettings.LabelFont?.FontFamily.Name ?? "Tahoma", 9),
                 ForeColor = TextSecondary,
                 TextAlign = ContentAlignment.MiddleRight
-            };
-            parent.Controls.Add(lbl);
+            });
 
             numeric = new NumericUpDown
             {
-                Location = new Point(x + checkW + 3, y),
-                Size = new Size(numW, 26),
-                Minimum = 8,
-                Maximum = 72,
-                Value = defaultValue,
-                Font = GetSafeFont(FontSettings.BodyFont?.FontFamily.Name ?? "Tahoma", 9),
+                Location    = new Point(x + checkW + 3, y),
+                Size        = new Size(numW, 26),
+                Minimum     = 8, Maximum = 72, Value = defaultValue,
+                Font        = GetSafeFont(FontSettings.BodyFont?.FontFamily.Name ?? "Tahoma", 9),
                 BorderStyle = BorderStyle.FixedSingle
             };
             parent.Controls.Add(numeric);
 
             checkbox = new CheckBox
             {
-                Text = "ضخیم",
-                Location = new Point(x, y + 2),
-                Size = new Size(checkW, 22),
-                Font = GetSafeFont(FontSettings.BodyFont?.FontFamily.Name ?? "Tahoma", 8),
+                Text      = "ضخیم",
+                Location  = new Point(x, y + 2),
+                Size      = new Size(checkW, 22),
+                Font      = GetSafeFont(FontSettings.BodyFont?.FontFamily.Name ?? "Tahoma", 8),
                 ForeColor = TextSecondary
             };
             parent.Controls.Add(checkbox);
@@ -726,65 +791,62 @@ namespace PersonnelManagementApp
         private void AddFontSizeRowCompactNoCheckbox(Panel parent, string label, int x, int y, int labelW,
             out NumericUpDown numeric, int numW, int checkW, int defaultValue)
         {
-            Label lbl = new Label
+            parent.Controls.Add(new Label
             {
-                Text = label,
-                Location = new Point(x + numW + checkW + 5, y + 2),
-                Size = new Size(labelW, 22),
-                Font = GetSafeFont(FontSettings.LabelFont?.FontFamily.Name ?? "Tahoma", 9),
+                Text      = label,
+                Location  = new Point(x + numW + checkW + 5, y + 2),
+                Size      = new Size(labelW, 22),
+                Font      = GetSafeFont(FontSettings.LabelFont?.FontFamily.Name ?? "Tahoma", 9),
                 ForeColor = TextSecondary,
                 TextAlign = ContentAlignment.MiddleRight
-            };
-            parent.Controls.Add(lbl);
+            });
 
             numeric = new NumericUpDown
             {
-                Location = new Point(x + checkW + 3, y),
-                Size = new Size(numW, 26),
-                Minimum = 8,
-                Maximum = 72,
-                Value = defaultValue,
-                Font = GetSafeFont(FontSettings.BodyFont?.FontFamily.Name ?? "Tahoma", 9),
+                Location    = new Point(x + checkW + 3, y),
+                Size        = new Size(numW, 26),
+                Minimum     = 8, Maximum = 72, Value = defaultValue,
+                Font        = GetSafeFont(FontSettings.BodyFont?.FontFamily.Name ?? "Tahoma", 9),
                 BorderStyle = BorderStyle.FixedSingle
             };
             parent.Controls.Add(numeric);
         }
 
+        // ─────────────────────────────────────────────
+        // دکمه‌های پایین
+        // ─────────────────────────────────────────────
         private Panel CreateButtonPanel()
         {
             Panel panel = new Panel
             {
-                Location = new Point(15, 595),
-                Size = new Size(950, 60),
+                Location  = new Point(15, 635),
+                Size      = new Size(950, 60),
                 BackColor = CardBackground
             };
             ApplyRoundedCorners(panel, 10);
             ApplyCardShadow(panel);
 
-            int centerX = panel.Width / 2;
+            int centerX     = panel.Width / 2;
             int buttonWidth = 130;
-            int buttonHeight = 38;
-            int spacing = 12;
+            int buttonHeight= 38;
+            int spacing     = 12;
 
-            // دکمه ذخیره (وسط)
-            Button btnSave = CreateModernButton("💾 ذخیره", AccentColor, buttonWidth, buttonHeight);
+            Button btnSave = CreateModernButton("\ud83d\udcbe ذخیره", AccentColor, buttonWidth, buttonHeight);
             btnSave.Location = new Point(centerX - buttonWidth / 2, 11);
-            btnSave.Font = GetSafeFont(FontSettings.ButtonFont?.FontFamily.Name ?? "Tahoma", 10, FontStyle.Bold);
-            btnSave.Click += BtnSave_Click;
+            btnSave.Font     = GetSafeFont(FontSettings.ButtonFont?.FontFamily.Name ?? "Tahoma", 10, FontStyle.Bold);
+            btnSave.Click   += BtnSave_Click;
             panel.Controls.Add(btnSave);
 
-            // دکمه بازنشانی (راست)
-            Button btnReset = CreateModernButton("🔄 بازنشانی", WarningColor, buttonWidth, buttonHeight);
+            Button btnReset = CreateModernButton("\ud83d\udd04 بازنشانی", WarningColor, buttonWidth, buttonHeight);
             btnReset.Location = new Point(centerX + buttonWidth / 2 + spacing, 11);
-            btnReset.Font = GetSafeFont(FontSettings.ButtonFont?.FontFamily.Name ?? "Tahoma", 10, FontStyle.Bold);
-            btnReset.Click += BtnReset_Click;
+            btnReset.Font     = GetSafeFont(FontSettings.ButtonFont?.FontFamily.Name ?? "Tahoma", 10, FontStyle.Bold);
+            btnReset.Click   += BtnReset_Click;
             panel.Controls.Add(btnReset);
 
-            // دکمه لغو (چپ)
-            Button btnCancel = CreateModernButton("❌ لغو", DangerColor, buttonWidth, buttonHeight);
+            Button btnCancel = CreateModernButton("\u274c لغو", DangerColor, buttonWidth, buttonHeight);
             btnCancel.Location = new Point(centerX - buttonWidth / 2 - buttonWidth - spacing, 11);
-            btnCancel.Font = GetSafeFont(FontSettings.ButtonFont?.FontFamily.Name ?? "Tahoma", 10, FontStyle.Bold);
-            btnCancel.Click += (s, e) => this.Close();
+            btnCancel.Font     = GetSafeFont(FontSettings.ButtonFont?.FontFamily.Name ?? "Tahoma", 10, FontStyle.Bold);
+            btnCancel.Click   += (s, e) => this.Close();
             panel.Controls.Add(btnCancel);
 
             return panel;
@@ -794,56 +856,55 @@ namespace PersonnelManagementApp
         {
             Button btn = new Button
             {
-                Text = text,
-                Size = new Size(width, height),
+                Text      = text,
+                Size      = new Size(width, height),
                 BackColor = backColor,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand,
-                Font = GetSafeFont(FontSettings.ButtonFont?.FontFamily.Name ?? "Tahoma", 10)
+                Cursor    = Cursors.Hand,
+                Font      = GetSafeFont(FontSettings.ButtonFont?.FontFamily.Name ?? "Tahoma", 10)
             };
             btn.FlatAppearance.BorderSize = 0;
             ApplyRoundedCorners(btn, 8);
 
-            Color originalColor = backColor;
-            btn.MouseEnter += (s, e) => btn.BackColor = ControlPaint.Light(originalColor, 0.1f);
-            btn.MouseLeave += (s, e) => btn.BackColor = originalColor;
-
+            Color orig = backColor;
+            btn.MouseEnter += (s, e) => btn.BackColor = ControlPaint.Light(orig, 0.1f);
+            btn.MouseLeave += (s, e) => btn.BackColor = orig;
             return btn;
         }
 
+        // ─────────────────────────────────────────────
+        // بارگذاری تنظیمات
+        // ─────────────────────────────────────────────
         private void LoadCurrentSettings()
         {
-            txtDatabasePath.Text = AppSettings.DatabasePath;
-            txtPhotosFolder.Text = AppSettings.PhotosFolder;
-            lblCurrentDatabase.Text = $"📂 {AppSettings.DatabasePath}";
-            lblCurrentPhotos.Text = $"📂 {AppSettings.PhotosFolder}";
+            txtDatabasePath.Text  = AppSettings.DatabasePath;
+            txtPhotosFolder.Text  = AppSettings.PhotosFolder;
+            lblCurrentDatabase.Text = $"\ud83d\udcc2 {AppSettings.DatabasePath}";
+            lblCurrentPhotos.Text   = $"\ud83d\udcc2 {AppSettings.PhotosFolder}";
 
-            cmbFontFamily.Text = FontSettings.FontFamilyName;
-            numTitleSize.Value = (decimal)FontSettings.TitleFontSize;
-            numLabelSize.Value = (decimal)FontSettings.LabelFontSize;
-            numTextBoxSize.Value = (decimal)FontSettings.TextBoxFontSize;
-            numButtonSize.Value = (decimal)FontSettings.ButtonFontSize;
-            numBodySize.Value = (decimal)FontSettings.BodyFontSize;
-            numChartLabelSize.Value = (decimal)FontSettings.ChartLabelFontSize;  // 🔥 اضافه شد
-            chkBoldTitle.Checked = FontSettings.TitleFontBold;
-            chkBoldLabel.Checked = FontSettings.LabelFontBold;
-            chkBoldButton.Checked = FontSettings.ButtonFontBold;
-            chkBoldChartLabel.Checked = FontSettings.ChartLabelFontBold;  // 🔥 اضافه شد
+            cmbFontFamily.Text      = FontSettings.FontFamilyName;
+            numTitleSize.Value      = (decimal)FontSettings.TitleFontSize;
+            numLabelSize.Value      = (decimal)FontSettings.LabelFontSize;
+            numTextBoxSize.Value    = (decimal)FontSettings.TextBoxFontSize;
+            numButtonSize.Value     = (decimal)FontSettings.ButtonFontSize;
+            numBodySize.Value       = (decimal)FontSettings.BodyFontSize;
+            numChartLabelSize.Value = (decimal)FontSettings.ChartLabelFontSize;
+            chkBoldTitle.Checked        = FontSettings.TitleFontBold;
+            chkBoldLabel.Checked        = FontSettings.LabelFontBold;
+            chkBoldButton.Checked       = FontSettings.ButtonFontBold;
+            chkBoldChartLabel.Checked   = FontSettings.ChartLabelFontBold;
         }
 
         private void BtnBrowseDatabase_Click(object sender, EventArgs e)
         {
             using (OpenFileDialog ofd = new OpenFileDialog())
             {
-                ofd.Filter = "Access Database (*.accdb)|*.accdb|All Files (*.*)|*.*";
-                ofd.Title = "انتخاب فایل دیتابیس";
+                ofd.Filter           = "Access Database (*.accdb)|*.accdb|All Files (*.*)|*.*";
+                ofd.Title            = "انتخاب فایل دیتابیس";
                 ofd.InitialDirectory = Path.GetDirectoryName(AppSettings.DatabasePath);
-
                 if (ofd.ShowDialog() == DialogResult.OK)
-                {
                     txtDatabasePath.Text = ofd.FileName;
-                }
             }
         }
 
@@ -851,14 +912,11 @@ namespace PersonnelManagementApp
         {
             using (FolderBrowserDialog fbd = new FolderBrowserDialog())
             {
-                fbd.Description = "انتخاب پوشه عکس‌ها";
-                fbd.SelectedPath = AppSettings.PhotosFolder;
+                fbd.Description     = "انتخاب پوشه عکس‌ها";
+                fbd.SelectedPath    = AppSettings.PhotosFolder;
                 fbd.ShowNewFolderButton = true;
-
                 if (fbd.ShowDialog() == DialogResult.OK)
-                {
                     txtPhotosFolder.Text = fbd.SelectedPath;
-                }
             }
         }
 
@@ -868,107 +926,80 @@ namespace PersonnelManagementApp
             {
                 if (!File.Exists(txtDatabasePath.Text))
                 {
-                    DialogResult result = MessageBox.Show(
-                        "⚠️ فایل دیتابیس در مسیر انتخابی وجود ندارد.\n\nآیا می‌خواهید ادامه دهید؟",
-                        "هشدار",
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Warning
-                    );
-
-                    if (result == DialogResult.No)
+                    if (MessageBox.Show(
+                        "\u26a0\ufe0f فایل دیتابیس در مسیر انتخابی وجود ندارد.\n\nآیا می‌خواهید ادامه دهید؟",
+                        "هشدار", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.No)
                         return;
                 }
 
                 if (!Directory.Exists(txtPhotosFolder.Text))
                 {
-                    DialogResult result = MessageBox.Show(
-                        "📁 پوشه عکس‌ها وجود ندارد.\n\nآیا می‌خواهید آن را ایجاد کنید؟",
-                        "پرسش",
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Question
-                    );
-
-                    if (result == DialogResult.Yes)
-                    {
+                    if (MessageBox.Show(
+                        "\ud83d\udcc1 پوشه عکس‌ها وجود ندارد.\n\nآیا می‌خواهید آن را ایجاد کنید؟",
+                        "پرسش", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
                         Directory.CreateDirectory(txtPhotosFolder.Text);
-                    }
                     else
-                    {
                         return;
-                    }
                 }
 
                 AppSettings.DatabasePath = txtDatabasePath.Text;
                 AppSettings.PhotosFolder = txtPhotosFolder.Text;
 
-                FontSettings.FontFamilyName = cmbFontFamily.Text;
-                FontSettings.TitleFontSize = (float)numTitleSize.Value;
-                FontSettings.LabelFontSize = (float)numLabelSize.Value;
-                FontSettings.TextBoxFontSize = (float)numTextBoxSize.Value;
-                FontSettings.ButtonFontSize = (float)numButtonSize.Value;
-                FontSettings.BodyFontSize = (float)numBodySize.Value;
-                FontSettings.ChartLabelFontSize = (float)numChartLabelSize.Value;  // 🔥 اضافه شد
-                FontSettings.TitleFontBold = chkBoldTitle.Checked;
-                FontSettings.LabelFontBold = chkBoldLabel.Checked;
-                FontSettings.ButtonFontBold = chkBoldButton.Checked;
-                FontSettings.ChartLabelFontBold = chkBoldChartLabel.Checked;  // 🔥 اضافه شد
+                FontSettings.FontFamilyName     = cmbFontFamily.Text;
+                FontSettings.TitleFontSize      = (float)numTitleSize.Value;
+                FontSettings.LabelFontSize      = (float)numLabelSize.Value;
+                FontSettings.TextBoxFontSize    = (float)numTextBoxSize.Value;
+                FontSettings.ButtonFontSize     = (float)numButtonSize.Value;
+                FontSettings.BodyFontSize       = (float)numBodySize.Value;
+                FontSettings.ChartLabelFontSize = (float)numChartLabelSize.Value;
+                FontSettings.TitleFontBold      = chkBoldTitle.Checked;
+                FontSettings.LabelFontBold      = chkBoldLabel.Checked;
+                FontSettings.ButtonFontBold     = chkBoldButton.Checked;
+                FontSettings.ChartLabelFontBold = chkBoldChartLabel.Checked;
 
                 FontSettings.SaveSettings();
 
                 MessageBox.Show(
-                    "✅ تنظیمات با موفقیت ذخیره شد!\n\n🔄 لطفاً برنامه را مجدداٌ راه‌اندازی کنید.",
-                    "موفقیت",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information
-                );
+                    "\u2705 تنظیمات با موفقیت ذخیره شد!\n\n\ud83d\udd04 لطفاً برنامه را مجدداٌ راه‌اندازی کنید.",
+                    "موفقیت", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                 this.DialogResult = DialogResult.OK;
                 this.Close();
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    $"❌ خطا در ذخیره تنظیمات:\n\n{ex.Message}",
-                    "خطا",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error
-                );
+                MessageBox.Show($"\u274c خطا در ذخیره تنظیمات:\n\n{ex.Message}", "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
         private void BtnReset_Click(object sender, EventArgs e)
         {
-            DialogResult result = MessageBox.Show(
-                "⚠️ آیا مطمئن هستید که می‌خواهید تنظیمات را به حالت پیش‌فرض برگردانید؟\n\nتمامی تغییرات از بین خواهد رفت!",
-                "تایید بازنشانی",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Question
-            );
-
-            if (result == DialogResult.Yes)
+            if (MessageBox.Show(
+                "\u26a0\ufe0f آیا مطمئن هستید که می‌خواهید تنظیمات را به حالت پیش‌فرض برگردانید?\n\nتمامی تغییرات از بین خواهد رفت!",
+                "تایید بازنشانی", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
             {
                 AppSettings.ResetToDefaults();
                 FontSettings.ResetToDefaults();
                 LoadCurrentSettings();
 
                 MessageBox.Show(
-                    "✅ تنظیمات به حالت پیش‌فرض برگشت!\n\n🔄 برای اعمال تغییرات، برنامه را مجدداً راه‌اندازی کنید.",
-                    "موفقیت",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information
-                );
+                    "\u2705 تنظیمات به حالت پیش‌فرض برگشت!\n\n\ud83d\udd04 برای اعمال تغییرات، برنامه را مجدداً راه‌اندازی کنید.",
+                    "موفقیت", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
 
+        // ─────────────────────────────────────────────
+        // ابزارهای کمکی UI
+        // ─────────────────────────────────────────────
         private void ApplyRoundedCorners(Control control, int radius)
         {
             try
             {
                 GraphicsPath path = new GraphicsPath();
                 path.AddArc(0, 0, radius, radius, 180, 90);
-                path.AddArc(control.Width - radius, 0, radius, radius, 270, 90);
-                path.AddArc(control.Width - radius, control.Height - radius, radius, radius, 0, 90);
-                path.AddArc(0, control.Height - radius, radius, radius, 90, 90);
+                path.AddArc(control.Width  - radius, 0,                    radius, radius, 270, 90);
+                path.AddArc(control.Width  - radius, control.Height - radius, radius, radius, 0,   90);
+                path.AddArc(0,                        control.Height - radius, radius, radius, 90,  90);
                 path.CloseFigure();
                 control.Region = new Region(path);
             }
@@ -980,10 +1011,17 @@ namespace PersonnelManagementApp
             panel.Paint += (s, e) =>
             {
                 using (SolidBrush shadowBrush = new SolidBrush(Color.FromArgb(10, 0, 0, 0)))
-                {
                     e.Graphics.FillRectangle(shadowBrush, new Rectangle(3, 3, panel.Width - 3, panel.Height - 3));
-                }
             };
+        }
+    }
+
+    // ✅ Extension method کوچک برای null-safe invoke
+    internal static class PanelExtensions
+    {
+        internal static void let(this Panel p, Action<Panel> action)
+        {
+            if (p != null) action(p);
         }
     }
 }
