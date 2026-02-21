@@ -1,1 +1,563 @@
-using System;\nusing System.Collections.Generic;\nusing System.Data;\nusing System.Data.OleDb;\nusing System.Drawing;\nusing System.Globalization;\nusing System.IO;\nusing System.Windows.Forms;\nusing OfficeOpenXml;\n\nnamespace PersonnelManagementApp\n{\n    // ✅ فرم وارد کردن اطلاعات پرسنلی از فایل اکسل\n    public class FormExcelImport : Form\n    {\n        private readonly DbHelper _db;\n        private string _selectedFilePath;\n        private static readonly PersianCalendar _pc = new PersianCalendar();\n\n        // UI controls\n        private Label lblFile;\n        private Button btnImport;\n        private ProgressBar progressBar;\n        private Label lblProgress;\n        private DataGridView dgvPreview;\n        private Label lblInfo;\n\n        // کش مقادیر جدول‌های پشتیبان: نام → ID\n        private readonly Dictionary<string, int> _cProvinces    = new Dictionary<string, int>(StringComparer.Ordinal);\n        private readonly Dictionary<string, int> _cCities       = new Dictionary<string, int>(StringComparer.Ordinal);\n        private readonly Dictionary<string, int> _cAffairs      = new Dictionary<string, int>(StringComparer.Ordinal);\n        private readonly Dictionary<string, int> _cDepts        = new Dictionary<string, int>(StringComparer.Ordinal);\n        private readonly Dictionary<string, int> _cDistricts    = new Dictionary<string, int>(StringComparer.Ordinal);\n        private readonly Dictionary<string, int> _cPostNames    = new Dictionary<string, int>(StringComparer.Ordinal);\n        private readonly Dictionary<string, int> _cVoltages     = new Dictionary<string, int>(StringComparer.Ordinal);\n        private readonly Dictionary<string, int> _cWorkShifts   = new Dictionary<string, int>(StringComparer.Ordinal);\n        private readonly Dictionary<string, int> _cGenders      = new Dictionary<string, int>(StringComparer.Ordinal);\n        private readonly Dictionary<string, int> _cContracts    = new Dictionary<string, int>(StringComparer.Ordinal);\n        private readonly Dictionary<string, int> _cJobLevels    = new Dictionary<string, int>(StringComparer.Ordinal);\n        private readonly Dictionary<string, int> _cCompanies    = new Dictionary<string, int>(StringComparer.Ordinal);\n        private readonly Dictionary<string, int> _cDegrees      = new Dictionary<string, int>(StringComparer.Ordinal);\n        private readonly Dictionary<string, int> _cDegreeFields = new Dictionary<string, int>(StringComparer.Ordinal);\n        private readonly Dictionary<string, int> _cChartAffairs = new Dictionary<string, int>(StringComparer.Ordinal);\n        private readonly Dictionary<string, int> _cStatuses     = new Dictionary<string, int>(StringComparer.Ordinal);\n\n        // ایندکس ستون‌ها در اکسل\n        private const int COL_PROVINCE       = 0;   // استان\n        private const int COL_CITY           = 1;   // شهر\n        private const int COL_AFFAIR         = 2;   // امور انتقال\n        private const int COL_DEPT           = 3;   // اداره\n        private const int COL_DISTRICT       = 4;   // ناحیه\n        private const int COL_POST_NAME      = 5;   // نام پست\n        private const int COL_VOLTAGE        = 6;   // سطح ولتاژ\n        private const int COL_WORKSHIFT      = 7;   // روزکار/نوبتکار\n        private const int COL_GENDER         = 8;   // جنسیت\n        private const int COL_FIRSTNAME      = 9;   // نام\n        private const int COL_LASTNAME       = 10;  // نام خانوادگی\n        private const int COL_FATHERNAME     = 11;  // نام پدر\n        private const int COL_PERSONNELNUMBER= 12;  // شماره پرسنلی\n        private const int COL_NATIONALID     = 13;  // کدملی\n        private const int COL_MOBILE         = 14;  // موبایل\n        private const int COL_BIRTHDATE      = 15;  // تاریخ تولد\n        private const int COL_HIREDATE       = 16;  // تاریخ استخدام\n        private const int COL_STARTDATE      = 17;  // تاریخ شروع بکار\n        private const int COL_CONTRACTTYPE   = 18;  // نوع قرارداد\n        private const int COL_JOBLEVEL       = 19;  // سطح شغل\n        private const int COL_COMPANY        = 20;  // شرکت\n        private const int COL_DEGREE         = 21;  // مدرک\n        private const int COL_DEGREEFIELD    = 22;  // رشته تحصیلی\n        private const int COL_MAINJOB        = 23;  // عنوان شغلی اصلی\n        private const int COL_CURRENTACTIVITY= 24;  // فعالیت فعلی\n        private const int COL_STATUS         = 25;  // مغایرت/وضعیت\n\n        public FormExcelImport(DbHelper db)\n        {\n            _db = db;\n            BuildUI();\n        }\n\n        // ───────────────────────────────────────────────────────\n        // ساخت UI\n        // ───────────────────────────────────────────────────────\n        private void BuildUI()\n        {\n            this.Text = \"\\ud83d\\udce5  وارد کردن اطلاعات از فایل اکسل\";\n            this.Size = new Size(1280, 780);\n            this.MinimumSize = new Size(900, 600);\n            this.RightToLeft = RightToLeft.Yes;\n            this.RightToLeftLayout = true;\n            this.StartPosition = FormStartPosition.CenterParent;\n\n            // ―― پنل بالا\n            Panel topPanel = new Panel { Dock = DockStyle.Top, Height = 75, BackColor = Color.FromArgb(245, 248, 255) };\n\n            Button btnBrowse = new Button\n            {\n                Text = \"\\ud83d\\udcc2  انتخاب فایل اکسل\",\n                Location = new Point(12, 20),\n                Size = new Size(190, 38),\n                BackColor = Color.SteelBlue,\n                ForeColor = Color.White,\n                FlatStyle = FlatStyle.Flat,\n                Font = new Font(\"B Nazanin\", 10F)\n            };\n            btnBrowse.FlatAppearance.BorderSize = 0;\n            btnBrowse.Click += BtnBrowse_Click;\n\n            lblFile = new Label\n            {\n                Text = \"هنوز فایلی انتخاب نشده است...\",\n                Location = new Point(215, 28),\n                Size = new Size(640, 22),\n                ForeColor = Color.Gray,\n                Font = new Font(\"B Nazanin\", 9F)\n            };\n\n            btnImport = new Button\n            {\n                Text = \"\\u2705  وارد کردن به دیتابیس\",\n                Location = new Point(870, 20),\n                Size = new Size(220, 38),\n                BackColor = Color.ForestGreen,\n                ForeColor = Color.White,\n                FlatStyle = FlatStyle.Flat,\n                Font = new Font(\"B Nazanin\", 10F),\n                Enabled = false\n            };\n            btnImport.FlatAppearance.BorderSize = 0;\n            btnImport.Click += BtnImport_Click;\n\n            Button btnClose = new Button\n            {\n                Text = \"\\u2716  بستن\",\n                Location = new Point(1100, 20),\n                Size = new Size(120, 38),\n                BackColor = Color.Crimson,\n                ForeColor = Color.White,\n                FlatStyle = FlatStyle.Flat,\n                Font = new Font(\"B Nazanin\", 10F)\n            };\n            btnClose.FlatAppearance.BorderSize = 0;\n            btnClose.Click += (s, e) => this.Close();\n\n            topPanel.Controls.AddRange(new Control[] { btnBrowse, lblFile, btnImport, btnClose });\n\n            // ―― پنل اطلاعات\n            lblInfo = new Label\n            {\n                Dock = DockStyle.Top,\n                Height = 48,\n                Text = \"\\u2139️  ستون‌های مورد انتظار: استان | شهر | امور | اداره | ناحیه | نام پست | ولتاژ | شیفت | جنسیت | نام | نام خانوادگی | نام پدر | ش.پرسنلی | کدملی | موبایل | تاریخ تولد | تاریخ استخدام | تاریخ شروع | نوع قرارداد | سطح شغل | شرکت | مدرک | رشته | عنوان شغلی اصلی | فعالیت فعلی | وضعیت\",\n                ForeColor = Color.FromArgb(50, 80, 160),\n                BackColor = Color.FromArgb(230, 240, 255),\n                Padding = new Padding(10, 5, 10, 5),\n                Font = new Font(\"B Nazanin\", 8.5F)\n            };\n\n            // ―― پنل پیشرفت\n            Panel progressPanel = new Panel { Dock = DockStyle.Top, Height = 38, BackColor = Color.White };\n            progressBar = new ProgressBar { Location = new Point(10, 7), Size = new Size(850, 24), Visible = false };\n            lblProgress = new Label { Location = new Point(875, 9), Size = new Size(350, 22), Text = \"\", Font = new Font(\"B Nazanin\", 9.5F), ForeColor = Color.DarkSlateGray };\n            progressPanel.Controls.AddRange(new Control[] { progressBar, lblProgress });\n\n            // ―― DataGridView پیش‌نمایی\n            dgvPreview = new DataGridView\n            {\n                Dock = DockStyle.Fill,\n                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells,\n                ReadOnly = true,\n                AllowUserToAddRows = false,\n                RightToLeft = RightToLeft.Yes,\n                ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize,\n                Font = new Font(\"B Nazanin\", 8.5F),\n                RowHeadersVisible = false,\n                BorderStyle = BorderStyle.None,\n                GridColor = Color.LightGray\n            };\n\n            this.Controls.Add(dgvPreview);\n            this.Controls.Add(progressPanel);\n            this.Controls.Add(lblInfo);\n            this.Controls.Add(topPanel);\n        }\n\n        // ───────────────────────────────────────────────────────\n        // انتخاب فایل و نمایش پیش‌نمایش\n        // ───────────────────────────────────────────────────────\n        private void BtnBrowse_Click(object sender, EventArgs e)\n        {\n            using (OpenFileDialog ofd = new OpenFileDialog())\n            {\n                ofd.Filter = \"فایل اکسل (*.xlsx)|*.xlsx|فایل اکسل قدیمی (*.xls)|*.xls\";\n                ofd.Title = \"انتخاب فایل اکسل پرسنلی\";\n                if (ofd.ShowDialog() == DialogResult.OK)\n                    LoadPreview(ofd.FileName);\n            }\n        }\n\n        private void LoadPreview(string filePath)\n        {\n            try\n            {\n                // Update for EPPlus 8 and later\n                ExcelPackage.License.SetNonCommercialPersonal(\"PersonnelManagementApp\");\n                using (var pkg = new ExcelPackage(new FileInfo(filePath)))\n                {\n                    var ws = pkg.Workbook.Worksheets[0];\n                    if (ws.Dimension == null)\n                    {\n                        MessageBox.Show(\"فایل اکسل خالی است!\", \"هشدار\", MessageBoxButtons.OK, MessageBoxIcon.Warning);\n                        return;\n                    }\n\n                    int rows = ws.Dimension.Rows;\n                    int cols = ws.Dimension.Columns;\n                    DataTable dt = new DataTable();\n\n                    for (int c = 1; c <= cols; c++)\n                        dt.Columns.Add(ws.Cells[1, c].Text?.Trim() ?? $\"ستون{c}\");\n\n                    int preview = Math.Min(rows, 51);\n                    for (int r = 2; r <= preview; r++)\n                    {\n                        var dr = dt.NewRow();\n                        for (int c = 1; c <= cols; c++)\n                            dr[c - 1] = ws.Cells[r, c].Text?.Trim() ?? \"\";\n                        dt.Rows.Add(dr);\n                    }\n\n                    dgvPreview.DataSource = dt;\n                    _selectedFilePath = filePath;\n                    lblFile.Text = $\"\\u2705  {Path.GetFileName(filePath)}   —   مجموع {rows - 1} ردیف داده\";\n                    lblFile.ForeColor = Color.DarkGreen;\n                    btnImport.Enabled = true;\n\n                    if (rows - 1 > 50)\n                        lblProgress.Text = $\"بیش از 50 ردیف — فقط 50 اول نمایش داده می‌شود\";\n                }\n            }\n            catch (Exception ex)\n            {\n                MessageBox.Show($\"\\u274c خطا در خواندن فایل اکسل:\\n{ex.Message}\", \"خطا\", MessageBoxButtons.OK, MessageBoxIcon.Error);\n            }\n        }\n\n        // ───────────────────────────────────────────────────────\n        // شروع وارد کردن\n        // ───────────────────────────────────────────────────────\n        private void BtnImport_Click(object sender, EventArgs e)\n        {\n            if (string.IsNullOrEmpty(_selectedFilePath)) return;\n\n            var res = MessageBox.Show(\n                \"\\u26a0\\ufe0f آیا مطمئن هستید که می‌خواهید اطلاعات اکسل را به دیتابیس وارد کنید?\\n\\n\"\n                + \"\\u2022 ردیف‌هایی که کدملی تکراری دارند نادیده گرفته می‌شوند.\\n\"\n                + \"\\u2022 تاریخ‌ها به شمسی تبدیل می‌شوند.\\n\"\n                + \"\\u2022 مقادیر خالی با مقادیر پیش‌فرض جایگزینی می‌شوند.\",\n                \"تأیید وارد کردن\", MessageBoxButtons.YesNo, MessageBoxIcon.Question);\n\n            if (res != DialogResult.Yes) return;\n\n            btnImport.Enabled = false;\n            progressBar.Visible = true;\n            lblProgress.Text = \"\\u23f3 در حال آمادسازی...\";\n            Application.DoEvents();\n\n            try\n            {\n                LoadAllCaches();\n                DoImport(_selectedFilePath);\n            }\n            finally\n            {\n                btnImport.Enabled = true;\n                progressBar.Visible = false;\n            }\n        }\n\n        private void DoImport(string filePath)\n        {\n            int success = 0, skipped = 0, failed = 0;\n            try\n            {\n                // Update for EPPlus 8 and later\n                ExcelPackage.License.SetNonCommercialPersonal(\"PersonnelManagementApp\");\n                using (var pkg = new ExcelPackage(new FileInfo(filePath)))\n                {\n                    var ws = pkg.Workbook.Worksheets[0];\n                    int totalRows = ws.Dimension.Rows - 1;\n                    progressBar.Maximum = Math.Max(totalRows, 1);\n                    progressBar.Value = 0;\n\n                    var existingNIDs = GetExistingNationalIDs();\n\n                    for (int r = 2; r <= ws.Dimension.Rows; r++)\n                    {\n                        try\n                        {\n                            int totalCols = ws.Dimension.Columns;\n                            string[] cells = new string[Math.Max(totalCols, 27)];\n                            for (int c = 1; c <= totalCols; c++)\n                                cells[c - 1] = ws.Cells[r, c].Text?.Trim() ?? \"\";\n\n                            // رد کردن ردیف‌های کاملاً خالی\n                            if (string.IsNullOrWhiteSpace(cells[COL_FIRSTNAME]) &&\n                                string.IsNullOrWhiteSpace(cells[COL_NATIONALID])) continue;\n\n                            // رد کردن کدملی تکراری\n                            string nid = cells[COL_NATIONALID]?.Trim();\n                            if (!string.IsNullOrWhiteSpace(nid) && existingNIDs.Contains(nid))\n                            { skipped++; continue; }\n\n                            InsertRecord(cells);\n                            success++;\n                            if (!string.IsNullOrWhiteSpace(nid)) existingNIDs.Add(nid);\n                        }\n                        catch { failed++; }\n\n                        progressBar.Value = Math.Min(r - 1, progressBar.Maximum);\n                        lblProgress.Text = $\"\\u2705 موفق: {success}  |  \\u23ed تکراری: {skipped}  |  \\u274c ناموفق: {failed}\";\n                        Application.DoEvents();\n                    }\n                }\n\n                progressBar.Value = progressBar.Maximum;\n                MessageBox.Show(\n                    $\"\\u2705 وارد کردن اطلاعات به پایان رسید!\\n\\n\"\n                    + $\"\\ud83d\\udfe2  موفق: {success} ردیف\\n\"\n                    + $\"\\u23ed️  تکراری (نادیده گرفته): {skipped} ردیف\\n\"\n                    + $\"\\ud83d\\udd34  ناموفق: {failed} ردیف\",\n                    \"نتیجه وارد کردن\", MessageBoxButtons.OK, MessageBoxIcon.Information);\n            }\n            catch (Exception ex)\n            {\n                MessageBox.Show($\"\\u274c خطا در وارد کردن:\\n{ex.Message}\", \"خطا\", MessageBoxButtons.OK, MessageBoxIcon.Error);\n            }\n        }\n\n        private void InsertRecord(string[] cells)\n        {\n            int provinceId    = GetOrCreate(_cProvinces,    GetCell(cells, COL_PROVINCE),                  \"Provinces\",           \"ProvinceID\",    \"ProvinceName\");\n            int cityId        = GetOrCreate(_cCities,       GetCell(cells, COL_CITY),                      \"Cities\",              \"CityID\",        \"CityName\");\n            int affairId      = GetOrCreate(_cAffairs,      GetCell(cells, COL_AFFAIR),                    \"TransferAffairs\",     \"AffairID\",      \"AffairName\");\n            int deptId        = GetOrCreate(_cDepts,        GetCell(cells, COL_DEPT),                      \"OperationDepartments\",\"DeptID\",        \"DeptName\");\n            int districtId    = GetOrCreate(_cDistricts,    GetCell(cells, COL_DISTRICT),                  \"Districts\",           \"DistrictID\",    \"DistrictName\");\n            int postNameId    = GetOrCreate(_cPostNames,    GetCell(cells, COL_POST_NAME),                 \"PostsNames\",          \"PostNameID\",    \"PostName\");\n            int voltageId     = GetOrCreate(_cVoltages,     GetCell(cells, COL_VOLTAGE),                   \"VoltageLevels\",       \"VoltageID\",     \"VoltageName\");\n            int workShiftId   = GetOrCreate(_cWorkShifts,   GetCell(cells, COL_WORKSHIFT),                 \"WorkShift\",           \"WorkShiftID\",   \"WorkShiftName\");\n            int genderId      = GetOrCreate(_cGenders,      GetCell(cells, COL_GENDER),                    \"Gender\",              \"GenderID\",      \"GenderName\");\n            int contractId    = GetOrCreate(_cContracts,    GetCell(cells, COL_CONTRACTTYPE),              \"ContractType\",        \"ContractTypeID\",\"ContractTypeName\");\n            int jobLevelId    = GetOrCreate(_cJobLevels,    GetCell(cells, COL_JOBLEVEL),                  \"JobLevel\",            \"JobLevelID\",    \"JobLevelName\");\n            int companyId     = GetOrCreate(_cCompanies,    GetCell(cells, COL_COMPANY),                   \"Company\",             \"CompanyID\",     \"CompanyName\");\n            int degreeId      = GetOrCreate(_cDegrees,      GetCell(cells, COL_DEGREE),                    \"Degree\",              \"DegreeID\",      \"DegreeName\");\n            int degreeFieldId = GetOrCreate(_cDegreeFields, GetJobCell(cells, COL_DEGREEFIELD),            \"DegreeField\",         \"DegreeFieldID\", \"DegreeFieldName\");\n            int mainJobId     = GetOrCreateChart(GetJobCell(cells, COL_MAINJOB),     affairId);\n            int currentActId  = GetOrCreateChart(GetJobCell(cells, COL_CURRENTACTIVITY), affairId);\n            int statusId      = GetOrCreate(_cStatuses,     GetCell(cells, COL_STATUS, \"حاضر\"), \"StatusPresence\",      \"StatusID\",      \"StatusName\");\n\n            string birthDate  = ParseDate(GetCell(cells, COL_BIRTHDATE,  \"\"));\n            string hireDate   = ParseDate(GetCell(cells, COL_HIREDATE,   \"\"));\n            string startDate  = ParseDate(GetCell(cells, COL_STARTDATE,  \"\"));\n\n            string sql = @\"INSERT INTO Personnel\n                (ProvinceID, CityID, AffairID, DeptID, DistrictID, PostNameID, VoltageID, WorkShiftID, GenderID,\n                 FirstName, LastName, FatherName, PersonnelNumber, NationalID, MobileNumber,\n                 BirthDate, HireDate, StartDateOperation, ContractTypeID, JobLevelID, CompanyID,\n                 DegreeID, DegreeFieldID, MainJobTitle, CurrentActivity, StatusID)\n                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\";\n\n            var ps = new OleDbParameter[]\n            {\n                new OleDbParameter(\"?\", provinceId),\n                new OleDbParameter(\"?\", cityId),\n                new OleDbParameter(\"?\", affairId),\n                new OleDbParameter(\"?\", deptId),\n                new OleDbParameter(\"?\", districtId),\n                new OleDbParameter(\"?\", postNameId),\n                new OleDbParameter(\"?\", voltageId),\n                new OleDbParameter(\"?\", workShiftId),\n                new OleDbParameter(\"?\", genderId),\n                new OleDbParameter(\"?\", GetCell(cells, COL_FIRSTNAME)),\n                new OleDbParameter(\"?\", GetCell(cells, COL_LASTNAME)),\n                new OleDbParameter(\"?\", GetCell(cells, COL_FATHERNAME)),\n                new OleDbParameter(\"?\", GetCell(cells, COL_PERSONNELNUMBER, \"داده‌ای وجود ندارد\")),\n                new OleDbParameter(\"?\", GetCell(cells, COL_NATIONALID,     \"داده‌ای وجود ندارد\")),\n                new OleDbParameter(\"?\", GetCell(cells, COL_MOBILE,         \"داده‌ای وجود ندارد\")),\n                new OleDbParameter(\"?\", birthDate),\n                new OleDbParameter(\"?\", hireDate),\n                new OleDbParameter(\"?\", startDate),\n                new OleDbParameter(\"?\", contractId),\n                new OleDbParameter(\"?\", jobLevelId),\n                new OleDbParameter(\"?\", companyId),\n                new OleDbParameter(\"?\", degreeId),\n                new OleDbParameter(\"?\", degreeFieldId),\n                new OleDbParameter(\"?\", mainJobId),\n                new OleDbParameter(\"?\", currentActId),\n                new OleDbParameter(\"?\", statusId)\n            };\n\n            _db.ExecuteNonQuery(sql, ps);\n        }\n\n        // ───────────────────────────────────────────────────────\n        // متد‌های کمکی\n        // ───────────────────────────────────────────────────────\n        /// دریافت مقدار سلول — اگر خالی بود مقدار پیش‌فرض برگردان\n        private string GetCell(string[] cells, int idx, string def = \"داده‌ای وجود ندارد\")\n        {\n            if (idx >= cells.Length) return def;\n            string v = cells[idx]?.Trim();\n            return string.IsNullOrWhiteSpace(v) ? def : v;\n        }\n\n        /// برای ستون‌های شغلی — مقدار پیش‌فرض غیرمرتبط\n        private string GetJobCell(string[] cells, int idx)\n        {\n            string v = GetCell(cells, idx, \"\");\n            return string.IsNullOrWhiteSpace(v) ? \"غیرمرتبط\" : v;\n        }\n\n        /// تبدیل تاریخ میلادی به شمسی — تاریخ خالی → 1300/01/01\n        private string ParseDate(string raw)\n        {\n            if (string.IsNullOrWhiteSpace(raw) || raw == \"داده‌ای وجود ندارد\")\n                return \"1300/01/01\";\n            try\n            {\n                string[] p = raw.Trim().Split(new char[] { '/', '-', '.' }, StringSplitOptions.RemoveEmptyEntries);\n                if (p.Length == 3)\n                {\n                    // حالت 1: yyyy/MM/dd\n                    if (int.TryParse(p[0], out int y) &&\n                        int.TryParse(p[1], out int m) &&\n                        int.TryParse(p[2], out int d))\n                    {\n                        if (y >= 1800 && m >= 1 && m <= 12 && d >= 1 && d <= 31)\n                        {\n                            // میلادی → تبدیل به شمسی\n                            var dt = new DateTime(y, m, d);\n                            return $\"{_pc.GetYear(dt):0000}/{_pc.GetMonth(dt):00}/{_pc.GetDayOfMonth(dt):00}\";\n                        }\n                        if (y >= 1300 && y <= 1500)\n                            return $\"{y:0000}/{m:00}/{d:00}\";  // قبلاً شمسی است\n                        if (y >= 1 && y <= 99)\n                            return $\"{y + 1300:0000}/{m:00}/{d:00}\";  // سال کوتاه 71 → 1371\n                    }\n                    // حالت 2: dd/MM/yy (مثل 26/11/71)\n                    if (int.TryParse(p[0], out int d2) &&\n                        int.TryParse(p[1], out int m2) &&\n                        int.TryParse(p[2], out int y2) &&\n                        d2 > 12 && m2 <= 12)\n                    {\n                        int fy = y2 < 100 ? y2 + 1300 : y2;\n                        return $\"{fy:0000}/{m2:00}/{d2:00}\";\n                    }\n                }\n            }\n            catch { }\n            return \"1300/01/01\";\n        }\n\n        // ───────────────────────────────────────────────────────\n        // Cache + GetOrCreate\n        // ───────────────────────────────────────────────────────\n        private void LoadAllCaches()\n        {\n            FillCache(\"SELECT ProvinceID, ProvinceName FROM Provinces\",              \"ProvinceID\",    \"ProvinceName\",    _cProvinces);\n            FillCache(\"SELECT CityID, CityName FROM Cities\",                         \"CityID\",        \"CityName\",        _cCities);\n            FillCache(\"SELECT AffairID, AffairName FROM TransferAffairs\",            \"AffairID\",      \"AffairName\",      _cAffairs);\n            FillCache(\"SELECT DeptID, DeptName FROM OperationDepartments\",           \"DeptID\",        \"DeptName\",        _cDepts);\n            FillCache(\"SELECT DistrictID, DistrictName FROM Districts\",              \"DistrictID\",    \"DistrictName\",    _cDistricts);\n            FillCache(\"SELECT PostNameID, PostName FROM PostsNames\",                 \"PostNameID\",    \"PostName\",        _cPostNames);\n            FillCache(\"SELECT VoltageID, VoltageName FROM VoltageLevels\",            \"VoltageID\",     \"VoltageName\",     _cVoltages);\n            FillCache(\"SELECT WorkShiftID, WorkShiftName FROM WorkShift\",            \"WorkShiftID\",   \"WorkShiftName\",   _cWorkShifts);\n            FillCache(\"SELECT GenderID, GenderName FROM Gender\",                     \"GenderID\",      \"GenderName\",      _cGenders);\n            FillCache(\"SELECT ContractTypeID, ContractTypeName FROM ContractType\",   \"ContractTypeID\",\"ContractTypeName\",_cContracts);\n            FillCache(\"SELECT JobLevelID, JobLevelName FROM JobLevel\",               \"JobLevelID\",    \"JobLevelName\",    _cJobLevels);\n            FillCache(\"SELECT CompanyID, CompanyName FROM Company\",                  \"CompanyID\",     \"CompanyName\",     _cCompanies);\n            FillCache(\"SELECT DegreeID, DegreeName FROM Degree\",                     \"DegreeID\",      \"DegreeName\",      _cDegrees);\n            FillCache(\"SELECT DegreeFieldID, DegreeFieldName FROM DegreeField\",      \"DegreeFieldID\", \"DegreeFieldName\", _cDegreeFields);\n            FillCache(\"SELECT ChartID, ChartName FROM ChartAffairs\",                 \"ChartID\",       \"ChartName\",       _cChartAffairs);\n            FillCache(\"SELECT StatusID, StatusName FROM StatusPresence\",             \"StatusID\",      \"StatusName\",      _cStatuses);\n        }\n\n        private void FillCache(string query, string idCol, string nameCol, Dictionary<string, int> cache)\n        {\n            try\n            {\n                var dt = _db.ExecuteQuery(query);\n                if (dt == null) return;\n                foreach (DataRow row in dt.Rows)\n                {\n                    string name = row[nameCol]?.ToString() ?? \"\";\n                    if (!string.IsNullOrEmpty(name) && !cache.ContainsKey(name))\n                        cache[name] = Convert.ToInt32(row[idCol]);\n                }\n            }\n            catch { }\n        }\n\n        /// دریافت ID از كش — اگر نبود INSERT کند و ID جدید برگردان (@@IDENTITY در یک اتصال)\n        private int GetOrCreate(Dictionary<string, int> cache, string name, string table, string idCol, string nameCol)\n        {\n            if (cache.TryGetValue(name, out int id)) return id;\n\n            int newId = ExecuteInsertGetId(\n                $\"INSERT INTO {table} ({nameCol}) VALUES (?)\",\n                new OleDbParameter[] { new OleDbParameter(\"?\", name) });\n\n            cache[name] = newId;\n            return newId;\n        }\n\n        /// خاص ChartAffairs که نیاز به AffairID دارد\n        private int GetOrCreateChart(string chartName, int affairId)\n        {\n            if (_cChartAffairs.TryGetValue(chartName, out int id)) return id;\n\n            int newId = ExecuteInsertGetId(\n                \"INSERT INTO ChartAffairs (AffairID, ChartName) VALUES (?, ?)\",\n                new OleDbParameter[]\n                {\n                    new OleDbParameter(\"?\", affairId),\n                    new OleDbParameter(\"?\", chartName)\n                });\n\n            _cChartAffairs[chartName] = newId;\n            return newId;\n        }\n\n        /// اجرای INSERT و دریافت @@IDENTITY در یک اتصال (ضروری برای Access)\n        private int ExecuteInsertGetId(string insertSql, OleDbParameter[] ps)\n        {\n            using (var conn = new OleDbConnection(_db.GetConnectionString_Public()))\n            {\n                conn.Open();\n                using (var cmd = new OleDbCommand(insertSql, conn))\n                {\n                    if (ps != null) cmd.Parameters.AddRange(ps);\n                    cmd.ExecuteNonQuery();\n                }\n                using (var cmd2 = new OleDbCommand(\"SELECT @@IDENTITY\", conn))\n                {\n                    object result = cmd2.ExecuteScalar();\n                    return (result != null && result != DBNull.Value) ? Convert.ToInt32(result) : 0;\n                }\n            }\n        }\n\n        private HashSet<string> GetExistingNationalIDs()\n        {\n            var set = new HashSet<string>(StringComparer.Ordinal);\n            var dt = _db.ExecuteQuery(\"SELECT NationalID FROM Personnel WHERE NationalID IS NOT NULL\");\n            if (dt == null) return set;\n            foreach (DataRow row in dt.Rows)\n            {\n                string nid = row[\"NationalID\"]?.ToString()?.Trim();\n                if (!string.IsNullOrWhiteSpace(nid)) set.Add(nid);\n            }\n            return set;\n        }\n    }\n}\n
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.OleDb;
+using System.Drawing;
+using System.Globalization;
+using System.IO;
+using System.Windows.Forms;
+using OfficeOpenXml;
+
+namespace PersonnelManagementApp
+{
+    // ✅ فرم وارد کردن اطلاعات پرسنلی از فایل اکسل
+    public class FormExcelImport : Form
+    {
+        private readonly DbHelper _db;
+        private string _selectedFilePath;
+        private static readonly PersianCalendar _pc = new PersianCalendar();
+
+        // UI controls
+        private Label lblFile;
+        private Button btnImport;
+        private ProgressBar progressBar;
+        private Label lblProgress;
+        private DataGridView dgvPreview;
+        private Label lblInfo;
+
+        // کش مقادیر جدول‌های پشتیبان: نام → ID
+        private readonly Dictionary<string, int> _cProvinces    = new Dictionary<string, int>(StringComparer.Ordinal);
+        private readonly Dictionary<string, int> _cCities       = new Dictionary<string, int>(StringComparer.Ordinal);
+        private readonly Dictionary<string, int> _cAffairs      = new Dictionary<string, int>(StringComparer.Ordinal);
+        private readonly Dictionary<string, int> _cDepts        = new Dictionary<string, int>(StringComparer.Ordinal);
+        private readonly Dictionary<string, int> _cDistricts    = new Dictionary<string, int>(StringComparer.Ordinal);
+        private readonly Dictionary<string, int> _cPostNames    = new Dictionary<string, int>(StringComparer.Ordinal);
+        private readonly Dictionary<string, int> _cVoltages     = new Dictionary<string, int>(StringComparer.Ordinal);
+        private readonly Dictionary<string, int> _cWorkShifts   = new Dictionary<string, int>(StringComparer.Ordinal);
+        private readonly Dictionary<string, int> _cGenders      = new Dictionary<string, int>(StringComparer.Ordinal);
+        private readonly Dictionary<string, int> _cContracts    = new Dictionary<string, int>(StringComparer.Ordinal);
+        private readonly Dictionary<string, int> _cJobLevels    = new Dictionary<string, int>(StringComparer.Ordinal);
+        private readonly Dictionary<string, int> _cCompanies    = new Dictionary<string, int>(StringComparer.Ordinal);
+        private readonly Dictionary<string, int> _cDegrees      = new Dictionary<string, int>(StringComparer.Ordinal);
+        private readonly Dictionary<string, int> _cDegreeFields = new Dictionary<string, int>(StringComparer.Ordinal);
+        private readonly Dictionary<string, int> _cChartAffairs = new Dictionary<string, int>(StringComparer.Ordinal);
+        private readonly Dictionary<string, int> _cStatuses     = new Dictionary<string, int>(StringComparer.Ordinal);
+
+        // ایندکس ستون‌ها در اکسل
+        private const int COL_PROVINCE       = 0;   // استان
+        private const int COL_CITY           = 1;   // شهر
+        private const int COL_AFFAIR         = 2;   // امور انتقال
+        private const int COL_DEPT           = 3;   // اداره
+        private const int COL_DISTRICT       = 4;   // ناحیه
+        private const int COL_POST_NAME      = 5;   // نام پست
+        private const int COL_VOLTAGE        = 6;   // سطح ولتاژ
+        private const int COL_WORKSHIFT      = 7;   // روزکار/نوبتکار
+        private const int COL_GENDER         = 8;   // جنسیت
+        private const int COL_FIRSTNAME      = 9;   // نام
+        private const int COL_LASTNAME       = 10;  // نام خانوادگی
+        private const int COL_FATHERNAME     = 11;  // نام پدر
+        private const int COL_PERSONNELNUMBER= 12;  // شماره پرسنلی
+        private const int COL_NATIONALID     = 13;  // کدملی
+        private const int COL_MOBILE         = 14;  // موبایل
+        private const int COL_BIRTHDATE      = 15;  // تاریخ تولد
+        private const int COL_HIREDATE       = 16;  // تاریخ استخدام
+        private const int COL_STARTDATE      = 17;  // تاریخ شروع بکار
+        private const int COL_CONTRACTTYPE   = 18;  // نوع قرارداد
+        private const int COL_JOBLEVEL       = 19;  // سطح شغل
+        private const int COL_COMPANY        = 20;  // شرکت
+        private const int COL_DEGREE         = 21;  // مدرک
+        private const int COL_DEGREEFIELD    = 22;  // رشته تحصیلی
+        private const int COL_MAINJOB        = 23;  // عنوان شغلی اصلی
+        private const int COL_CURRENTACTIVITY= 24;  // فعالیت فعلی
+        private const int COL_STATUS         = 25;  // مغایرت/وضعیت
+
+        public FormExcelImport(DbHelper db)
+        {
+            _db = db;
+            BuildUI();
+        }
+
+        // ───────────────────────────────────────────────────────
+        // ساخت UI
+        // ───────────────────────────────────────────────────────
+        private void BuildUI()
+        {
+            this.Text = "📥  وارد کردن اطلاعات از فایل اکسل";
+            this.Size = new Size(1280, 780);
+            this.MinimumSize = new Size(900, 600);
+            this.RightToLeft = RightToLeft.Yes;
+            this.RightToLeftLayout = true;
+            this.StartPosition = FormStartPosition.CenterParent;
+
+            // ―― پنل بالا
+            Panel topPanel = new Panel { Dock = DockStyle.Top, Height = 75, BackColor = Color.FromArgb(245, 248, 255) };
+
+            Button btnBrowse = new Button
+            {
+                Text = "📂  انتخاب فایل اکسل",
+                Location = new Point(12, 20),
+                Size = new Size(190, 38),
+                BackColor = Color.SteelBlue,
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("B Nazanin", 10F)
+            };
+            btnBrowse.FlatAppearance.BorderSize = 0;
+            btnBrowse.Click += BtnBrowse_Click;
+
+            lblFile = new Label
+            {
+                Text = "هنوز فایلی انتخاب نشده است...",
+                Location = new Point(215, 28),
+                Size = new Size(640, 22),
+                ForeColor = Color.Gray,
+                Font = new Font("B Nazanin", 9F)
+            };
+
+            btnImport = new Button
+            {
+                Text = "✅  وارد کردن به دیتابیس",
+                Location = new Point(870, 20),
+                Size = new Size(220, 38),
+                BackColor = Color.ForestGreen,
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("B Nazanin", 10F),
+                Enabled = false
+            };
+            btnImport.FlatAppearance.BorderSize = 0;
+            btnImport.Click += BtnImport_Click;
+
+            Button btnClose = new Button
+            {
+                Text = "✖  بستن",
+                Location = new Point(1100, 20),
+                Size = new Size(120, 38),
+                BackColor = Color.Crimson,
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("B Nazanin", 10F)
+            };
+            btnClose.FlatAppearance.BorderSize = 0;
+            btnClose.Click += (s, e) => this.Close();
+
+            topPanel.Controls.AddRange(new Control[] { btnBrowse, lblFile, btnImport, btnClose });
+
+            // ―― پنل اطلاعات
+            lblInfo = new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 48,
+                Text = "ℹ️  ستون‌های مورد انتظار: استان | شهر | امور | اداره | ناحیه | نام پست | ولتاژ | شیفت | جنسیت | نام | نام خانوادگی | نام پدر | ش.پرسنلی | کدملی | موبایل | تاریخ تولد | تاریخ استخدام | تاریخ شروع | نوع قرارداد | سطح شغل | شرکت | مدرک | رشته | عنوان شغلی اصلی | فعالیت فعلی | وضعیت",
+                ForeColor = Color.FromArgb(50, 80, 160),
+                BackColor = Color.FromArgb(230, 240, 255),
+                Padding = new Padding(10, 5, 10, 5),
+                Font = new Font("B Nazanin", 8.5F)
+            };
+
+            // ―― پنل پیشرفت
+            Panel progressPanel = new Panel { Dock = DockStyle.Top, Height = 38, BackColor = Color.White };
+            progressBar = new ProgressBar { Location = new Point(10, 7), Size = new Size(850, 24), Visible = false };
+            lblProgress = new Label { Location = new Point(875, 9), Size = new Size(350, 22), Text = "", Font = new Font("B Nazanin", 9.5F), ForeColor = Color.DarkSlateGray };
+            progressPanel.Controls.AddRange(new Control[] { progressBar, lblProgress });
+
+            // ―― DataGridView پیش‌نمایی
+            dgvPreview = new DataGridView
+            {
+                Dock = DockStyle.Fill,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells,
+                ReadOnly = true,
+                AllowUserToAddRows = false,
+                RightToLeft = RightToLeft.Yes,
+                ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize,
+                Font = new Font("B Nazanin", 8.5F),
+                RowHeadersVisible = false,
+                BorderStyle = BorderStyle.None,
+                GridColor = Color.LightGray
+            };
+
+            this.Controls.Add(dgvPreview);
+            this.Controls.Add(progressPanel);
+            this.Controls.Add(lblInfo);
+            this.Controls.Add(topPanel);
+        }
+
+        // ───────────────────────────────────────────────────────
+        // انتخاب فایل و نمایش پیش‌نمایش
+        // ───────────────────────────────────────────────────────
+        private void BtnBrowse_Click(object sender, EventArgs e)
+        {
+            using (OpenFileDialog ofd = new OpenFileDialog())
+            {
+                ofd.Filter = "فایل اکسل (*.xlsx)|*.xlsx|فایل اکسل قدیمی (*.xls)|*.xls";
+                ofd.Title = "انتخاب فایل اکسل پرسنلی";
+                if (ofd.ShowDialog() == DialogResult.OK)
+                    LoadPreview(ofd.FileName);
+            }
+        }
+
+        private void LoadPreview(string filePath)
+        {
+            try
+            {
+                // Update for EPPlus 8 and later
+                ExcelPackage.License.SetNonCommercialPersonal("PersonnelManagementApp");
+                using (var pkg = new ExcelPackage(new FileInfo(filePath)))
+                {
+                    var ws = pkg.Workbook.Worksheets[0];
+                    if (ws.Dimension == null)
+                    {
+                        MessageBox.Show("فایل اکسل خالی است!", "هشدار", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    int rows = ws.Dimension.Rows;
+                    int cols = ws.Dimension.Columns;
+                    DataTable dt = new DataTable();
+
+                    for (int c = 1; c <= cols; c++)
+                        dt.Columns.Add(ws.Cells[1, c].Text?.Trim() ?? $"ستون{c}");
+
+                    int preview = Math.Min(rows, 51);
+                    for (int r = 2; r <= preview; r++)
+                    {
+                        var dr = dt.NewRow();
+                        for (int c = 1; c <= cols; c++)
+                            dr[c - 1] = ws.Cells[r, c].Text?.Trim() ?? "";
+                        dt.Rows.Add(dr);
+                    }
+
+                    dgvPreview.DataSource = dt;
+                    _selectedFilePath = filePath;
+                    lblFile.Text = $"✅  {Path.GetFileName(filePath)}   —   مجموع {rows - 1} ردیف داده";
+                    lblFile.ForeColor = Color.DarkGreen;
+                    btnImport.Enabled = true;
+
+                    if (rows - 1 > 50)
+                        lblProgress.Text = $"بیش از 50 ردیف — فقط 50 اول نمایش داده می‌شود";
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"❌ خطا در خواندن فایل اکسل:\n{ex.Message}", "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // ───────────────────────────────────────────────────────
+        // شروع وارد کردن
+        // ───────────────────────────────────────────────────────
+        private void BtnImport_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrEmpty(_selectedFilePath)) return;
+
+            var res = MessageBox.Show(
+                "⚠️ آیا مطمئن هستید که می‌خواهید اطلاعات اکسل را به دیتابیس وارد کنید?\n\n"
+                + "• ردیف‌هایی که کدملی تکراری دارند نادیده گرفته می‌شوند.\n"
+                + "• تاریخ‌ها به شمسی تبدیل می‌شوند.\n"
+                + "• مقادیر خالی با مقادیر پیش‌فرض جایگزینی می‌شوند.",
+                "تأیید وارد کردن", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+            if (res != DialogResult.Yes) return;
+
+            btnImport.Enabled = false;
+            progressBar.Visible = true;
+            lblProgress.Text = "⏳ در حال آمادسازی...";
+            Application.DoEvents();
+
+            try
+            {
+                LoadAllCaches();
+                DoImport(_selectedFilePath);
+            }
+            finally
+            {
+                btnImport.Enabled = true;
+                progressBar.Visible = false;
+            }
+        }
+
+        private void DoImport(string filePath)
+        {
+            int success = 0, skipped = 0, failed = 0;
+            try
+            {
+                // Update for EPPlus 8 and later
+                ExcelPackage.License.SetNonCommercialPersonal("PersonnelManagementApp");
+                using (var pkg = new ExcelPackage(new FileInfo(filePath)))
+                {
+                    var ws = pkg.Workbook.Worksheets[0];
+                    int totalRows = ws.Dimension.Rows - 1;
+                    progressBar.Maximum = Math.Max(totalRows, 1);
+                    progressBar.Value = 0;
+
+                    var existingNIDs = GetExistingNationalIDs();
+
+                    for (int r = 2; r <= ws.Dimension.Rows; r++)
+                    {
+                        try
+                        {
+                            int totalCols = ws.Dimension.Columns;
+                            string[] cells = new string[Math.Max(totalCols, 27)];
+                            for (int c = 1; c <= totalCols; c++)
+                                cells[c - 1] = ws.Cells[r, c].Text?.Trim() ?? "";
+
+                            // رد کردن ردیف‌های کاملاً خالی
+                            if (string.IsNullOrWhiteSpace(cells[COL_FIRSTNAME]) &&
+                                string.IsNullOrWhiteSpace(cells[COL_NATIONALID])) continue;
+
+                            // رد کردن کدملی تکراری
+                            string nid = cells[COL_NATIONALID]?.Trim();
+                            if (!string.IsNullOrWhiteSpace(nid) && existingNIDs.Contains(nid))
+                            { skipped++; continue; }
+
+                            InsertRecord(cells);
+                            success++;
+                            if (!string.IsNullOrWhiteSpace(nid)) existingNIDs.Add(nid);
+                        }
+                        catch { failed++; }
+
+                        progressBar.Value = Math.Min(r - 1, progressBar.Maximum);
+                        lblProgress.Text = $"✅ موفق: {success}  |  ⏭ تکراری: {skipped}  |  ❌ ناموفق: {failed}";
+                        Application.DoEvents();
+                    }
+                }
+
+                progressBar.Value = progressBar.Maximum;
+                MessageBox.Show(
+                    $"✅ وارد کردن اطلاعات به پایان رسید!\n\n"
+                    + $"🟢  موفق: {success} ردیف\n"
+                    + $"⏭️  تکراری (نادیده گرفته): {skipped} ردیف\n"
+                    + $"🔴  ناموفق: {failed} ردیف",
+                    "نتیجه وارد کردن", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"❌ خطا در وارد کردن:\n{ex.Message}", "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void InsertRecord(string[] cells)
+        {
+            int provinceId    = GetOrCreate(_cProvinces,    GetCell(cells, COL_PROVINCE),                  "Provinces",           "ProvinceID",    "ProvinceName");
+            int cityId        = GetOrCreate(_cCities,       GetCell(cells, COL_CITY),                      "Cities",              "CityID",        "CityName");
+            int affairId      = GetOrCreate(_cAffairs,      GetCell(cells, COL_AFFAIR),                    "TransferAffairs",     "AffairID",      "AffairName");
+            int deptId        = GetOrCreate(_cDepts,        GetCell(cells, COL_DEPT),                      "OperationDepartments","DeptID",        "DeptName");
+            int districtId    = GetOrCreate(_cDistricts,    GetCell(cells, COL_DISTRICT),                  "Districts",           "DistrictID",    "DistrictName");
+            int postNameId    = GetOrCreate(_cPostNames,    GetCell(cells, COL_POST_NAME),                 "PostsNames",          "PostNameID",    "PostName");
+            int voltageId     = GetOrCreate(_cVoltages,     GetCell(cells, COL_VOLTAGE),                   "VoltageLevels",       "VoltageID",     "VoltageName");
+            int workShiftId   = GetOrCreate(_cWorkShifts,   GetCell(cells, COL_WORKSHIFT),                 "WorkShift",           "WorkShiftID",   "WorkShiftName");
+            int genderId      = GetOrCreate(_cGenders,      GetCell(cells, COL_GENDER),                    "Gender",              "GenderID",      "GenderName");
+            int contractId    = GetOrCreate(_cContracts,    GetCell(cells, COL_CONTRACTTYPE),              "ContractType",        "ContractTypeID","ContractTypeName");
+            int jobLevelId    = GetOrCreate(_cJobLevels,    GetCell(cells, COL_JOBLEVEL),                  "JobLevel",            "JobLevelID",    "JobLevelName");
+            int companyId     = GetOrCreate(_cCompanies,    GetCell(cells, COL_COMPANY),                   "Company",             "CompanyID",     "CompanyName");
+            int degreeId      = GetOrCreate(_cDegrees,      GetCell(cells, COL_DEGREE),                    "Degree",              "DegreeID",      "DegreeName");
+            int degreeFieldId = GetOrCreate(_cDegreeFields, GetJobCell(cells, COL_DEGREEFIELD),            "DegreeField",         "DegreeFieldID", "DegreeFieldName");
+            int mainJobId     = GetOrCreateChart(GetJobCell(cells, COL_MAINJOB),     affairId);
+            int currentActId  = GetOrCreateChart(GetJobCell(cells, COL_CURRENTACTIVITY), affairId);
+            int statusId      = GetOrCreate(_cStatuses,     GetCell(cells, COL_STATUS, "حاضر"), "StatusPresence",      "StatusID",      "StatusName");
+
+            string birthDate  = ParseDate(GetCell(cells, COL_BIRTHDATE,  ""));
+            string hireDate   = ParseDate(GetCell(cells, COL_HIREDATE,   ""));
+            string startDate  = ParseDate(GetCell(cells, COL_STARTDATE,  ""));
+
+            string sql = @"INSERT INTO Personnel
+                (ProvinceID, CityID, AffairID, DeptID, DistrictID, PostNameID, VoltageID, WorkShiftID, GenderID,
+                 FirstName, LastName, FatherName, PersonnelNumber, NationalID, MobileNumber,
+                 BirthDate, HireDate, StartDateOperation, ContractTypeID, JobLevelID, CompanyID,
+                 DegreeID, DegreeFieldID, MainJobTitle, CurrentActivity, StatusID)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+            var ps = new OleDbParameter[]
+            {
+                new OleDbParameter("?", provinceId),
+                new OleDbParameter("?", cityId),
+                new OleDbParameter("?", affairId),
+                new OleDbParameter("?", deptId),
+                new OleDbParameter("?", districtId),
+                new OleDbParameter("?", postNameId),
+                new OleDbParameter("?", voltageId),
+                new OleDbParameter("?", workShiftId),
+                new OleDbParameter("?", genderId),
+                new OleDbParameter("?", GetCell(cells, COL_FIRSTNAME)),
+                new OleDbParameter("?", GetCell(cells, COL_LASTNAME)),
+                new OleDbParameter("?", GetCell(cells, COL_FATHERNAME)),
+                new OleDbParameter("?", GetCell(cells, COL_PERSONNELNUMBER, "داده‌ای وجود ندارد")),
+                new OleDbParameter("?", GetCell(cells, COL_NATIONALID,     "داده‌ای وجود ندارد")),
+                new OleDbParameter("?", GetCell(cells, COL_MOBILE,         "داده‌ای وجود ندارد")),
+                new OleDbParameter("?", birthDate),
+                new OleDbParameter("?", hireDate),
+                new OleDbParameter("?", startDate),
+                new OleDbParameter("?", contractId),
+                new OleDbParameter("?", jobLevelId),
+                new OleDbParameter("?", companyId),
+                new OleDbParameter("?", degreeId),
+                new OleDbParameter("?", degreeFieldId),
+                new OleDbParameter("?", mainJobId),
+                new OleDbParameter("?", currentActId),
+                new OleDbParameter("?", statusId)
+            };
+
+            _db.ExecuteNonQuery(sql, ps);
+        }
+
+        // ───────────────────────────────────────────────────────
+        // متد‌های کمکی
+        // ───────────────────────────────────────────────────────
+        /// دریافت مقدار سلول — اگر خالی بود مقدار پیش‌فرض برگردان
+        private string GetCell(string[] cells, int idx, string def = "داده‌ای وجود ندارد")
+        {
+            if (idx >= cells.Length) return def;
+            string v = cells[idx]?.Trim();
+            return string.IsNullOrWhiteSpace(v) ? def : v;
+        }
+
+        /// برای ستون‌های شغلی — مقدار پیش‌فرض غیرمرتبط
+        private string GetJobCell(string[] cells, int idx)
+        {
+            string v = GetCell(cells, idx, "");
+            return string.IsNullOrWhiteSpace(v) ? "غیرمرتبط" : v;
+        }
+
+        /// تبدیل تاریخ میلادی به شمسی — تاریخ خالی → 1300/01/01
+        private string ParseDate(string raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw) || raw == "داده‌ای وجود ندارد")
+                return "1300/01/01";
+            try
+            {
+                string[] p = raw.Trim().Split(new char[] { '/', '-', '.' }, StringSplitOptions.RemoveEmptyEntries);
+                if (p.Length == 3)
+                {
+                    // حالت 1: yyyy/MM/dd
+                    if (int.TryParse(p[0], out int y) &&
+                        int.TryParse(p[1], out int m) &&
+                        int.TryParse(p[2], out int d))
+                    {
+                        if (y >= 1800 && m >= 1 && m <= 12 && d >= 1 && d <= 31)
+                        {
+                            // میلادی → تبدیل به شمسی
+                            var dt = new DateTime(y, m, d);
+                            return $"{_pc.GetYear(dt):0000}/{_pc.GetMonth(dt):00}/{_pc.GetDayOfMonth(dt):00}";
+                        }
+                        if (y >= 1300 && y <= 1500)
+                            return $"{y:0000}/{m:00}/{d:00}";  // قبلاً شمسی است
+                        if (y >= 1 && y <= 99)
+                            return $"{y + 1300:0000}/{m:00}/{d:00}";  // سال کوتاه 71 → 1371
+                    }
+                    // حالت 2: dd/MM/yy (مثل 26/11/71)
+                    if (int.TryParse(p[0], out int d2) &&
+                        int.TryParse(p[1], out int m2) &&
+                        int.TryParse(p[2], out int y2) &&
+                        d2 > 12 && m2 <= 12)
+                    {
+                        int fy = y2 < 100 ? y2 + 1300 : y2;
+                        return $"{fy:0000}/{m2:00}/{d2:00}";
+                    }
+                }
+            }
+            catch { }
+            return "1300/01/01";
+        }
+
+        // ───────────────────────────────────────────────────────
+        // Cache + GetOrCreate
+        // ───────────────────────────────────────────────────────
+        private void LoadAllCaches()
+        {
+            FillCache("SELECT ProvinceID, ProvinceName FROM Provinces",              "ProvinceID",    "ProvinceName",    _cProvinces);
+            FillCache("SELECT CityID, CityName FROM Cities",                         "CityID",        "CityName",        _cCities);
+            FillCache("SELECT AffairID, AffairName FROM TransferAffairs",            "AffairID",      "AffairName",      _cAffairs);
+            FillCache("SELECT DeptID, DeptName FROM OperationDepartments",           "DeptID",        "DeptName",        _cDepts);
+            FillCache("SELECT DistrictID, DistrictName FROM Districts",              "DistrictID",    "DistrictName",    _cDistricts);
+            FillCache("SELECT PostNameID, PostName FROM PostsNames",                 "PostNameID",    "PostName",        _cPostNames);
+            FillCache("SELECT VoltageID, VoltageName FROM VoltageLevels",            "VoltageID",     "VoltageName",     _cVoltages);
+            FillCache("SELECT WorkShiftID, WorkShiftName FROM WorkShift",            "WorkShiftID",   "WorkShiftName",   _cWorkShifts);
+            FillCache("SELECT GenderID, GenderName FROM Gender",                     "GenderID",      "GenderName",      _cGenders);
+            FillCache("SELECT ContractTypeID, ContractTypeName FROM ContractType",   "ContractTypeID","ContractTypeName",_cContracts);
+            FillCache("SELECT JobLevelID, JobLevelName FROM JobLevel",               "JobLevelID",    "JobLevelName",    _cJobLevels);
+            FillCache("SELECT CompanyID, CompanyName FROM Company",                  "CompanyID",     "CompanyName",     _cCompanies);
+            FillCache("SELECT DegreeID, DegreeName FROM Degree",                     "DegreeID",      "DegreeName",      _cDegrees);
+            FillCache("SELECT DegreeFieldID, DegreeFieldName FROM DegreeField",      "DegreeFieldID", "DegreeFieldName", _cDegreeFields);
+            FillCache("SELECT ChartID, ChartName FROM ChartAffairs",                 "ChartID",       "ChartName",       _cChartAffairs);
+            FillCache("SELECT StatusID, StatusName FROM StatusPresence",             "StatusID",      "StatusName",      _cStatuses);
+        }
+
+        private void FillCache(string query, string idCol, string nameCol, Dictionary<string, int> cache)
+        {
+            try
+            {
+                var dt = _db.ExecuteQuery(query);
+                if (dt == null) return;
+                foreach (DataRow row in dt.Rows)
+                {
+                    string name = row[nameCol]?.ToString() ?? "";
+                    if (!string.IsNullOrEmpty(name) && !cache.ContainsKey(name))
+                        cache[name] = Convert.ToInt32(row[idCol]);
+                }
+            }
+            catch { }
+        }
+
+        /// دریافت ID از كش — اگر نبود INSERT کند و ID جدید برگردان (@@IDENTITY در یک اتصال)
+        private int GetOrCreate(Dictionary<string, int> cache, string name, string table, string idCol, string nameCol)
+        {
+            if (cache.TryGetValue(name, out int id)) return id;
+
+            int newId = ExecuteInsertGetId(
+                $"INSERT INTO {table} ({nameCol}) VALUES (?)",
+                new OleDbParameter[] { new OleDbParameter("?", name) });
+
+            cache[name] = newId;
+            return newId;
+        }
+
+        /// خاص ChartAffairs که نیاز به AffairID دارد
+        private int GetOrCreateChart(string chartName, int affairId)
+        {
+            if (_cChartAffairs.TryGetValue(chartName, out int id)) return id;
+
+            int newId = ExecuteInsertGetId(
+                "INSERT INTO ChartAffairs (AffairID, ChartName) VALUES (?, ?)",
+                new OleDbParameter[]
+                {
+                    new OleDbParameter("?", affairId),
+                    new OleDbParameter("?", chartName)
+                });
+
+            _cChartAffairs[chartName] = newId;
+            return newId;
+        }
+
+        /// اجرای INSERT و دریافت @@IDENTITY در یک اتصال (ضروری برای Access)
+        private int ExecuteInsertGetId(string insertSql, OleDbParameter[] ps)
+        {
+            using (var conn = new OleDbConnection(_db.GetConnectionString_Public()))
+            {
+                conn.Open();
+                using (var cmd = new OleDbCommand(insertSql, conn))
+                {
+                    if (ps != null) cmd.Parameters.AddRange(ps);
+                    cmd.ExecuteNonQuery();
+                }
+                using (var cmd2 = new OleDbCommand("SELECT @@IDENTITY", conn))
+                {
+                    object result = cmd2.ExecuteScalar();
+                    return (result != null && result != DBNull.Value) ? Convert.ToInt32(result) : 0;
+                }
+            }
+        }
+
+        private HashSet<string> GetExistingNationalIDs()
+        {
+            var set = new HashSet<string>(StringComparer.Ordinal);
+            var dt = _db.ExecuteQuery("SELECT NationalID FROM Personnel WHERE NationalID IS NOT NULL");
+            if (dt == null) return set;
+            foreach (DataRow row in dt.Rows)
+            {
+                string nid = row["NationalID"]?.ToString()?.Trim();
+                if (!string.IsNullOrWhiteSpace(nid)) set.Add(nid);
+            }
+            return set;
+        }
+    }
+}

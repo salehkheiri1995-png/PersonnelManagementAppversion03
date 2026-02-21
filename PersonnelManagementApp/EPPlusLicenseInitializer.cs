@@ -1,1 +1,32 @@
-using System;\nusing OfficeOpenXml;\n\nnamespace PersonnelManagementApp\n{\n    /// <summary>\n    /// مقداردهی اولیه License برای EPPlus\n    /// باید در ابتدای برنامه صدا زده شود\n    /// </summary>\n    public static class EPPlusLicenseInitializer\n    {\n        private static bool _initialized = false;\n\n        public static void Initialize()\n        {\n            if (_initialized)\n                return;\n\n            try\n            {\n                // روش برای EPPlus 8 و جدیدتر\n                ExcelPackage.License.SetNonCommercialPersonal(\"PersonnelManagementApp\");\n                _initialized = true;\n            }\n            catch\n            {\n                // اگر مشکلی پیش آمد ادامه بده\n                _initialized = true;\n            }\n        }\n    }\n}\n
+using System;
+using OfficeOpenXml;
+
+namespace PersonnelManagementApp
+{
+    /// <summary>
+    /// مقداردهی اولیه License برای EPPlus
+    /// باید در ابتدای برنامه صدا زده شود
+    /// </summary>
+    public static class EPPlusLicenseInitializer
+    {
+        private static bool _initialized = false;
+
+        public static void Initialize()
+        {
+            if (_initialized)
+                return;
+
+            try
+            {
+                // روش برای EPPlus 8 و جدیدتر
+                ExcelPackage.License.SetNonCommercialPersonal("PersonnelManagementApp");
+                _initialized = true;
+            }
+            catch
+            {
+                // اگر مشکلی پیش آمد ادامه بده
+                _initialized = true;
+            }
+        }
+    }
+}
