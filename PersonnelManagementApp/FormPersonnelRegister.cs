@@ -712,23 +712,24 @@ namespace PersonnelManagementApp
 
         private ValidationResult ValidateFormData()
         {
-            if (cbProvince.SelectedIndex == -1) return new ValidationResult(false, "لطفاً استان را انتخاب کنید.");
-            if (cbCity.SelectedIndex == -1) return new ValidationResult(false, "لطفاً شهر را انتخاب کنید.");
-            if (cbAffair.SelectedIndex == -1) return new ValidationResult(false, "لطفاً امور انتقال را انتخاب کنید.");
-            if (cbDept.SelectedIndex == -1) return new ValidationResult(false, "لطفاً اداره بهره‌برداری را انتخاب کنید.");
-            if (cbDistrict.SelectedIndex == -1) return new ValidationResult(false, "لطفاً ناحیه بهره‌برداری را انتخاب کنید.");
-            if (cbPostName.SelectedIndex == -1) return new ValidationResult(false, "لطفاً نام پست را انتخاب کنید.");
-            if (cbVoltage.SelectedIndex == -1) return new ValidationResult(false, "لطفاً سطح ولتاژ را انتخاب کنید.");
-            if (cbWorkShift.SelectedIndex == -1) return new ValidationResult(false, "لطفاً شیفت کاری را انتخاب کنید.");
-            if (cbGender.SelectedIndex == -1) return new ValidationResult(false, "لطفاً جنسیت را انتخاب کنید.");
-            if (cbContractType.SelectedIndex == -1) return new ValidationResult(false, "لطفاً نوع قرارداد را انتخاب کنید.");
-            if (cbJobLevel.SelectedIndex == -1) return new ValidationResult(false, "لطفاً سطح شغل را انتخاب کنید.");
-            if (cbCompany.SelectedIndex == -1) return new ValidationResult(false, "لطفاً شرکت را انتخاب کنید.");
-            if (cbDegree.SelectedIndex == -1) return new ValidationResult(false, "لطفاً مدرک تحصیلی را انتخاب کنید.");
-            if (cbDegreeField.SelectedIndex == -1) return new ValidationResult(false, "لطفاً رشته تحصیلی را انتخاب کنید.");
-            if (cbMainJobTitle.SelectedIndex == -1) return new ValidationResult(false, "لطفاً عنوان شغلی اصلی را انتخاب کنید.");
-            if (cbCurrentActivity.SelectedIndex == -1) return new ValidationResult(false, "لطفاً فعالیت فعلی را انتخاب کنید.");
-            if (cbStatus.SelectedIndex == -1) return new ValidationResult(false, "لطفاً وضعیت حضور را انتخاب کنید.");
+            // ✅ تحقق دقیق از فیلدهای کلیدی خارجی و اطمینان از دریافت مقدار صحیح
+            if (!IsComboBoxValidWithValue(cbProvince)) return new ValidationResult(false, "لطفاً استان را انتخاب کنید.");
+            if (!IsComboBoxValidWithValue(cbCity)) return new ValidationResult(false, "لطفاً شهر را انتخاب کنید.");
+            if (!IsComboBoxValidWithValue(cbAffair)) return new ValidationResult(false, "لطفاً امور انتقال را انتخاب کنید.");
+            if (!IsComboBoxValidWithValue(cbDept)) return new ValidationResult(false, "لطفاً اداره بهره‌برداری را انتخاب کنید.");
+            if (!IsComboBoxValidWithValue(cbDistrict)) return new ValidationResult(false, "لطفاً ناحیه بهره‌برداری را انتخاب کنید.");
+            if (!IsComboBoxValidWithValue(cbPostName)) return new ValidationResult(false, "لطفاً نام پست را انتخاب کنید.");
+            if (!IsComboBoxValidWithValue(cbVoltage)) return new ValidationResult(false, "لطفاً سطح ولتاژ را انتخاب کنید.");
+            if (!IsComboBoxValidWithValue(cbWorkShift)) return new ValidationResult(false, "لطفاً شیفت کاری را انتخاب کنید.");
+            if (!IsComboBoxValidWithValue(cbGender)) return new ValidationResult(false, "لطفاً جنسیت را انتخاب کنید.");
+            if (!IsComboBoxValidWithValue(cbContractType)) return new ValidationResult(false, "لطفاً نوع قرارداد را انتخاب کنید.");
+            if (!IsComboBoxValidWithValue(cbJobLevel)) return new ValidationResult(false, "لطفاً سطح شغل را انتخاب کنید.");
+            if (!IsComboBoxValidWithValue(cbCompany)) return new ValidationResult(false, "لطفاً شرکت را انتخاب کنید.");
+            if (!IsComboBoxValidWithValue(cbDegree)) return new ValidationResult(false, "لطفاً مدرک تحصیلی را انتخاب کنید.");
+            if (!IsComboBoxValidWithValue(cbDegreeField)) return new ValidationResult(false, "لطفاً رشته تحصیلی را انتخاب کنید.");
+            if (!IsComboBoxValidWithValue(cbMainJobTitle)) return new ValidationResult(false, "لطفاً عنوان شغلی اصلی را انتخاب کنید.");
+            if (!IsComboBoxValidWithValue(cbCurrentActivity)) return new ValidationResult(false, "لطفاً فعالیت فعلی را انتخاب کنید.");
+            if (!IsComboBoxValidWithValue(cbStatus)) return new ValidationResult(false, "لطفاً وضعیت حضور را انتخاب کنید.");
 
             if (string.IsNullOrWhiteSpace(txtFirstName.Text)) return new ValidationResult(false, "لطفاً نام را وارد کنید.");
             if (string.IsNullOrWhiteSpace(txtLastName.Text)) return new ValidationResult(false, "لطفاً نام خانوادگی را وارد کنید.");
@@ -892,6 +893,24 @@ namespace PersonnelManagementApp
             {
                 MessageBox.Show($"خطا در ثبت پرسنل:\n{ex.Message}\n\nStackTrace: {ex.StackTrace}", "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        // ✅ تحقق از اینکه کمبوباکس مقدار صحیح دارد (نه صرفاً selected index)
+        private bool IsComboBoxValidWithValue(ComboBox comboBox)
+        {
+            try
+            {
+                if (comboBox.SelectedIndex == -1 || comboBox.SelectedValue == null)
+                    return false;
+
+                if (int.TryParse(comboBox.SelectedValue.ToString(), out int value))
+                    return value > 0;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"خطا در تحقق مقدار کمبوباکس: {ex.Message}");
+            }
+            return false;
         }
 
         private object GetComboBoxValue(ComboBox comboBox)
