@@ -478,7 +478,7 @@ namespace PersonnelManagementApp
             FillCache("SELECT CompanyID, CompanyName FROM Company",                  "CompanyID",     "CompanyName",     _cCompanies);
             FillCache("SELECT DegreeID, DegreeName FROM Degree",                     "DegreeID",      "DegreeName",      _cDegrees);
             FillCache("SELECT DegreeFieldID, DegreeFieldName FROM DegreeField",      "DegreeFieldID", "DegreeFieldName", _cDegreeFields);
-            FillCache("SELECT ChartID, ChartName FROM ChartAffairs",                 "ChartID",       "ChartName",       _cChartAffairs);
+            FillCache("SELECT ChartID, ChartName FROM ChartAffairs1",                "ChartID",       "ChartName",       _cChartAffairs);
             FillCache("SELECT StatusID, StatusName FROM StatusPresence",             "StatusID",      "StatusName",      _cStatuses);
         }
 
@@ -511,13 +511,13 @@ namespace PersonnelManagementApp
             return newId;
         }
 
-        /// خاص ChartAffairs که نیاز به AffairID دارد
+        /// خاص ChartAffairs1 که نیاز به AffairID دارد
         private int GetOrCreateChart(string chartName, int affairId)
         {
             if (_cChartAffairs.TryGetValue(chartName, out int id)) return id;
 
             int newId = ExecuteInsertGetId(
-                "INSERT INTO ChartAffairs (AffairID, ChartName) VALUES (?, ?)",
+                "INSERT INTO ChartAffairs1 (AffairID, ChartName) VALUES (?, ?)",
                 new OleDbParameter[]
                 {
                     new OleDbParameter("?", affairId),
