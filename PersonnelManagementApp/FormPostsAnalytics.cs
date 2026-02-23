@@ -575,10 +575,10 @@ namespace PersonnelManagementApp
 
         private List<(string Name, int Count)> GroupStats(DataTable dt, string col)
         {
-            if (dt.Rows.Count == 0) return new List<(string, int)>();
+            if (dt == null || dt.Rows.Count == 0) return new List<(string Name, int Count)>();
             return dt.AsEnumerable()
                 .GroupBy(r => r[col]?.ToString() ?? "نامشخص")
-                .Select(g => (g.Key, g.Count()))
+                .Select(g => (Name: g.Key, Count: g.Count()))
                 .OrderByDescending(x => x.Count)
                 .ToList();
         }
@@ -655,8 +655,8 @@ namespace PersonnelManagementApp
                             return $"{(y / 10) * 10}\u2013{(y / 10) * 10 + 9}";
                         return "نامشخص";
                     })
-                    .Select(g => (g.Key, g.Count()))
-                    .OrderBy(x => x.Key)
+                    .Select(g => (Name: g.Key, Count: g.Count()))
+                    .OrderBy(x => x.Name)
                     .ToList();
 
                 int total = stats.Sum(x => x.Count);
