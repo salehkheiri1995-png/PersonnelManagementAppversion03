@@ -93,7 +93,7 @@ namespace PersonnelManagementApp
         private void InitializeComponent()
         {
             this.Text = $"🗂️ مدیریت {tableDisplayName}";
-            this.Size = new Size(1000, 700);
+            this.Size = new Size(1000, 760);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.RightToLeft = RightToLeft.Yes;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -125,7 +125,7 @@ namespace PersonnelManagementApp
             // Label تعداد رکوردها
             lblRecordCount = new Label
             {
-                Location = new Point(20, 625),
+                Location = new Point(20, 680),
                 Size = new Size(300, 25),
                 Font = GetSafeFont(FontSettings.BodyFont?.FontFamily.Name ?? "Tahoma", 9),
                 ForeColor = TextSecondary,
@@ -245,7 +245,7 @@ namespace PersonnelManagementApp
             Panel panel = new Panel
             {
                 Location = new Point(15, 445),
-                Size = new Size(950, 160),
+                Size = new Size(950, 190),
                 BackColor = CardBackground
             };
             ApplyRoundedCorners(panel, 8);
@@ -308,7 +308,7 @@ namespace PersonnelManagementApp
             // خط جداکننده
             Panel separator = new Panel
             {
-                Location = new Point(20, 118),
+                Location = new Point(20, 120),
                 Size = new Size(910, 2),
                 BackColor = Color.FromArgb(230, 230, 230)
             };
@@ -320,25 +320,45 @@ namespace PersonnelManagementApp
                 Text = "✏️ ویرایش رکورد انتخابی:",
                 Font = GetSafeFont(FontSettings.LabelFont?.FontFamily.Name ?? "Tahoma", 10, FontStyle.Bold),
                 ForeColor = TextPrimary,
-                Location = new Point(400, 128),
-                Size = new Size(530, 25),
+                Location = new Point(750, 130),
+                Size = new Size(180, 25),
+                TextAlign = ContentAlignment.MiddleRight
+            });
+
+            panel.Controls.Add(new Label
+            {
+                Text = $"{parentDisplayName}:",
+                Font = GetSafeFont(FontSettings.LabelFont?.FontFamily.Name ?? "Tahoma", 9),
+                ForeColor = TextPrimary,
+                Location = new Point(750, 135),
+                Size = new Size(180, 25),
                 TextAlign = ContentAlignment.MiddleRight
             });
 
             cmbParentEdit = new ComboBox
             {
-                Location = new Point(650, 128),
-                Size = new Size(140, 28),
-                Font = GetSafeFont(FontSettings.TextBoxFont?.FontFamily.Name ?? "Tahoma", 9),
+                Location = new Point(450, 135),
+                Size = new Size(290, 28),
+                Font = GetSafeFont(FontSettings.TextBoxFont?.FontFamily.Name ?? "Tahoma", 10),
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 Enabled = false
             };
             panel.Controls.Add(cmbParentEdit);
 
+            panel.Controls.Add(new Label
+            {
+                Text = $"{tableDisplayName}:",
+                Font = GetSafeFont(FontSettings.LabelFont?.FontFamily.Name ?? "Tahoma", 9),
+                ForeColor = TextPrimary,
+                Location = new Point(750, 163),
+                Size = new Size(180, 25),
+                TextAlign = ContentAlignment.MiddleRight
+            });
+
             txtEditValue = new TextBox
             {
-                Location = new Point(450, 128),
-                Size = new Size(190, 28),
+                Location = new Point(450, 163),
+                Size = new Size(290, 28),
                 Font = GetSafeFont(FontSettings.TextBoxFont?.FontFamily.Name ?? "Tahoma", 10),
                 BorderStyle = BorderStyle.FixedSingle,
                 Enabled = false
@@ -346,13 +366,13 @@ namespace PersonnelManagementApp
             panel.Controls.Add(txtEditValue);
 
             btnEdit = CreateModernButton("✏️ ویرایش", WarningColor, 100, 32);
-            btnEdit.Location = new Point(340, 126);
+            btnEdit.Location = new Point(340, 161);
             btnEdit.Enabled = false;
             btnEdit.Click += BtnEdit_Click;
             panel.Controls.Add(btnEdit);
 
             btnDelete = CreateModernButton("🗑️ حذف", DangerColor, 100, 32);
-            btnDelete.Location = new Point(230, 126);
+            btnDelete.Location = new Point(230, 161);
             btnDelete.Enabled = false;
             btnDelete.Click += BtnDelete_Click;
             panel.Controls.Add(btnDelete);
@@ -364,7 +384,7 @@ namespace PersonnelManagementApp
         {
             Panel panel = new Panel
             {
-                Location = new Point(15, 615),
+                Location = new Point(15, 675),
                 Size = new Size(950, 50),
                 BackColor = Color.Transparent
             };

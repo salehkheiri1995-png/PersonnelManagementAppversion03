@@ -306,7 +306,7 @@ namespace PersonnelManagementApp
             Panel card = new Panel
             {
                 Location  = new Point(10, 10),
-                Size      = new Size(690, 750),
+                Size      = new Size(690, 820),
                 BackColor = CardBackground
             };
             ApplyRoundedCorners(card, 10);
@@ -336,21 +336,26 @@ namespace PersonnelManagementApp
             int yPos = 95;
             int btnWidth = 200;
             int btnHeight = 40;
-            int spacing = 15;
+            int spacing = 28;
             int col1X = 470;
             int col2X = 240;
             int col3X = 10;
 
             // ردیف اول
             AddLookupTableButton(card, "🏢 استان‌ها", col1X, yPos, btnWidth, btnHeight, "Provinces", "ProvinceID", "ProvinceName", "استان‌ها");
-            AddLookupTableButton(card, "🏙️ شهرها", col2X, yPos, btnWidth, btnHeight, "Cities", "CityID", "CityName", "شهرها");
-            AddLookupTableButton(card, "📋 امور انتقال", col3X, yPos, btnWidth, btnHeight, "TransferAffairs", "AffairID", "AffairName", "امور انتقال");
+            AddLookupTableButton(card, "🏙️ شهرها", col2X, yPos, btnWidth, btnHeight, "Cities", "CityID", "CityName", "شهرها",
+                "Provinces", "ProvinceID", "ProvinceName", "استان‌ها", "ProvinceID");
+            AddLookupTableButton(card, "📋 امور انتقال", col3X, yPos, btnWidth, btnHeight, "TransferAffairs", "AffairID", "AffairName", "امور انتقال",
+                "Provinces", "ProvinceID", "ProvinceName", "استان‌ها", "ProvinceID");
             yPos += btnHeight + spacing;
 
             // ردیف دوم
-            AddLookupTableButton(card, "🏛️ ادارات بهره‌برداری", col1X, yPos, btnWidth, btnHeight, "OperationDepartments", "DeptID", "DeptName", "ادارات بهره‌برداری");
-            AddLookupTableButton(card, "📍 نواحی", col2X, yPos, btnWidth, btnHeight, "Districts", "DistrictID", "DistrictName", "نواحی");
-            AddLookupTableButton(card, "🏭 نام پست‌ها", col3X, yPos, btnWidth, btnHeight, "PostsNames", "PostNameID", "PostName", "نام پست‌ها");
+            AddLookupTableButton(card, "🏛️ ادارات بهره‌برداری", col1X, yPos, btnWidth, btnHeight, "OperationDepartments", "DeptID", "DeptName", "ادارات بهره‌برداری",
+                "TransferAffairs", "AffairID", "AffairName", "امور انتقال", "AffairID");
+            AddLookupTableButton(card, "📍 نواحی", col2X, yPos, btnWidth, btnHeight, "Districts", "DistrictID", "DistrictName", "نواحی",
+                "OperationDepartments", "DeptID", "DeptName", "ادارات بهره‌برداری", "DeptID");
+            AddLookupTableButton(card, "🏭 نام پست‌ها", col3X, yPos, btnWidth, btnHeight, "PostsNames", "PostNameID", "PostName", "نام پست‌ها",
+                "Districts", "DistrictID", "DistrictName", "نواحی", "DistrictID");
             yPos += btnHeight + spacing;
 
             // ردیف سوم
@@ -399,7 +404,9 @@ namespace PersonnelManagementApp
         }
 
         private void AddLookupTableButton(Panel parent, string text, int x, int y, int width, int height,
-            string tableName, string idColumn, string nameColumn, string displayName)
+            string tableName, string idColumn, string nameColumn, string displayName,
+            string parentTableName = null, string parentIdColumn = null, string parentNameColumn = null,
+            string parentDisplayName = null, string foreignKeyColumn = null)
         {
             Button btn = CreateModernButton(text, LookupColor, width, height);
             btn.Location = new Point(x, y);
@@ -408,8 +415,20 @@ namespace PersonnelManagementApp
             {
                 try
                 {
-                    FormLookupTableManager lookupForm = new FormLookupTableManager(tableName, idColumn, nameColumn, displayName);
-                    lookupForm.ShowDialog(this);
+                    if (!string.IsNullOrEmpty(parentTableName))
+                    {
+                        // استفاده از فرم وابسته‌ای برای جداول با وابستگی
+                        FormLookupTableManagerWithDependency lookupForm = new FormLookupTableManagerWithDependency(
+                            tableName, idColumn, nameColumn, displayName,
+                            parentTableName, parentIdColumn, parentNameColumn, parentDisplayName, foreignKeyColumn);
+                        lookupForm.ShowDialog(this);
+                    }
+                    else
+                    {
+                        // استفاده از فرم ساده برای جداول بدون وابستگی
+                        FormLookupTableManager lookupForm = new FormLookupTableManager(tableName, idColumn, nameColumn, displayName);
+                        lookupForm.ShowDialog(this);
+                    }
                 }
                 catch (Exception ex)
                 {
