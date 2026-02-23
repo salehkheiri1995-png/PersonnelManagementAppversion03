@@ -537,7 +537,7 @@ namespace PersonnelManagementApp
         {
             try
             {
-                using var frm = new FormExcelImport();
+                using var frm = new FormImportExcel();
                 frm.ShowDialog(this);
             }
             catch (Exception ex)

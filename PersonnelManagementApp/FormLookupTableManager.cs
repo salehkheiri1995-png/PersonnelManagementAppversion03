@@ -344,10 +344,19 @@ namespace PersonnelManagementApp
                 if (dt != null && dt.Rows.Count > 0)
                 {
                     dgvData.DataSource = dt;
-                    dgvData.Columns[idColumnName].HeaderText = "شناسه";
-                    dgvData.Columns[nameColumnName].HeaderText = tableDisplayName;
-                    dgvData.Columns[idColumnName].Width = 100;
-                    dgvData.Columns[nameColumnName].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+                    
+                    if (dgvData.Columns.Count >= 2)
+                    {
+                        // Temporarily disable Fill mode to set custom widths
+                        dgvData.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
+                        
+                        dgvData.Columns[0].HeaderText = "شناسه";
+                        dgvData.Columns[0].Width = 100;
+                        dgvData.Columns[1].HeaderText = tableDisplayName;
+                        
+                        // Re-enable Fill mode for the second column
+                        dgvData.Columns[1].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+                    }
 
                     lblRecordCount.Text = $"📊 تعداد رکوردها: {dt.Rows.Count}";
                 }
