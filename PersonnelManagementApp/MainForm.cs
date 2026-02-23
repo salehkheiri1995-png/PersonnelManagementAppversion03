@@ -81,7 +81,7 @@ namespace PersonnelManagementApp
             }
 
             int centerX = (this.ClientSize.Width - 300) / 2;
-            int centerY = (this.ClientSize.Height - 450) / 2;
+            int centerY = (this.ClientSize.Height - 470) / 2;
 
             // سرتیتر
             Label lblTitle = new Label
@@ -165,11 +165,25 @@ namespace PersonnelManagementApp
             btnAnalytics.Click += (s, e) => new FormPersonnelAnalytics().ShowDialog();
             this.Controls.Add(btnAnalytics);
 
-            // دکمه تنظیمات (جدید)
+            // دکمه تحلیل پست‌ها
+            Button btnPostsAnalytics = new Button
+            {
+                Text = "تحلیل پست‌ها",
+                Location = new Point(centerX, centerY + 300),
+                Size = new Size(300, 50),
+                Font = FontSettings.ButtonFont,
+                BackColor = Color.Teal,
+                ForeColor = Color.White
+            };
+            ApplyRoundedCorners(btnPostsAnalytics, 15);
+            btnPostsAnalytics.Click += (s, e) => new FormPostsAnalytics().ShowDialog();
+            this.Controls.Add(btnPostsAnalytics);
+
+            // دکمه تنظیمات
             Button btnSettings = new Button
             {
                 Text = "تنظیمات",
-                Location = new Point(centerX, centerY + 300),
+                Location = new Point(centerX, centerY + 360),
                 Size = new Size(300, 50),
                 Font = FontSettings.ButtonFont,
                 BackColor = Color.MediumPurple,
@@ -183,7 +197,7 @@ namespace PersonnelManagementApp
             Button btnExit = new Button
             {
                 Text = "خروج",
-                Location = new Point(centerX, centerY + 360),
+                Location = new Point(centerX, centerY + 420),
                 Size = new Size(300, 50),
                 Font = FontSettings.ButtonFont,
                 BackColor = Color.Gray,
