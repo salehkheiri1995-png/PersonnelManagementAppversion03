@@ -25,51 +25,52 @@ namespace PersonnelManagementApp
         private DataGridView dgvPreview;
         private Label lblInfo;
 
-        // کش مقادیر جدول‌های پشتیبان: نام → ID
-        private readonly Dictionary<string, int> _cProvinces    = new Dictionary<string, int>(StringComparer.Ordinal);
-        private readonly Dictionary<string, int> _cCities       = new Dictionary<string, int>(StringComparer.Ordinal);
-        private readonly Dictionary<string, int> _cAffairs      = new Dictionary<string, int>(StringComparer.Ordinal);
-        private readonly Dictionary<string, int> _cDepts        = new Dictionary<string, int>(StringComparer.Ordinal);
-        private readonly Dictionary<string, int> _cDistricts    = new Dictionary<string, int>(StringComparer.Ordinal);
-        private readonly Dictionary<string, int> _cPostNames    = new Dictionary<string, int>(StringComparer.Ordinal);
-        private readonly Dictionary<string, int> _cVoltages     = new Dictionary<string, int>(StringComparer.Ordinal);
-        private readonly Dictionary<string, int> _cWorkShifts   = new Dictionary<string, int>(StringComparer.Ordinal);
-        private readonly Dictionary<string, int> _cGenders      = new Dictionary<string, int>(StringComparer.Ordinal);
-        private readonly Dictionary<string, int> _cContracts    = new Dictionary<string, int>(StringComparer.Ordinal);
-        private readonly Dictionary<string, int> _cJobLevels    = new Dictionary<string, int>(StringComparer.Ordinal);
-        private readonly Dictionary<string, int> _cCompanies    = new Dictionary<string, int>(StringComparer.Ordinal);
-        private readonly Dictionary<string, int> _cDegrees      = new Dictionary<string, int>(StringComparer.Ordinal);
-        private readonly Dictionary<string, int> _cDegreeFields = new Dictionary<string, int>(StringComparer.Ordinal);
-        private readonly Dictionary<string, int> _cChartAffairs = new Dictionary<string, int>(StringComparer.Ordinal);
-        private readonly Dictionary<string, int> _cStatuses     = new Dictionary<string, int>(StringComparer.Ordinal);
+        // ✅ کش مقادیر جدول‌های پشتیبان: نام → ID
+        // OrdinalIgnoreCase برای جلوگیری از مشکل حروف بزرگ/کوچک
+        private readonly Dictionary<string, int> _cProvinces    = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int> _cCities       = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int> _cAffairs      = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int> _cDepts        = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int> _cDistricts    = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int> _cPostNames    = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int> _cVoltages     = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int> _cWorkShifts   = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int> _cGenders      = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int> _cContracts    = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int> _cJobLevels    = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int> _cCompanies    = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int> _cDegrees      = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int> _cDegreeFields = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int> _cChartAffairs = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int> _cStatuses     = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
         // ایندکس ستون‌ها در اکسل
-        private const int COL_PROVINCE       = 0;   // استان
-        private const int COL_CITY           = 1;   // شهر
-        private const int COL_AFFAIR         = 2;   // امور انتقال
-        private const int COL_DEPT           = 3;   // اداره
-        private const int COL_DISTRICT       = 4;   // ناحیه
-        private const int COL_POST_NAME      = 5;   // نام پست
-        private const int COL_VOLTAGE        = 6;   // سطح ولتاژ
-        private const int COL_WORKSHIFT      = 7;   // روزکار/نوبتکار
-        private const int COL_GENDER         = 8;   // جنسیت
-        private const int COL_FIRSTNAME      = 9;   // نام
-        private const int COL_LASTNAME       = 10;  // نام خانوادگی
-        private const int COL_FATHERNAME     = 11;  // نام پدر
-        private const int COL_PERSONNELNUMBER= 12;  // شماره پرسنلی
-        private const int COL_NATIONALID     = 13;  // کدملی
-        private const int COL_MOBILE         = 14;  // موبایل
-        private const int COL_BIRTHDATE      = 15;  // تاریخ تولد
-        private const int COL_HIREDATE       = 16;  // تاریخ استخدام
-        private const int COL_STARTDATE      = 17;  // تاریخ شروع بکار
-        private const int COL_CONTRACTTYPE   = 18;  // نوع قرارداد
-        private const int COL_JOBLEVEL       = 19;  // سطح شغل
-        private const int COL_COMPANY        = 20;  // شرکت
-        private const int COL_DEGREE         = 21;  // مدرک
-        private const int COL_DEGREEFIELD    = 22;  // رشته تحصیلی
-        private const int COL_MAINJOB        = 23;  // عنوان شغلی اصلی
-        private const int COL_CURRENTACTIVITY= 24;  // فعالیت فعلی
-        private const int COL_STATUS         = 25;  // مغایرت/وضعیت
+        private const int COL_PROVINCE        = 0;   // استان
+        private const int COL_CITY            = 1;   // شهر
+        private const int COL_AFFAIR          = 2;   // امور انتقال
+        private const int COL_DEPT            = 3;   // اداره
+        private const int COL_DISTRICT        = 4;   // ناحیه بهره‌برداری
+        private const int COL_POST_NAME       = 5;   // نام پست
+        private const int COL_VOLTAGE         = 6;   // سطح ولتاژ
+        private const int COL_WORKSHIFT       = 7;   // روزکار/نوبتکار
+        private const int COL_GENDER          = 8;   // جنسیت
+        private const int COL_FIRSTNAME       = 9;   // نام
+        private const int COL_LASTNAME        = 10;  // نام خانوادگی
+        private const int COL_FATHERNAME      = 11;  // نام پدر
+        private const int COL_PERSONNELNUMBER = 12;  // شماره پرسنلی
+        private const int COL_NATIONALID      = 13;  // کدملی
+        private const int COL_MOBILE          = 14;  // موبایل
+        private const int COL_BIRTHDATE       = 15;  // تاریخ تولد
+        private const int COL_HIREDATE        = 16;  // تاریخ استخدام
+        private const int COL_STARTDATE       = 17;  // تاریخ شروع بکار
+        private const int COL_CONTRACTTYPE    = 18;  // نوع قرارداد
+        private const int COL_JOBLEVEL        = 19;  // سطح شغل
+        private const int COL_COMPANY         = 20;  // شرکت
+        private const int COL_DEGREE          = 21;  // مدرک
+        private const int COL_DEGREEFIELD     = 22;  // رشته تحصیلی
+        private const int COL_MAINJOB         = 23;  // عنوان شغلی اصلی
+        private const int COL_CURRENTACTIVITY = 24;  // فعالیت فعلی
+        private const int COL_STATUS          = 25;  // وضعیت
 
         public FormExcelImport(DbHelper db)
         {
@@ -200,7 +201,6 @@ namespace PersonnelManagementApp
         {
             try
             {
-                // Update for EPPlus 8 and later
                 ExcelPackage.License.SetNonCommercialPersonal("PersonnelManagementApp");
                 using (var pkg = new ExcelPackage(new FileInfo(filePath)))
                 {
@@ -261,7 +261,7 @@ namespace PersonnelManagementApp
 
             btnImport.Enabled = false;
             progressBar.Visible = true;
-            lblProgress.Text = "⏳ در حال آمادسازی...";
+            lblProgress.Text = "⏳ در حال آماده‌سازی...";
             Application.DoEvents();
 
             try
@@ -281,7 +281,6 @@ namespace PersonnelManagementApp
             int success = 0, skipped = 0, failed = 0;
             try
             {
-                // Update for EPPlus 8 and later
                 ExcelPackage.License.SetNonCommercialPersonal("PersonnelManagementApp");
                 using (var pkg = new ExcelPackage(new FileInfo(filePath)))
                 {
@@ -336,25 +335,34 @@ namespace PersonnelManagementApp
             }
         }
 
+        // ───────────────────────────────────────────────────────
+        // ✅ درج رکورد — نسخه اصلاح‌شده
+        // ───────────────────────────────────────────────────────
         private void InsertRecord(string[] cells)
         {
-            int provinceId    = GetOrCreate(_cProvinces,    GetCell(cells, COL_PROVINCE),                  "Provinces",           "ProvinceID",    "ProvinceName");
-            int cityId        = GetOrCreate(_cCities,       GetCell(cells, COL_CITY),                      "Cities",              "CityID",        "CityName");
-            int affairId      = GetOrCreate(_cAffairs,      GetCell(cells, COL_AFFAIR),                    "TransferAffairs",     "AffairID",      "AffairName");
-            int deptId        = GetOrCreate(_cDepts,        GetCell(cells, COL_DEPT),                      "OperationDepartments","DeptID",        "DeptName");
-            int districtId    = GetOrCreate(_cDistricts,    GetCell(cells, COL_DISTRICT),                  "Districts",           "DistrictID",    "DistrictName");
-            int postNameId    = GetOrCreate(_cPostNames,    GetCell(cells, COL_POST_NAME),                 "PostsNames",          "PostNameID",    "PostName");
-            int voltageId     = GetOrCreate(_cVoltages,     GetCell(cells, COL_VOLTAGE),                   "VoltageLevels",       "VoltageID",     "VoltageName");
-            int workShiftId   = GetOrCreate(_cWorkShifts,   GetCell(cells, COL_WORKSHIFT),                 "WorkShift",           "WorkShiftID",   "WorkShiftName");
-            int genderId      = GetOrCreate(_cGenders,      GetCell(cells, COL_GENDER),                    "Gender",              "GenderID",      "GenderName");
-            int contractId    = GetOrCreate(_cContracts,    GetCell(cells, COL_CONTRACTTYPE),              "ContractType",        "ContractTypeID","ContractTypeName");
-            int jobLevelId    = GetOrCreate(_cJobLevels,    GetCell(cells, COL_JOBLEVEL),                  "JobLevel",            "JobLevelID",    "JobLevelName");
-            int companyId     = GetOrCreate(_cCompanies,    GetCell(cells, COL_COMPANY),                   "Company",             "CompanyID",     "CompanyName");
-            int degreeId      = GetOrCreate(_cDegrees,      GetCell(cells, COL_DEGREE),                    "Degree",              "DegreeID",      "DegreeName");
-            int degreeFieldId = GetOrCreate(_cDegreeFields, GetJobCell(cells, COL_DEGREEFIELD),            "DegreeField",         "DegreeFieldID", "DegreeFieldName");
-            int mainJobId     = GetOrCreateChart(GetJobCell(cells, COL_MAINJOB),     affairId);
-            int currentActId  = GetOrCreateChart(GetJobCell(cells, COL_CURRENTACTIVITY), affairId);
-            int statusId      = GetOrCreate(_cStatuses,     GetCell(cells, COL_STATUS, "حاضر"), "StatusPresence",      "StatusID",      "StatusName");
+            // ── فیلدهای عمومی با fuzzy matching
+            int provinceId    = GetOrCreateFuzzy(_cProvinces,    GetCell(cells, COL_PROVINCE),              "Provinces",            "ProvinceID",    "ProvinceName");
+            int cityId        = GetOrCreateFuzzy(_cCities,       GetCell(cells, COL_CITY),                  "Cities",               "CityID",        "CityName");
+            int affairId      = GetOrCreateFuzzy(_cAffairs,      GetCell(cells, COL_AFFAIR),                "TransferAffairs",      "AffairID",      "AffairName");
+
+            // ✅ اداره عملیاتی: با AffairID ذخیره می‌شود (ForeignKey حفظ می‌شود)
+            int deptId        = GetOrCreateWithAffair(_cDepts,    GetCell(cells, COL_DEPT),                 "OperationDepartments", "DeptID",        "DeptName",   affairId);
+
+            // ✅ ناحیه بهره‌برداری: با AffairID ذخیره می‌شود ← این باگ اصلی بود
+            int districtId    = GetOrCreateWithAffair(_cDistricts, GetCell(cells, COL_DISTRICT),            "Districts",            "DistrictID",    "DistrictName", affairId);
+
+            int postNameId    = GetOrCreateFuzzy(_cPostNames,    GetCell(cells, COL_POST_NAME),             "PostsNames",           "PostNameID",    "PostName");
+            int voltageId     = GetOrCreateFuzzy(_cVoltages,     GetCell(cells, COL_VOLTAGE),               "VoltageLevels",        "VoltageID",     "VoltageName");
+            int workShiftId   = GetOrCreateFuzzy(_cWorkShifts,   GetCell(cells, COL_WORKSHIFT),             "WorkShift",            "WorkShiftID",   "WorkShiftName");
+            int genderId      = GetOrCreateFuzzy(_cGenders,      GetCell(cells, COL_GENDER),                "Gender",               "GenderID",      "GenderName");
+            int contractId    = GetOrCreateFuzzy(_cContracts,    GetCell(cells, COL_CONTRACTTYPE),          "ContractType",         "ContractTypeID","ContractTypeName");
+            int jobLevelId    = GetOrCreateFuzzy(_cJobLevels,    GetCell(cells, COL_JOBLEVEL),              "JobLevel",             "JobLevelID",    "JobLevelName");
+            int companyId     = GetOrCreateFuzzy(_cCompanies,    GetCell(cells, COL_COMPANY),               "Company",              "CompanyID",     "CompanyName");
+            int degreeId      = GetOrCreateFuzzy(_cDegrees,      GetCell(cells, COL_DEGREE),                "Degree",               "DegreeID",      "DegreeName");
+            int degreeFieldId = GetOrCreateFuzzy(_cDegreeFields, GetJobCell(cells, COL_DEGREEFIELD),        "DegreeField",          "DegreeFieldID", "DegreeFieldName");
+            int mainJobId     = GetOrCreateChart(GetJobCell(cells, COL_MAINJOB),                            affairId);
+            int currentActId  = GetOrCreateChart(GetJobCell(cells, COL_CURRENTACTIVITY),                    affairId);
+            int statusId      = GetOrCreateFuzzy(_cStatuses,     GetCell(cells, COL_STATUS, "حاضر"),       "StatusPresence",       "StatusID",      "StatusName");
 
             string birthDate  = ParseDate(GetCell(cells, COL_BIRTHDATE,  ""));
             string hireDate   = ParseDate(GetCell(cells, COL_HIREDATE,   ""));
@@ -401,69 +409,159 @@ namespace PersonnelManagementApp
         }
 
         // ───────────────────────────────────────────────────────
-        // متد‌های کمکی
+        // ✅ Fuzzy Matching — برگرفته از کد قدیمی PostDatabaseManager
         // ───────────────────────────────────────────────────────
-        /// دریافت مقدار سلول — اگر خالی بود مقدار پیش‌فرض برگردان
-        private string GetCell(string[] cells, int idx, string def = "داده‌ای وجود ندارد")
+
+        /// نرمال‌سازی متن فارسی/عربی: حذف نیم‌فاصله، یکسان‌سازی ی/ک عربی
+        private string Normalize(string s)
         {
-            if (idx >= cells.Length) return def;
-            string v = cells[idx]?.Trim();
-            return string.IsNullOrWhiteSpace(v) ? def : v;
+            if (string.IsNullOrEmpty(s)) return "";
+            return s
+                .Replace("\u200C", "")   // حذف نیم‌فاصله ZWJ
+                .Replace("\u200F", "")   // حذف RLM
+                .Replace("ي", "ی")        // ی عربی → فارسی
+                .Replace("ك", "ک")        // ک عربی → فارسی
+                .Replace("  ", " ")       // فاصله‌های دوگانه
+                .Trim();
         }
 
-        /// برای ستون‌های شغلی — مقدار پیش‌فرض غیرمرتبط
-        private string GetJobCell(string[] cells, int idx)
+        /// فاصله Levenshtein — برای تطبیق متن‌های مشابه
+        private int LevenshteinDistance(string s1, string s2)
         {
-            string v = GetCell(cells, idx, "");
-            return string.IsNullOrWhiteSpace(v) ? "غیرمرتبط" : v;
-        }
-
-        /// تبدیل تاریخ میلادی به شمسی — تاریخ خالی → 1300/01/01
-        private string ParseDate(string raw)
-        {
-            if (string.IsNullOrWhiteSpace(raw) || raw == "داده‌ای وجود ندارد")
-                return "1300/01/01";
-            try
-            {
-                string[] p = raw.Trim().Split(new char[] { '/', '-', '.' }, StringSplitOptions.RemoveEmptyEntries);
-                if (p.Length == 3)
+            int[,] matrix = new int[s1.Length + 1, s2.Length + 1];
+            for (int i = 0; i <= s1.Length; i++) matrix[i, 0] = i;
+            for (int j = 0; j <= s2.Length; j++) matrix[0, j] = j;
+            for (int i = 1; i <= s1.Length; i++)
+                for (int j = 1; j <= s2.Length; j++)
                 {
-                    // حالت 1: yyyy/MM/dd
-                    if (int.TryParse(p[0], out int y) &&
-                        int.TryParse(p[1], out int m) &&
-                        int.TryParse(p[2], out int d))
-                    {
-                        if (y >= 1800 && m >= 1 && m <= 12 && d >= 1 && d <= 31)
-                        {
-                            // میلادی → تبدیل به شمسی
-                            var dt = new DateTime(y, m, d);
-                            return $"{_pc.GetYear(dt):0000}/{_pc.GetMonth(dt):00}/{_pc.GetDayOfMonth(dt):00}";
-                        }
-                        if (y >= 1300 && y <= 1500)
-                            return $"{y:0000}/{m:00}/{d:00}";  // قبلاً شمسی است
-                        if (y >= 1 && y <= 99)
-                            return $"{y + 1300:0000}/{m:00}/{d:00}";  // سال کوتاه 71 → 1371
-                    }
-                    // حالت 2: dd/MM/yy (مثل 26/11/71)
-                    if (int.TryParse(p[0], out int d2) &&
-                        int.TryParse(p[1], out int m2) &&
-                        int.TryParse(p[2], out int y2) &&
-                        d2 > 12 && m2 <= 12)
-                    {
-                        int fy = y2 < 100 ? y2 + 1300 : y2;
-                        return $"{fy:0000}/{m2:00}/{d2:00}";
-                    }
+                    int cost = (s1[i - 1] == s2[j - 1]) ? 0 : 1;
+                    matrix[i, j] = Math.Min(
+                        Math.Min(matrix[i - 1, j] + 1, matrix[i, j - 1] + 1),
+                        matrix[i - 1, j - 1] + cost);
+                }
+            return matrix[s1.Length, s2.Length];
+        }
+
+        /// جستجوی fuzzy در cache — اول دقیق، سپس Levenshtein
+        private int FindFuzzyInCache(Dictionary<string, int> cache, string searchName, int maxDistance = 3)
+        {
+            string normalizedSearch = Normalize(searchName);
+            if (string.IsNullOrEmpty(normalizedSearch)) return 0;
+
+            // 1) مطابقت دقیق پس از نرمال‌سازی
+            foreach (var kv in cache)
+                if (Normalize(kv.Key) == normalizedSearch) return kv.Value;
+
+            // 2) مطابقت fuzzy با الگوریتم Levenshtein
+            int minDist = int.MaxValue;
+            int closestId = 0;
+            foreach (var kv in cache)
+            {
+                int dist = LevenshteinDistance(normalizedSearch, Normalize(kv.Key));
+                if (dist < minDist) { minDist = dist; closestId = kv.Value; }
+            }
+            return (minDist <= maxDistance) ? closestId : 0;
+        }
+
+        /// دریافت ID با fuzzy matching — اگر پیدا نشد INSERT ساده (بدون FK)
+        private int GetOrCreateFuzzy(Dictionary<string, int> cache, string name,
+                                      string table, string idCol, string nameCol)
+        {
+            int found = FindFuzzyInCache(cache, name);
+            if (found > 0) return found;
+
+            int newId = ExecuteInsertGetId(
+                $"INSERT INTO {table} ({nameCol}) VALUES (?)",
+                new OleDbParameter[] { new OleDbParameter("?", name) });
+
+            if (newId > 0) cache[name] = newId;
+            return newId;
+        }
+
+        /// ✅ دریافت ID با fuzzy matching — اگر پیدا نشد INSERT با AffairID
+        /// این متد برای Districts و OperationDepartments استفاده می‌شود
+        /// تا رابطه FK با جدول TransferAffairs حفظ شود
+        private int GetOrCreateWithAffair(Dictionary<string, int> cache, string name,
+                                           string table, string idCol, string nameCol,
+                                           int affairId)
+        {
+            int found = FindFuzzyInCache(cache, name);
+            if (found > 0) return found;
+
+            // INSERT با AffairID تا ناحیه/اداره به امور مرتبط شود
+            int newId = ExecuteInsertGetId(
+                $"INSERT INTO {table} ({nameCol}, AffairID) VALUES (?, ?)",
+                new OleDbParameter[]
+                {
+                    new OleDbParameter("?", name),
+                    new OleDbParameter("?", affairId)
+                });
+
+            if (newId > 0) cache[name] = newId;
+            return newId;
+        }
+
+        /// خاص ChartAffairs1 که نیاز به AffairID دارد
+        private int GetOrCreateChart(string chartName, int affairId)
+        {
+            if (_cChartAffairs.TryGetValue(chartName, out int id)) return id;
+
+            int found = FindFuzzyInCache(_cChartAffairs, chartName);
+            if (found > 0) return found;
+
+            int newId = ExecuteInsertGetId(
+                "INSERT INTO ChartAffairs1 (AffairID, ChartName) VALUES (?, ?)",
+                new OleDbParameter[]
+                {
+                    new OleDbParameter("?", affairId),
+                    new OleDbParameter("?", chartName)
+                });
+
+            if (newId > 0) _cChartAffairs[chartName] = newId;
+            return newId;
+        }
+
+        /// اجرای INSERT و دریافت @@IDENTITY در یک اتصال (ضروری برای Access)
+        private int ExecuteInsertGetId(string insertSql, OleDbParameter[] ps)
+        {
+            using (var conn = new OleDbConnection(_db.GetConnectionString_Public()))
+            {
+                conn.Open();
+                using (var cmd = new OleDbCommand(insertSql, conn))
+                {
+                    if (ps != null) cmd.Parameters.AddRange(ps);
+                    cmd.ExecuteNonQuery();
+                }
+                using (var cmd2 = new OleDbCommand("SELECT @@IDENTITY", conn))
+                {
+                    object result = cmd2.ExecuteScalar();
+                    return (result != null && result != DBNull.Value) ? Convert.ToInt32(result) : 0;
                 }
             }
-            catch { }
-            return "1300/01/01";
         }
 
         // ───────────────────────────────────────────────────────
-        // Cache + GetOrCreate
+        // Cache Loader
         // ───────────────────────────────────────────────────────
         private void LoadAllCaches()
         {
+            _cProvinces.Clear();
+            _cCities.Clear();
+            _cAffairs.Clear();
+            _cDepts.Clear();
+            _cDistricts.Clear();
+            _cPostNames.Clear();
+            _cVoltages.Clear();
+            _cWorkShifts.Clear();
+            _cGenders.Clear();
+            _cContracts.Clear();
+            _cJobLevels.Clear();
+            _cCompanies.Clear();
+            _cDegrees.Clear();
+            _cDegreeFields.Clear();
+            _cChartAffairs.Clear();
+            _cStatuses.Clear();
+
             FillCache("SELECT ProvinceID, ProvinceName FROM Provinces",              "ProvinceID",    "ProvinceName",    _cProvinces);
             FillCache("SELECT CityID, CityName FROM Cities",                         "CityID",        "CityName",        _cCities);
             FillCache("SELECT AffairID, AffairName FROM TransferAffairs",            "AffairID",      "AffairName",      _cAffairs);
@@ -498,53 +596,64 @@ namespace PersonnelManagementApp
             catch { }
         }
 
-        /// دریافت ID از كش — اگر نبود INSERT کند و ID جدید برگردان (@@IDENTITY در یک اتصال)
-        private int GetOrCreate(Dictionary<string, int> cache, string name, string table, string idCol, string nameCol)
+        // ───────────────────────────────────────────────────────
+        // متدهای کمکی
+        // ───────────────────────────────────────────────────────
+        /// دریافت مقدار سلول — اگر خالی بود مقدار پیش‌فرض برگردان
+        private string GetCell(string[] cells, int idx, string def = "داده‌ای وجود ندارد")
         {
-            if (cache.TryGetValue(name, out int id)) return id;
-
-            int newId = ExecuteInsertGetId(
-                $"INSERT INTO {table} ({nameCol}) VALUES (?)",
-                new OleDbParameter[] { new OleDbParameter("?", name) });
-
-            cache[name] = newId;
-            return newId;
+            if (idx >= cells.Length) return def;
+            string v = cells[idx]?.Trim();
+            return string.IsNullOrWhiteSpace(v) ? def : v;
         }
 
-        /// خاص ChartAffairs1 که نیاز به AffairID دارد
-        private int GetOrCreateChart(string chartName, int affairId)
+        /// برای ستون‌های شغلی — مقدار پیش‌فرض غیرمرتبط
+        private string GetJobCell(string[] cells, int idx)
         {
-            if (_cChartAffairs.TryGetValue(chartName, out int id)) return id;
-
-            int newId = ExecuteInsertGetId(
-                "INSERT INTO ChartAffairs1 (AffairID, ChartName) VALUES (?, ?)",
-                new OleDbParameter[]
-                {
-                    new OleDbParameter("?", affairId),
-                    new OleDbParameter("?", chartName)
-                });
-
-            _cChartAffairs[chartName] = newId;
-            return newId;
+            string v = GetCell(cells, idx, "");
+            return string.IsNullOrWhiteSpace(v) ? "غیرمرتبط" : v;
         }
 
-        /// اجرای INSERT و دریافت @@IDENTITY در یک اتصال (ضروری برای Access)
-        private int ExecuteInsertGetId(string insertSql, OleDbParameter[] ps)
+        /// تبدیل تاریخ میلادی/شمسی به فرمت ذخیره‌سازی شمسی
+        private string ParseDate(string raw)
         {
-            using (var conn = new OleDbConnection(_db.GetConnectionString_Public()))
+            if (string.IsNullOrWhiteSpace(raw) || raw == "داده‌ای وجود ندارد")
+                return "1300/01/01";
+            try
             {
-                conn.Open();
-                using (var cmd = new OleDbCommand(insertSql, conn))
+                string[] p = raw.Trim().Split(new char[] { '/', '-', '.' }, StringSplitOptions.RemoveEmptyEntries);
+                if (p.Length == 3)
                 {
-                    if (ps != null) cmd.Parameters.AddRange(ps);
-                    cmd.ExecuteNonQuery();
-                }
-                using (var cmd2 = new OleDbCommand("SELECT @@IDENTITY", conn))
-                {
-                    object result = cmd2.ExecuteScalar();
-                    return (result != null && result != DBNull.Value) ? Convert.ToInt32(result) : 0;
+                    if (int.TryParse(p[0], out int y) &&
+                        int.TryParse(p[1], out int m) &&
+                        int.TryParse(p[2], out int d))
+                    {
+                        // میلادی (1800+) → تبدیل به شمسی
+                        if (y >= 1800 && m >= 1 && m <= 12 && d >= 1 && d <= 31)
+                        {
+                            var dt = new DateTime(y, m, d);
+                            return $"{_pc.GetYear(dt):0000}/{_pc.GetMonth(dt):00}/{_pc.GetDayOfMonth(dt):00}";
+                        }
+                        // از قبل شمسی
+                        if (y >= 1300 && y <= 1500)
+                            return $"{y:0000}/{m:00}/{d:00}";
+                        // سال کوتاه مثل 71 → 1371
+                        if (y >= 1 && y <= 99)
+                            return $"{y + 1300:0000}/{m:00}/{d:00}";
+                    }
+                    // حالت dd/MM/yy مثل 26/11/71
+                    if (int.TryParse(p[0], out int d2) &&
+                        int.TryParse(p[1], out int m2) &&
+                        int.TryParse(p[2], out int y2) &&
+                        d2 > 12 && m2 <= 12)
+                    {
+                        int fy = y2 < 100 ? y2 + 1300 : y2;
+                        return $"{fy:0000}/{m2:00}/{d2:00}";
+                    }
                 }
             }
+            catch { }
+            return "1300/01/01";
         }
 
         private HashSet<string> GetExistingNationalIDs()
