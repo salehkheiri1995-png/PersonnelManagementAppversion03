@@ -458,34 +458,35 @@ namespace PersonnelManagementApp
                     return;
                 }
 
-                string query =
-                    "SELECT Posts.PostID, Posts.OperationYear, Posts.DistributedCapacity, " +
-                    "Posts.CapacityHV, Posts.CapacityMV, " +
-                    "Provinces.ProvinceName, Cities.CityName, TransferAffairs.AffairName, " +
-                    "OperationDepartments.DeptName, Districts.DistrictName, PostsNames.PostName, " +
-                    "VoltageLevels.VoltageName, PostStandards.StandardName, PostTypes.TypeName, " +
-                    "DistributedConnections.ConnName, InsulationTypes.InsName, PostTypeTwos.PT2Name, " +
-                    "FixedMobiles.FMName, CircuitStatuses.CircuitName, DieselGenerators.DieselName, " +
-                    "DistributionFeeds.FeedName, WaterStatuses.WaterName, GuestHouses.GuestName " +
-                    "FROM Posts " +
-                    "INNER JOIN Provinces ON Posts.ProvinceID = Provinces.ProvinceID " +
-                    "INNER JOIN Cities ON Posts.CityID = Cities.CityID " +
-                    "INNER JOIN TransferAffairs ON Posts.AffairID = TransferAffairs.AffairID " +
-                    "INNER JOIN OperationDepartments ON Posts.DeptID = OperationDepartments.DeptID " +
-                    "INNER JOIN Districts ON Posts.DistrictID = Districts.DistrictID " +
-                    "INNER JOIN PostsNames ON Posts.PostNameID = PostsNames.PostNameID " +
-                    "INNER JOIN VoltageLevels ON Posts.VoltageID = VoltageLevels.VoltageID " +
-                    "INNER JOIN PostStandards ON Posts.StandardID = PostStandards.StandardID " +
-                    "INNER JOIN PostTypes ON Posts.TypeID = PostTypes.TypeID " +
-                    "INNER JOIN DistributedConnections ON Posts.ConnID = DistributedConnections.ConnID " +
-                    "INNER JOIN InsulationTypes ON Posts.InsID = InsulationTypes.InsID " +
-                    "INNER JOIN PostTypeTwos ON Posts.PT2ID = PostTypeTwos.PT2ID " +
-                    "INNER JOIN FixedMobiles ON Posts.FMID = FixedMobiles.FMID " +
-                    "INNER JOIN CircuitStatuses ON Posts.CircuitID = CircuitStatuses.CircuitID " +
-                    "INNER JOIN DieselGenerators ON Posts.DieselID = DieselGenerators.DieselID " +
-                    "INNER JOIN DistributionFeeds ON Posts.FeedID = DistributionFeeds.FeedID " +
-                    "INNER JOIN WaterStatuses ON Posts.WaterID = WaterStatuses.WaterID " +
-                    "INNER JOIN GuestHouses ON Posts.GuestID = GuestHouses.GuestID";
+                string query = @"
+                    SELECT Posts.PostID, Posts.OperationYear, Posts.DistributedCapacity, 
+                    Posts.CapacityHV, Posts.CapacityMV, 
+                    Provinces.ProvinceName, Cities.CityName, TransferAffairs.AffairName, 
+                    OperationDepartments.DeptName, Districts.DistrictName, PostsNames.PostName, 
+                    VoltageLevels.VoltageName, PostStandards.StandardName, PostTypes.TypeName, 
+                    DistributedConnections.ConnName, InsulationTypes.InsName, PostTypeTwos.PT2Name, 
+                    FixedMobiles.FMName, CircuitStatuses.CircuitName, DieselGenerators.DieselName, 
+                    DistributionFeeds.FeedName, WaterStatuses.WaterName, GuestHouses.GuestName 
+                    FROM Posts 
+                    INNER JOIN Provinces ON Posts.ProvinceID = Provinces.ProvinceID 
+                    INNER JOIN Cities ON Posts.CityID = Cities.CityID 
+                    INNER JOIN TransferAffairs ON Posts.AffairID = TransferAffairs.AffairID 
+                    INNER JOIN OperationDepartments ON Posts.DeptID = OperationDepartments.DeptID 
+                    INNER JOIN Districts ON Posts.DistrictID = Districts.DistrictID 
+                    INNER JOIN PostsNames ON Posts.PostNameID = PostsNames.PostNameID 
+                    INNER JOIN VoltageLevels ON Posts.VoltageID = VoltageLevels.VoltageID 
+                    INNER JOIN PostStandards ON Posts.StandardID = PostStandards.StandardID 
+                    INNER JOIN PostTypes ON Posts.TypeID = PostTypes.TypeID 
+                    INNER JOIN DistributedConnections ON Posts.ConnID = DistributedConnections.ConnID 
+                    INNER JOIN InsulationTypes ON Posts.InsID = InsulationTypes.InsID 
+                    INNER JOIN PostTypeTwos ON Posts.PT2ID = PostTypeTwos.PT2ID 
+                    INNER JOIN FixedMobiles ON Posts.FMID = FixedMobiles.FMID 
+                    INNER JOIN CircuitStatuses ON Posts.CircuitID = CircuitStatuses.CircuitID 
+                    INNER JOIN DieselGenerators ON Posts.DieselID = DieselGenerators.DieselID 
+                    INNER JOIN DistributionFeeds ON Posts.FeedID = DistributionFeeds.FeedID 
+                    INNER JOIN WaterStatuses ON Posts.WaterID = WaterStatuses.WaterID 
+                    INNER JOIN GuestHouses ON Posts.GuestID = GuestHouses.GuestID
+                ";
 
                 allPostsData = dbHelper.ExecuteQuery(query);
 
