@@ -52,6 +52,10 @@ namespace PersonnelManagementApp
         // ====== Cached Data ======
         private DataTable? allPostsData;
 
+        // ====== Cascading Filter Guard ======
+        // Prevents recursive event loops when updating dependent filter options
+        private bool _updatingFilters = false;
+
         public FormPostsAnalytics()
         {
             dbHelper = new DbHelper();
@@ -458,7 +462,7 @@ namespace PersonnelManagementApp
                     return;
                 }
 
-                // FIX: MS Access (ACE.OLEDB) requires nested parentheses for multiple INNER JOINs
+                // MS Access (ACE.OLEDB) requires nested parentheses for multiple INNER JOINs
                 string query = @"
                     SELECT Posts.PostID, Posts.OperationYear, Posts.DistributedCapacity, 
                     Posts.CapacityHV, Posts.CapacityMV, 
@@ -512,6 +516,7 @@ namespace PersonnelManagementApp
         private void LoadFilterOptions()
         {
             if (allPostsData == null) return;
+            // Reload ALL options for every filter (used on initial load and after clear)
             FillFilter(clbProvincesFilter,   "ProvinceName");
             FillFilter(clbCitiesFilter,      "CityName");
             FillFilter(clbAffairsFilter,     "AffairName");
@@ -535,6 +540,67 @@ namespace PersonnelManagementApp
                 .Where(v => !string.IsNullOrWhiteSpace(v))
                 .Distinct().OrderBy(v => v))
                 clb.Items.Add(v, false);
+        }
+
+        // ── Cascading Filter Helpers ────────────────────
+        // Refreshes one CLB's items based on a filtered row set,
+        // preserving currently-checked items that are still valid.
+        private void RefreshClb(CheckedListBox clb, IEnumerable<DataRow> rows, string col)
+        {
+            var kept = clb.CheckedItems.Cast<string>().ToList();
+            var opts = rows
+                .Select(r => r[col]?.ToString() ?? "")
+                .Where(v => !string.IsNullOrWhiteSpace(v))
+                .Distinct().OrderBy(v => v).ToList();
+            clb.Items.Clear();
+            foreach (var item in opts)
+                clb.Items.Add(item, kept.Contains(item));
+        }
+
+        // Cascade chain:
+        //   Province  -->  Cities, Affairs
+        //   Province + Cities + Affairs  -->  Departments
+        //   Province + Cities + Affairs + Departments  -->  Districts
+        private void UpdateDependentFilters()
+        {
+            if (allPostsData == null || _updatingFilters) return;
+            _updatingFilters = true;
+            try
+            {
+                var allRows = allPostsData.AsEnumerable();
+
+                // --- Level 1: Province narrows Cities and Affairs ---
+                var selProv = clbProvincesFilter.CheckedItems.Cast<string>().ToList();
+                var afterProv = selProv.Count > 0
+                    ? allRows.Where(r => selProv.Contains(r["ProvinceName"]?.ToString() ?? ""))
+                    : allRows;
+
+                RefreshClb(clbCitiesFilter,  afterProv, "CityName");
+                RefreshClb(clbAffairsFilter, afterProv, "AffairName");
+
+                // --- Level 2: Province + Cities + Affairs narrows Departments ---
+                var selCity = clbCitiesFilter.CheckedItems.Cast<string>().ToList();
+                var selAff  = clbAffairsFilter.CheckedItems.Cast<string>().ToList();
+                var afterAff = afterProv;
+                if (selCity.Count > 0)
+                    afterAff = afterAff.Where(r => selCity.Contains(r["CityName"]?.ToString()  ?? ""));
+                if (selAff.Count > 0)
+                    afterAff = afterAff.Where(r => selAff.Contains(r["AffairName"]?.ToString() ?? ""));
+
+                RefreshClb(clbDepartmentsFilter, afterAff, "DeptName");
+
+                // --- Level 3: + Departments narrows Districts ---
+                var selDept  = clbDepartmentsFilter.CheckedItems.Cast<string>().ToList();
+                var afterDept = afterAff;
+                if (selDept.Count > 0)
+                    afterDept = afterDept.Where(r => selDept.Contains(r["DeptName"]?.ToString() ?? ""));
+
+                RefreshClb(clbDistrictsFilter, afterDept, "DistrictName");
+            }
+            finally
+            {
+                _updatingFilters = false;
+            }
         }
 
         // ── Filtered DataTable ──────────────────
@@ -750,8 +816,17 @@ namespace PersonnelManagementApp
         // ╚══════════════════════════════════════╝
         private void FilterChanged()
         {
+            // Guard: if we are already updating dependent filters, skip to avoid recursion
+            if (_updatingFilters) return;
+
             BeginInvoke((MethodInvoker)delegate
             {
+                if (_updatingFilters) return;
+
+                // Step 1: cascade-update dependent filter options
+                UpdateDependentFilters();
+
+                // Step 2: count active filters
                 int n =
                     clbProvincesFilter.CheckedItems.Count   + clbCitiesFilter.CheckedItems.Count    +
                     clbAffairsFilter.CheckedItems.Count     + clbDepartmentsFilter.CheckedItems.Count +
@@ -761,6 +836,8 @@ namespace PersonnelManagementApp
                     clbDieselFilter.CheckedItems.Count      + clbWaterFilter.CheckedItems.Count;
 
                 lblFilterInfo.Text = n > 0 ? $"🔴 {n} فیلتر فعال" : "✓ فیلتری فعال نیست";
+
+                // Step 3: refresh charts and tables
                 RefreshAllCharts();
             });
         }
@@ -780,12 +857,23 @@ namespace PersonnelManagementApp
 
         private void BtnClearFilters_Click(object? sender, EventArgs e)
         {
-            foreach (var clb in new[] {
-                clbProvincesFilter, clbCitiesFilter, clbAffairsFilter, clbDepartmentsFilter,
-                clbDistrictsFilter, clbVoltageFilter, clbTypeFilter, clbStandardFilter,
-                clbCircuitFilter, clbFMFilter, clbDieselFilter, clbWaterFilter })
-                for (int i = 0; i < clb.Items.Count; i++) clb.SetItemChecked(i, false);
+            // Uncheck all items without triggering cascade loops
+            _updatingFilters = true;
+            try
+            {
+                foreach (var clb in new[] {
+                    clbProvincesFilter, clbCitiesFilter, clbAffairsFilter, clbDepartmentsFilter,
+                    clbDistrictsFilter, clbVoltageFilter, clbTypeFilter, clbStandardFilter,
+                    clbCircuitFilter, clbFMFilter, clbDieselFilter, clbWaterFilter })
+                    for (int i = 0; i < clb.Items.Count; i++) clb.SetItemChecked(i, false);
+            }
+            finally
+            {
+                _updatingFilters = false;
+            }
 
+            // Restore ALL options in all filters (cascade may have narrowed them)
+            LoadFilterOptions();
             lblFilterInfo.Text = "✓ فیلتری فعال نیست";
             RefreshAllCharts();
         }
