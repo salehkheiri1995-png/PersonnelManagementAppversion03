@@ -396,11 +396,9 @@ namespace PersonnelManagementApp
         {
             try
             {
-                DbHelper db = new DbHelper();
-                using (FormExcelImport frm = new FormExcelImport(db))
-                {
-                    frm.ShowDialog(this);
-                }
+                // Use the actual form class name `FormImportExcel` that exists in the project
+                using var frm = new FormImportExcel();
+                frm.ShowDialog(this);
             }
             catch (Exception ex)
             {
