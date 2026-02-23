@@ -31,7 +31,8 @@ namespace PersonnelManagementApp
         private Panel pnlPhotosContent;
         private Panel pnlFontContent;
         private Panel pnlMissingPhotosContent;
-        private Panel pnlExcelImportContent;   // ✅ جدید
+        private Panel pnlExcelImportContent;
+        private Panel pnlLookupTablesContent;  // ✅ جدید
         private Panel pnlCurrentContent;
 
         // دکمه‌منوها
@@ -39,7 +40,8 @@ namespace PersonnelManagementApp
         private Panel btnMenuPhotos;
         private Panel btnMenuFont;
         private Panel btnMenuMissingPhotos;
-        private Panel btnMenuExcelImport;      // ✅ جدید
+        private Panel btnMenuExcelImport;
+        private Panel btnMenuLookupTables;     // ✅ جدید
         private Panel selectedMenuButton;
 
         // رنگ‌های مدرن
@@ -55,7 +57,8 @@ namespace PersonnelManagementApp
         private readonly Color WarningColor    = Color.FromArgb(255, 152, 0);
         private readonly Color MenuHover       = Color.FromArgb(240, 240, 240);
         private readonly Color MenuSelected    = Color.FromArgb(33, 150, 243);
-        private readonly Color ImportColor     = Color.FromArgb(0, 150, 136);  // ✅ رنگ سبز-آبی برای import
+        private readonly Color ImportColor     = Color.FromArgb(0, 150, 136);
+        private readonly Color LookupColor     = Color.FromArgb(156, 39, 176);  // ✅ بنفش برای مدیریت جداول
 
         public FormSettings()
         {
@@ -74,7 +77,7 @@ namespace PersonnelManagementApp
         private void InitializeComponent()
         {
             this.Text             = "\u2699\ufe0f تنظیمات برنامه";
-            this.Size             = new Size(1000, 760);   // ✅ ارتفاع کمی بیشتر برای منوی جدید
+            this.Size             = new Size(1000, 760);
             this.StartPosition    = FormStartPosition.CenterScreen;
             this.RightToLeft      = RightToLeft.Yes;
             this.FormBorderStyle  = FormBorderStyle.FixedDialog;
@@ -101,19 +104,22 @@ namespace PersonnelManagementApp
             pnlPhotosContent        = CreatePhotosContent();
             pnlFontContent          = CreateFontContent();
             pnlMissingPhotosContent = CreateMissingPhotosContent();
-            pnlExcelImportContent   = CreateExcelImportContent();   // ✅
+            pnlExcelImportContent   = CreateExcelImportContent();
+            pnlLookupTablesContent  = CreateLookupTablesContent();  // ✅
 
             contentArea.Controls.Add(pnlDatabaseContent);
             contentArea.Controls.Add(pnlPhotosContent);
             contentArea.Controls.Add(pnlFontContent);
             contentArea.Controls.Add(pnlMissingPhotosContent);
-            contentArea.Controls.Add(pnlExcelImportContent);        // ✅
+            contentArea.Controls.Add(pnlExcelImportContent);
+            contentArea.Controls.Add(pnlLookupTablesContent);       // ✅
 
             pnlDatabaseContent.Visible      = true;
             pnlPhotosContent.Visible        = true;
             pnlFontContent.Visible          = true;
             pnlMissingPhotosContent.Visible = true;
-            pnlExcelImportContent.Visible   = true;                 // ✅
+            pnlExcelImportContent.Visible   = true;
+            pnlLookupTablesContent.Visible  = true;                 // ✅
 
             // Sidebar
             Panel sidebarPanel = CreateSidebar();
@@ -200,9 +206,13 @@ namespace PersonnelManagementApp
             sidebar.Controls.Add(btnMenuMissingPhotos);
             yPos += 55;
 
-            // ✅ منوی جدید وارد کردن از اکسل
             btnMenuExcelImport = CreateMenuButton("\ud83d\udce5 وارد کردن از اکسل", yPos, pnlExcelImportContent);
             sidebar.Controls.Add(btnMenuExcelImport);
+            yPos += 55;
+
+            // ✅ منوی جدید مدیریت جداول مرجع
+            btnMenuLookupTables = CreateMenuButton("\ud83d\uddc2\ufe0f مدیریت جداول مرجع", yPos, pnlLookupTablesContent);
+            sidebar.Controls.Add(btnMenuLookupTables);
 
             return sidebar;
         }
@@ -250,7 +260,8 @@ namespace PersonnelManagementApp
             pnlPhotosContent?.let(p        => p.Visible = false);
             pnlFontContent?.let(p          => p.Visible = false);
             pnlMissingPhotosContent?.let(p => p.Visible = false);
-            pnlExcelImportContent?.let(p   => p.Visible = false);   // ✅
+            pnlExcelImportContent?.let(p   => p.Visible = false);
+            pnlLookupTablesContent?.let(p  => p.Visible = false);   // ✅
 
             if (contentPanel != null)
             {
@@ -277,6 +288,136 @@ namespace PersonnelManagementApp
                     if (c is Label l) l.ForeColor = Color.White;
                 selectedMenuButton = menuButton;
             }
+        }
+
+        // ─────────────────────────────────────────────
+        // ✅ محتوای بخش مدیریت جداول مرجع
+        // ─────────────────────────────────────────────
+        private Panel CreateLookupTablesContent()
+        {
+            Panel content = new Panel
+            {
+                Location   = new Point(0, 0),
+                Size       = new Size(720, 530),
+                BackColor  = Color.Transparent,
+                AutoScroll = true
+            };
+
+            Panel card = new Panel
+            {
+                Location  = new Point(10, 10),
+                Size      = new Size(690, 750),
+                BackColor = CardBackground
+            };
+            ApplyRoundedCorners(card, 10);
+            ApplyCardShadow(card);
+
+            // عنوان
+            card.Controls.Add(new Label
+            {
+                Text      = "🗂️ مدیریت جداول مرجع",
+                Font      = GetSafeFont(FontSettings.LabelFont?.FontFamily.Name ?? "Tahoma", 14, FontStyle.Bold),
+                ForeColor = TextPrimary,
+                Location  = new Point(420, 20),
+                Size      = new Size(250, 35),
+                TextAlign = ContentAlignment.MiddleRight
+            });
+
+            card.Controls.Add(new Label
+            {
+                Text      = "اضافه کردن، ویرایش و حذف رکوردهای جداول پایه سیستم",
+                Font      = GetSafeFont(FontSettings.BodyFont?.FontFamily.Name ?? "Tahoma", 9),
+                ForeColor = TextSecondary,
+                Location  = new Point(380, 55),
+                Size      = new Size(290, 20),
+                TextAlign = ContentAlignment.TopRight
+            });
+
+            int yPos = 95;
+            int btnWidth = 200;
+            int btnHeight = 40;
+            int spacing = 15;
+            int col1X = 470;
+            int col2X = 240;
+            int col3X = 10;
+
+            // ردیف اول
+            AddLookupTableButton(card, "🏢 استان‌ها", col1X, yPos, btnWidth, btnHeight, "Provinces", "ProvinceID", "ProvinceName", "استان‌ها");
+            AddLookupTableButton(card, "🏙️ شهرها", col2X, yPos, btnWidth, btnHeight, "Cities", "CityID", "CityName", "شهرها");
+            AddLookupTableButton(card, "📋 امور انتقال", col3X, yPos, btnWidth, btnHeight, "TransferAffairs", "AffairID", "AffairName", "امور انتقال");
+            yPos += btnHeight + spacing;
+
+            // ردیف دوم
+            AddLookupTableButton(card, "🏛️ ادارات بهره‌برداری", col1X, yPos, btnWidth, btnHeight, "OperationDepartments", "DeptID", "DeptName", "ادارات بهره‌برداری");
+            AddLookupTableButton(card, "📍 نواحی", col2X, yPos, btnWidth, btnHeight, "Districts", "DistrictID", "DistrictName", "نواحی");
+            AddLookupTableButton(card, "🏭 نام پست‌ها", col3X, yPos, btnWidth, btnHeight, "PostsNames", "PostNameID", "PostName", "نام پست‌ها");
+            yPos += btnHeight + spacing;
+
+            // ردیف سوم
+            AddLookupTableButton(card, "⚡ سطح ولتاژ", col1X, yPos, btnWidth, btnHeight, "VoltageLevels", "VoltageID", "VoltageName", "سطح ولتاژ");
+            AddLookupTableButton(card, "📊 استانداردهای پست", col2X, yPos, btnWidth, btnHeight, "PostStandards", "StandardID", "StandardName", "استانداردهای پست");
+            AddLookupTableButton(card, "🏗️ نوع پست", col3X, yPos, btnWidth, btnHeight, "PostTypes", "TypeID", "TypeName", "نوع پست");
+            yPos += btnHeight + spacing;
+
+            // ردیف چهارم
+            AddLookupTableButton(card, "🔌 اتصالات توزیع شده", col1X, yPos, btnWidth, btnHeight, "DistributedConnections", "ConnID", "ConnName", "اتصالات توزیع شده");
+            AddLookupTableButton(card, "🛡️ انواع عایق", col2X, yPos, btnWidth, btnHeight, "InsulationTypes", "InsID", "InsName", "انواع عایق");
+            AddLookupTableButton(card, "🔧 نوع پست دو", col3X, yPos, btnWidth, btnHeight, "PostTypeTwos", "PT2ID", "PT2Name", "نوع پست دو");
+            yPos += btnHeight + spacing;
+
+            // ردیف پنجم
+            AddLookupTableButton(card, "📱 ثابت/سیار", col1X, yPos, btnWidth, btnHeight, "FixedMobiles", "FMID", "FMName", "ثابت/سیار");
+            AddLookupTableButton(card, "🔗 وضعیت مدار", col2X, yPos, btnWidth, btnHeight, "CircuitStatuses", "CircuitID", "CircuitName", "وضعیت مدار");
+            AddLookupTableButton(card, "⚙️ دیزل ژنراتورها", col3X, yPos, btnWidth, btnHeight, "DieselGenerators", "DieselID", "DieselName", "دیزل ژنراتورها");
+            yPos += btnHeight + spacing;
+
+            // ردیف ششم
+            AddLookupTableButton(card, "🔋 فیدرهای توزیع", col1X, yPos, btnWidth, btnHeight, "DistributionFeeds", "FeedID", "FeedName", "فیدرهای توزیع");
+            AddLookupTableButton(card, "💧 وضعیت آب", col2X, yPos, btnWidth, btnHeight, "WaterStatuses", "WaterID", "WaterName", "وضعیت آب");
+            AddLookupTableButton(card, "🏠 مهمان‌خانه‌ها", col3X, yPos, btnWidth, btnHeight, "GuestHouses", "GuestID", "GuestName", "مهمان‌خانه‌ها");
+            yPos += btnHeight + spacing;
+
+            // ردیف هفتم - جداول پرسنلی
+            AddLookupTableButton(card, "🕐 شیفت کاری", col1X, yPos, btnWidth, btnHeight, "WorkShift", "WorkShiftID", "WorkShiftName", "شیفت کاری");
+            AddLookupTableButton(card, "👤 جنسیت", col2X, yPos, btnWidth, btnHeight, "Gender", "GenderID", "GenderName", "جنسیت");
+            AddLookupTableButton(card, "📝 نوع قرارداد", col3X, yPos, btnWidth, btnHeight, "ContractType", "ContractTypeID", "ContractTypeName", "نوع قرارداد");
+            yPos += btnHeight + spacing;
+
+            // ردیف هشتم
+            AddLookupTableButton(card, "📊 سطح شغلی", col1X, yPos, btnWidth, btnHeight, "JobLevel", "JobLevelID", "JobLevelName", "سطح شغلی");
+            AddLookupTableButton(card, "🏢 شرکت‌ها", col2X, yPos, btnWidth, btnHeight, "Company", "CompanyID", "CompanyName", "شرکت‌ها");
+            AddLookupTableButton(card, "🎓 مدرک تحصیلی", col3X, yPos, btnWidth, btnHeight, "Degree", "DegreeID", "DegreeName", "مدرک تحصیلی");
+            yPos += btnHeight + spacing;
+
+            // ردیف نهم
+            AddLookupTableButton(card, "📚 رشته تحصیلی", col1X, yPos, btnWidth, btnHeight, "DegreeField", "DegreeFieldID", "DegreeFieldName", "رشته تحصیلی");
+            AddLookupTableButton(card, "✅ وضعیت حضور", col2X, yPos, btnWidth, btnHeight, "StatusPresence", "StatusID", "StatusName", "وضعیت حضور");
+            AddLookupTableButton(card, "📋 چارت امور", col3X, yPos, btnWidth, btnHeight, "ChartAffairs", "ChartID", "ChartName", "چارت امور");
+
+            content.Controls.Add(card);
+            return content;
+        }
+
+        private void AddLookupTableButton(Panel parent, string text, int x, int y, int width, int height,
+            string tableName, string idColumn, string nameColumn, string displayName)
+        {
+            Button btn = CreateModernButton(text, LookupColor, width, height);
+            btn.Location = new Point(x, y);
+            btn.Font = GetSafeFont(FontSettings.ButtonFont?.FontFamily.Name ?? "Tahoma", 9, FontStyle.Bold);
+            btn.Click += (s, e) =>
+            {
+                try
+                {
+                    FormLookupTableManager lookupForm = new FormLookupTableManager(tableName, idColumn, nameColumn, displayName);
+                    lookupForm.ShowDialog(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"❌ خطا در باز کردن فرم:\n\n{ex.Message}\n\n{ex.StackTrace}",
+                        "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+            parent.Controls.Add(btn);
         }
 
         // ─────────────────────────────────────────────
@@ -396,8 +537,7 @@ namespace PersonnelManagementApp
         {
             try
             {
-                // Use the actual form class name `FormImportExcel` that exists in the project
-                using var frm = new FormImportExcel();
+                using var frm = new FormExcelImport();
                 frm.ShowDialog(this);
             }
             catch (Exception ex)
