@@ -232,7 +232,7 @@ namespace PersonnelManagementApp
         {
             var chartTypes = new Dictionary<string, string>
             {
-                { "province", "🗺️ نمودار استان‌ها" },
+                { "province", "🗺️ نمودار استان" },
                 { "department", "🏛️ نمودار ادارات" },
                 { "voltage", "⚡ نمودار سطح ولتاژ" },
                 { "type", "🏗️ نمودار نوع پست" },
@@ -322,7 +322,7 @@ namespace PersonnelManagementApp
                     columnName = "InsName";
                     chartTitle = "🔆 توزیع بر اساس نوع عایق";
                 }
-                else if (selected.Contains("۲"))
+                else if (selected.Contains("نوع پست ۲"))
                 {
                     columnName = "PT2Name";
                     chartTitle = "📋 توزیع بر اساس نوع پست ۲";
@@ -334,7 +334,7 @@ namespace PersonnelManagementApp
                 }
                 else if (selected.Contains("سال"))
                 {
-                    LoadOperationYearChart();
+                    DrawOperationYearChart();
                     return;
                 }
 
@@ -364,7 +364,7 @@ namespace PersonnelManagementApp
                 series["PieLabelStyle"] = "Outside";
 
                 int total = stats.Sum(x => x.Count);
-                var displayStats = stats.Take(15).ToList(); // فقط 15 تای اول
+                var displayStats = stats.Take(15).ToList();
 
                 foreach (var item in displayStats)
                 {
@@ -381,7 +381,6 @@ namespace PersonnelManagementApp
                     ForeColor = PrimaryColor
                 });
 
-                // نمایش آمار
                 DisplayStats(chartTitle, stats, total);
             }
             catch (Exception ex)
@@ -390,7 +389,7 @@ namespace PersonnelManagementApp
             }
         }
 
-        private void LoadOperationYearChart()
+        private void DrawOperationYearChart()
         {
             if (allPostsData == null) return;
 
@@ -417,16 +416,17 @@ namespace PersonnelManagementApp
                 {
                     ChartType = SeriesChartType.Pie,
                     Font = FontSettings.ChartLabelFont ?? new Font("Tahoma", 9F),
-                    IsValueShownAsLabel = true
+                    IsValueShownAsLabel = true,
+                    LabelForeColor = Color.Black
                 };
                 series["PieLabelStyle"] = "Outside";
 
-                foreach (var (name, count) in stats)
+                foreach (var item in stats)
                 {
-                    double pct = total > 0 ? (count * 100.0) / total : 0;
-                    int idx = series.Points.AddXY(name, count);
-                    series.Points[idx].Label = $"{name}\n{count} ({pct:F1}%)";
-                    series.Points[idx].ToolTip = $"{name}: {count} پست";
+                    double pct = total > 0 ? (item.Count * 100.0) / total : 0;
+                    int idx = series.Points.AddXY(item.Name, item.Count);
+                    series.Points[idx].Label = $"{item.Name}\n{item.Count} ({pct:F1}%)";
+                    series.Points[idx].ToolTip = $"{item.Name}: {item.Count} پست";
                 }
 
                 previewChart.Series.Add(series);
@@ -459,7 +459,7 @@ namespace PersonnelManagementApp
             txtStats.AppendText($"📋 تفکیک:\n\n");
 
             txtStats.SelectionFont = new Font(FontSettings.FontFamilyName, 9);
-            foreach (var item in data.Take(20)) // فقط 20 تای اول
+            foreach (var item in data.Take(20))
             {
                 double percentage = total > 0 ? (double)item.Count / total * 100 : 0;
                 txtStats.SelectionColor = TextSecondary;
