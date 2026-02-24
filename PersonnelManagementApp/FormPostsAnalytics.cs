@@ -342,7 +342,7 @@ namespace PersonnelManagementApp
             };
             btnExport.FlatAppearance.BorderSize = 0;
             btnExport.Location = new Point(10, 10);
-            btnExport.Click += (s, e) => new FormExportCharts().ShowDialog();
+            btnExport.Click += (s, e) => new FormExportPostCharts().ShowDialog();
 
             chart.Dock = DockStyle.Fill;
             chart.BackColor = Color.White;
