@@ -26,6 +26,11 @@ namespace PersonnelManagementApp
         private readonly Chart chartPT2Pie;
         private readonly Chart chartDieselPie;
         private readonly Chart chartOperationYearPie;
+        private readonly Chart chartCapacityHVChart;
+        private readonly Chart chartCapacityMVChart;
+        private readonly Chart chartFeedPie;
+        private readonly Chart chartGuestPie;
+        private readonly Chart chartDistributedCapacityChart;
 
         // ====== DataGridViews ======
         private readonly DataGridView dgvPostStats;
@@ -73,6 +78,11 @@ namespace PersonnelManagementApp
             chartPT2Pie           = new Chart();
             chartDieselPie        = new Chart();
             chartOperationYearPie = new Chart();
+            chartCapacityHVChart  = new Chart();
+            chartCapacityMVChart  = new Chart();
+            chartFeedPie          = new Chart();
+            chartGuestPie         = new Chart();
+            chartDistributedCapacityChart = new Chart();
 
             dgvPostStats   = new DataGridView();
             dgvDeptDetails = new DataGridView();
@@ -207,8 +217,8 @@ namespace PersonnelManagementApp
                 RightToLeft = RightToLeft.No,
                 BackColor = Color.Transparent
             };
-            mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 66f));
-            mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 34f));
+            mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 75f));
+            mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25f));
             mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
             // Charts panel
@@ -232,6 +242,11 @@ namespace PersonnelManagementApp
             AddChartTab(tabControl, "📋 نوع پست ۲",       chartPT2Pie);
             AddChartTab(tabControl, "🔋 دیزل",            chartDieselPie);
             AddChartTab(tabControl, "📅 سال بهره‌برداری", chartOperationYearPie);
+            AddChartTab(tabControl, "⚡ ظرفیت HV",        chartCapacityHVChart);
+            AddChartTab(tabControl, "⚡ ظرفیت MV",        chartCapacityMVChart);
+            AddChartTab(tabControl, "🔗 توزیع",           chartFeedPie);
+            AddChartTab(tabControl, "👥 میهمان‌سرا",       chartGuestPie);
+            AddChartTab(tabControl, "📊 ظرفیت توزیع",     chartDistributedCapacityChart);
 
             chartsPanel.Controls.Add(tabControl);
 
@@ -389,7 +404,8 @@ namespace PersonnelManagementApp
         {
             chartProvincePie, chartDeptPie, chartVoltagePie, chartTypePie, chartStandardPie,
             chartCircuitPie, chartFMPie, chartConnPie, chartInsPie, chartPT2Pie,
-            chartDieselPie, chartOperationYearPie
+            chartDieselPie, chartOperationYearPie, chartCapacityHVChart, chartCapacityMVChart,
+            chartFeedPie, chartGuestPie, chartDistributedCapacityChart
         };
 
         private void ChartTypeMenu_ItemClicked(object? sender, ToolStripItemClickedEventArgs e)
@@ -464,33 +480,33 @@ namespace PersonnelManagementApp
 
                 // MS Access (ACE.OLEDB) requires nested parentheses for multiple INNER JOINs
                 string query = @"
-                    SELECT Posts.PostID, Posts.OperationYear, Posts.DistributedCapacity, 
-                    Posts.CapacityHV, Posts.CapacityMV, 
-                    Provinces.ProvinceName, Cities.CityName, TransferAffairs.AffairName, 
-                    OperationDepartments.DeptName, Districts.DistrictName, PostsNames.PostName, 
-                    VoltageLevels.VoltageName, PostStandards.StandardName, PostTypes.TypeName, 
-                    DistributedConnections.ConnName, InsulationTypes.InsName, PostTypeTwos.PT2Name, 
-                    FixedMobiles.FMName, CircuitStatuses.CircuitName, DieselGenerators.DieselName, 
-                    DistributionFeeds.FeedName, WaterStatuses.WaterName, GuestHouses.GuestName 
+                    SELECT Posts.[PostID], Posts.[OperationYear], Posts.[DistributedCapacity], 
+                    Posts.[CapacityHV], Posts.[CapacityMV],
+                    Provinces.[ProvinceName], Cities.[CityName], TransferAffairs.[AffairName], 
+                    OperationDepartments.[DeptName], Districts.[DistrictName], PostsNames.[PostName], 
+                    VoltageLevels.[VoltageName], PostStandards.[StandardName], PostTypes.[TypeName], 
+                    DistributedConnections.[ConnName], InsulationTypes.[InsName], PostTypeTwos.[PT2Name], 
+                    FixedMobiles.[FMName], CircuitStatuses.[CircuitName], DieselGenerators.[DieselName], 
+                    DistributionFeeds.[FeedName], WaterStatuses.[WaterName], GuestHouses.[GuestName] 
                     FROM (((((((((((((((((Posts 
-                    INNER JOIN Provinces ON Posts.ProvinceID = Provinces.ProvinceID)
-                    INNER JOIN Cities ON Posts.CityID = Cities.CityID)
-                    INNER JOIN TransferAffairs ON Posts.AffairID = TransferAffairs.AffairID)
-                    INNER JOIN OperationDepartments ON Posts.DeptID = OperationDepartments.DeptID)
-                    INNER JOIN Districts ON Posts.DistrictID = Districts.DistrictID)
-                    INNER JOIN PostsNames ON Posts.PostNameID = PostsNames.PostNameID)
-                    INNER JOIN VoltageLevels ON Posts.VoltageID = VoltageLevels.VoltageID)
-                    INNER JOIN PostStandards ON Posts.StandardID = PostStandards.StandardID)
-                    INNER JOIN PostTypes ON Posts.TypeID = PostTypes.TypeID)
-                    INNER JOIN DistributedConnections ON Posts.ConnID = DistributedConnections.ConnID)
-                    INNER JOIN InsulationTypes ON Posts.InsID = InsulationTypes.InsID)
-                    INNER JOIN PostTypeTwos ON Posts.PT2ID = PostTypeTwos.PT2ID)
-                    INNER JOIN FixedMobiles ON Posts.FMID = FixedMobiles.FMID)
-                    INNER JOIN CircuitStatuses ON Posts.CircuitID = CircuitStatuses.CircuitID)
-                    INNER JOIN DieselGenerators ON Posts.DieselID = DieselGenerators.DieselID)
-                    INNER JOIN DistributionFeeds ON Posts.FeedID = DistributionFeeds.FeedID)
-                    INNER JOIN WaterStatuses ON Posts.WaterID = WaterStatuses.WaterID)
-                    INNER JOIN GuestHouses ON Posts.GuestID = GuestHouses.GuestID
+                    INNER JOIN Provinces ON Posts.[ProvinceID] = Provinces.[ProvinceID])
+                    INNER JOIN Cities ON Posts.[CityID] = Cities.[CityID])
+                    INNER JOIN TransferAffairs ON Posts.[AffairID] = TransferAffairs.[AffairID])
+                    INNER JOIN OperationDepartments ON Posts.[DeptID] = OperationDepartments.[DeptID])
+                    INNER JOIN Districts ON Posts.[DistrictID] = Districts.[DistrictID])
+                    INNER JOIN PostsNames ON Posts.[PostNameID] = PostsNames.[PostNameID])
+                    INNER JOIN VoltageLevels ON Posts.[VoltageID] = VoltageLevels.[VoltageID])
+                    INNER JOIN PostStandards ON Posts.[StandardID] = PostStandards.[StandardID])
+                    INNER JOIN PostTypes ON Posts.[TypeID] = PostTypes.[TypeID])
+                    INNER JOIN DistributedConnections ON Posts.[ConnID] = DistributedConnections.[ConnID])
+                    INNER JOIN InsulationTypes ON Posts.[InsID] = InsulationTypes.[InsID])
+                    INNER JOIN PostTypeTwos ON Posts.[PT2ID] = PostTypeTwos.[PT2ID])
+                    INNER JOIN FixedMobiles ON Posts.[FMID] = FixedMobiles.[FMID])
+                    INNER JOIN CircuitStatuses ON Posts.[CircuitID] = CircuitStatuses.[CircuitID])
+                    INNER JOIN DieselGenerators ON Posts.[DieselID] = DieselGenerators.[DieselID])
+                    INNER JOIN DistributionFeeds ON Posts.[FeedID] = DistributionFeeds.[FeedID])
+                    INNER JOIN WaterStatuses ON Posts.[WaterID] = WaterStatuses.[WaterID])
+                    INNER JOIN GuestHouses ON Posts.[GuestID] = GuestHouses.[GuestID]
                 ";
 
                 allPostsData = dbHelper.ExecuteQuery(query);
@@ -668,6 +684,11 @@ namespace PersonnelManagementApp
             DrawChart(chartInsPie,           dt, "InsName",       "🔆 توزیع بر اساس نوع عایق");
             DrawChart(chartPT2Pie,           dt, "PT2Name",       "📋 توزیع بر اساس نوع پست ۲");
             DrawChart(chartDieselPie,        dt, "DieselName",    "🔋 توزیع بر اساس دیزل ژنراتور");
+            DrawChart(chartFeedPie,          dt, "FeedName",      "🔗 توزیع بر اساس نوع توزیع");
+            DrawChart(chartGuestPie,         dt, "GuestName",     "👥 توزیع بر اساس میهمان‌سرا");
+            DrawCapacityChart(chartCapacityHVChart, dt, "CapacityHV", "⚡ توزیع ظرفیت HV");
+            DrawCapacityChart(chartCapacityMVChart, dt, "CapacityMV", "⚡ توزیع ظرفیت MV");
+            DrawCapacityChart(chartDistributedCapacityChart, dt, "DistributedCapacity", "📊 توزیع ظرفیت توزیع شده");
             DrawOperationYearChart(dt);
             LoadSummaryTable(dt);
             LoadDeptDetailsTable(dt);
@@ -750,6 +771,58 @@ namespace PersonnelManagementApp
                 chartOperationYearPie.Titles.Add(new Title("📅 توزیع بر اساس دهه بهره‌برداری") { Font = titleFont });
             }
             catch (Exception ex) { MessageBox.Show($"❌ خطا در نمودار سال: {ex.Message}"); }
+        }
+
+        private void DrawCapacityChart(Chart chart, DataTable dt, string col, string title)
+        {
+            try
+            {
+                chart.Series.Clear();
+                Font safeFont  = FontSettings.ChartLabelFont ?? new Font("Tahoma", 9F);
+                Font titleFont = FontSettings.HeaderFont     ?? new Font("Tahoma", 11F, FontStyle.Bold);
+
+                var stats = dt.AsEnumerable()
+                    .Where(r => r[col] != DBNull.Value)
+                    .GroupBy(r =>
+                    {
+                        if (decimal.TryParse(r[col]?.ToString(), out decimal cap))
+                            return $"{(int)(cap / 100) * 100}-{(int)(cap / 100) * 100 + 99}";
+                        return "نامشخص";
+                    })
+                    .Select(g => (Name: g.Key, Count: g.Count()))
+                    .OrderBy(x => x.Name)
+                    .ToList();
+
+                if (stats.Count == 0)
+                {
+                    chart.Titles.Clear();
+                    chart.Titles.Add(new Title($"{title}\n(داده‌های موجود نیستند)") { Font = titleFont });
+                    return;
+                }
+
+                int total = stats.Sum(x => x.Count);
+                var type  = GetChartTypeOrDefault(chart);
+                bool pie  = IsPieType(type);
+                ConfigureChartAreaForType(chart, type);
+
+                Series series = new Series("تعداد");
+                ConfigureSeriesForType(series, type);
+
+                foreach (var (name, count) in pie ? stats.Take(15) : (IEnumerable<(string, int)>)stats)
+                {
+                    double pct = total > 0 ? (count * 100.0) / total : 0;
+                    int idx = series.Points.AddXY(name, count);
+                    series.Points[idx].AxisLabel = name;
+                    series.Points[idx].ToolTip   = $"{name}: {count} پست ({pct:F1}%)";
+                    series.Points[idx].Font      = safeFont;
+                    series.Points[idx].Label     = pie ? $"{name}\n{count} ({pct:F1}%)" : count.ToString();
+                }
+
+                chart.Series.Add(series);
+                chart.Titles.Clear();
+                chart.Titles.Add(new Title(title) { Font = titleFont });
+            }
+            catch (Exception ex) { MessageBox.Show($"❌ خطا در نمودار: {ex.Message}"); }
         }
 
         // ── Statistics Tables ────────────────────
@@ -896,9 +969,45 @@ namespace PersonnelManagementApp
                 var dt = GetFilteredData();
                 if (dt.Rows.Count == 0) return;
 
-                var rows = dt.AsEnumerable()
-                    .Where(r => r[col]?.ToString() == itemName)
-                    .ToList();
+                var rows = dt.AsEnumerable().ToList();
+
+                // Handle range-based charts (Capacity and Year)
+                if (col.EndsWith("_Range"))
+                {
+                    string actualCol = col.Replace("_Range", "");
+
+                    if (actualCol == "OperationYear")
+                    {
+                        rows = rows.Where(r =>
+                        {
+                            if (r["OperationYear"] != DBNull.Value && 
+                                int.TryParse(r["OperationYear"]?.ToString(), out int y))
+                            {
+                                string range = $"{(y / 10) * 10}\u2013{(y / 10) * 10 + 9}";
+                                return range == itemName;
+                            }
+                            return itemName == "نامشخص";
+                        }).ToList();
+                    }
+                    else // Capacity ranges
+                    {
+                        rows = rows.Where(r =>
+                        {
+                            if (r[actualCol] != DBNull.Value && 
+                                decimal.TryParse(r[actualCol]?.ToString(), out decimal cap))
+                            {
+                                string range = $"{(int)(cap / 100) * 100}-{(int)(cap / 100) * 100 + 99}";
+                                return range == itemName;
+                            }
+                            return itemName == "نامشخص";
+                        }).ToList();
+                    }
+                }
+                else
+                {
+                    // Handle regular string-based charts
+                    rows = rows.Where(r => r[col]?.ToString() == itemName).ToList();
+                }
 
                 if (rows.Count > 0)
                     ShowPostDetails(itemName, rows.CopyToDataTable());
@@ -921,6 +1030,12 @@ namespace PersonnelManagementApp
             if (c == chartInsPie)       return "InsName";
             if (c == chartPT2Pie)       return "PT2Name";
             if (c == chartDieselPie)    return "DieselName";
+            if (c == chartFeedPie)      return "FeedName";
+            if (c == chartGuestPie)     return "GuestName";
+            if (c == chartOperationYearPie)     return "OperationYear_Range";
+            if (c == chartCapacityHVChart)      return "CapacityHV_Range";
+            if (c == chartCapacityMVChart)      return "CapacityMV_Range";
+            if (c == chartDistributedCapacityChart) return "DistributedCapacity_Range";
             return "";
         }
 

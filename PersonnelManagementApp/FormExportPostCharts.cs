@@ -243,6 +243,11 @@ namespace PersonnelManagementApp
                 { "insulation", "🔆 نمودار نوع عایق" },
                 { "posttype2", "📋 نمودار نوع پست ۲" },
                 { "diesel", "🔋 نمودار دیزل ژنراتور" },
+                { "feed", "🔗 نمودار نوع توزیع" },
+                { "guest", "👥 نمودار میهمان‌سرا" },
+                { "capacityhv", "⚡ نمودار ظرفیت HV" },
+                { "capacitymv", "⚡ نمودار ظرفیت MV" },
+                { "distributedcapacity", "📊 نمودار ظرفیت توزیع شده" },
                 { "operationyear", "📅 نمودار سال بهره‌برداری" }
             };
 
@@ -331,6 +336,31 @@ namespace PersonnelManagementApp
                 {
                     columnName = "DieselName";
                     chartTitle = "🔋 توزیع بر اساس دیزل ژنراتور";
+                }
+                else if (selected.Contains("نوع توزیع"))
+                {
+                    columnName = "FeedName";
+                    chartTitle = "🔗 توزیع بر اساس نوع توزیع";
+                }
+                else if (selected.Contains("میهمان‌سرا"))
+                {
+                    columnName = "GuestName";
+                    chartTitle = "👥 توزیع بر اساس میهمان‌سرا";
+                }
+                else if (selected.Contains("ظرفیت HV"))
+                {
+                    DrawCapacityChart("CapacityHV", "⚡ توزیع ظرفیت HV");
+                    return;
+                }
+                else if (selected.Contains("ظرفیت MV"))
+                {
+                    DrawCapacityChart("CapacityMV", "⚡ توزیع ظرفیت MV");
+                    return;
+                }
+                else if (selected.Contains("ظرفیت توزیع"))
+                {
+                    DrawCapacityChart("DistributedCapacity", "📊 توزیع ظرفیت توزیع شده");
+                    return;
                 }
                 else if (selected.Contains("سال"))
                 {
@@ -441,6 +471,67 @@ namespace PersonnelManagementApp
             catch (Exception ex)
             {
                 MessageBox.Show($"خطا در نمودار سال: {ex.Message}", "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void DrawCapacityChart(string columnName, string title)
+        {
+            if (allPostsData == null) return;
+
+            try
+            {
+                previewChart.Series.Clear();
+                previewChart.Titles.Clear();
+
+                var stats = allPostsData.AsEnumerable()
+                    .Where(r => r[columnName] != DBNull.Value)
+                    .GroupBy(r =>
+                    {
+                        if (decimal.TryParse(r[columnName]?.ToString(), out decimal cap))
+                            return $"{(int)(cap / 100) * 100}-{(int)(cap / 100) * 100 + 99}";
+                        return "نامشخص";
+                    })
+                    .Select(g => (Name: g.Key, Count: g.Count()))
+                    .OrderBy(x => x.Name)
+                    .ToList();
+
+                if (stats.Count == 0)
+                {
+                    MessageBox.Show("❌ داده‌ای برای این نمودار وجود ندارد.", "خطا", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                int total = stats.Sum(x => x.Count);
+
+                Series series = new Series("تعداد")
+                {
+                    ChartType = SeriesChartType.Pie,
+                    Font = FontSettings.ChartLabelFont ?? new Font("Tahoma", 9F),
+                    IsValueShownAsLabel = true,
+                    LabelForeColor = Color.Black
+                };
+                series["PieLabelStyle"] = "Outside";
+
+                foreach (var item in stats)
+                {
+                    double pct = total > 0 ? (item.Count * 100.0) / total : 0;
+                    int idx = series.Points.AddXY(item.Name, item.Count);
+                    series.Points[idx].Label = $"{item.Name}\n{item.Count} ({pct:F1}%)";
+                    series.Points[idx].ToolTip = $"{item.Name}: {item.Count} پست";
+                }
+
+                previewChart.Series.Add(series);
+                previewChart.Titles.Add(new Title(title)
+                {
+                    Font = FontSettings.HeaderFont ?? new Font("Tahoma", 12F, FontStyle.Bold),
+                    ForeColor = PrimaryColor
+                });
+
+                DisplayStats(title, stats, total);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"خطا در نمودار: {ex.Message}", "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
