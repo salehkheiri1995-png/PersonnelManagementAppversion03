@@ -891,8 +891,7 @@ namespace PersonnelManagementApp
             var body = CreateScrollBody();
 
             var card = CreateCard();
-            card.Height = 194;
-            card.Controls.Add(CreateCardTitle("پوشه عکس‌ها", FlatIconKind.Folder));
+            card.Height = 220;
             toolTip.SetToolTip(card, "پوشه‌ای که عکس پرسنل در آن ذخیره می‌شود");
 
             var layout = new TableLayoutPanel
@@ -943,6 +942,7 @@ namespace PersonnelManagementApp
             layout.SetColumnSpan(lblCurrentPhotos, 2);
 
             card.Controls.Add(layout);
+            card.Controls.Add(CreateCardTitle("پوشه عکس‌ها", FlatIconKind.Folder));
             AddCards(body, card);
             return CreatePageShell(header, body, CreateFooterRow());
         }
@@ -957,7 +957,6 @@ namespace PersonnelManagementApp
 
             var card = CreateCard();
             card.Height = 500;
-            card.Controls.Add(CreateCardTitle("فونت برنامه", FlatIconKind.Settings));
 
             var layout = new TableLayoutPanel
             {
@@ -972,7 +971,24 @@ namespace PersonnelManagementApp
             for (int i = 0; i < 9; i++)
                 layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 46F));
 
-            layout.Controls.Add(CreateFieldLabel("نوع فونت:"), 0, 0);
+            var familyRow = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.Transparent,
+                Margin = new Padding(0)
+            };
+            var familyLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 1,
+                BackColor = Color.Transparent,
+                Margin = new Padding(0)
+            };
+            familyLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150F));
+            familyLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            familyLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            familyLayout.Controls.Add(CreateFieldLabel("نوع فونت:"), 0, 0);
             cmbFontFamily = new ComboBox
             {
                 Dock = DockStyle.Fill,
@@ -986,7 +1002,9 @@ namespace PersonnelManagementApp
                 "Tahoma", "Arial", "Segoe UI", "Calibri", "Times New Roman",
                 "B Nazanin", "B Mitra", "B Lotus", "B Titr", "IRANSans", "Vazir"
             });
-            layout.Controls.Add(cmbFontFamily, 0, 0);
+            familyLayout.Controls.Add(cmbFontFamily, 1, 0);
+            familyRow.Controls.Add(familyLayout);
+            layout.Controls.Add(familyRow, 0, 0);
             layout.Controls.Add(new Panel { Dock = DockStyle.Fill, BackColor = BorderColor }, 0, 1);
 
             layout.Controls.Add(CreateFieldLabel("اندازه فونت‌ها:"), 0, 2);
