@@ -1,765 +1,890 @@
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.Windows.Forms;
 using System.Linq;
+using System.Windows.Forms;
 
 namespace PersonnelManagementApp
 {
+    /// <summary>
+    /// جستجو و حذف پرسنل (رابط مدرن).
+    /// </summary>
     public partial class FormPersonnelSearch : Form
     {
-        private DbHelper db = new DbHelper();
-        private DataTable personnelTable;
-        private DataTable provincesTable;
-        private DataTable citiesTable;
-        private DataTable transferAffairsTable;
-        private DataTable operationDepartmentsTable;
-        private DataTable districtsTable;
-        private DataTable postsNamesTable;
-        private DataTable searchTablePersonnel;
-        private TextBox txtFreeSearch;
-        private CheckedListBox clbProvinces;
-        private CheckedListBox clbCities;
-        private CheckedListBox clbAffairs;
-        private CheckedListBox clbDepartments;
-        private CheckedListBox clbDistricts;
-        private CheckedListBox clbPosts;
-        private DataGridView dgvResults;
-        private Button btnFreeSearch, btnShow, btnExport, btnBack;
+        private static readonly Color HeaderColor = Color.FromArgb(15, 23, 42);
+        private static readonly Color HeaderAccent = Color.FromArgb(56, 189, 248);
+        private static readonly Color CardColor = Color.White;
+        private static readonly Color CanvasColor = Color.FromArgb(241, 245, 249);
+        private static readonly Color BorderColor = Color.FromArgb(226, 232, 240);
+        private static readonly Color PrimaryColor = Color.FromArgb(0, 122, 204);
+        private static readonly Color SuccessColor = Color.FromArgb(16, 185, 129);
+        private static readonly Color DangerColor = Color.FromArgb(239, 68, 68);
+        private static readonly Color WarningColor = Color.FromArgb(245, 158, 11);
+        private static readonly Color TextColor = Color.FromArgb(30, 41, 59);
+        private static readonly Color MutedColor = Color.FromArgb(100, 116, 139);
+
+        private readonly DbHelper db = new();
+
+        private DataTable? personnelTable;
+        private DataTable? provincesTable;
+        private DataTable? citiesTable;
+        private DataTable? transferAffairsTable;
+        private DataTable? operationDepartmentsTable;
+        private DataTable? districtsTable;
+        private DataTable? postsNamesTable;
+        private DataTable? searchTablePersonnel;
+
+        private TextBox txtFreeSearch = new();
+        private CheckedListBox clbProvinces = new();
+        private CheckedListBox clbCities = new();
+        private CheckedListBox clbAffairs = new();
+        private CheckedListBox clbDepartments = new();
+        private CheckedListBox clbDistricts = new();
+        private CheckedListBox clbPosts = new();
+        private DataGridView dgvResults = new();
+        private Label lblStatus = new();
+        private Label lblCount = new();
+
+        private bool _loading;
 
         public FormPersonnelSearch()
         {
-            InitializeComponent();
-
-            // اعمال فونت‌های تنظیم‌شده
+            BuildUi();
             FontSettings.ApplyFontToForm(this);
-
             LoadData();
             CreateSearchTable();
             LoadProvinces();
+            ApplyResults();
         }
 
-        private void InitializeComponent()
+        private void BuildUi()
         {
-            this.Text = "جستجوی پرسنل";
-            this.WindowState = FormWindowState.Maximized;
-            this.RightToLeft = RightToLeft.Yes;
-            this.BackColor = Color.FromArgb(240, 248, 255);
+            Text = "جستجو و حذف پرسنل";
+            WindowState = FormWindowState.Maximized;
+            MinimumSize = new Size(1100, 700);
+            RightToLeft = RightToLeft.Yes;
+            RightToLeftLayout = true;
+            BackColor = CanvasColor;
+            Font = new Font(FontSettings.FontFamilyName, 9F);
 
-            // پس‌زمینه گرادیانت
-            using (LinearGradientBrush brush = new LinearGradientBrush(this.ClientRectangle, Color.LightBlue, Color.White, LinearGradientMode.Vertical))
+            var root = new TableLayoutPanel
             {
-                this.BackgroundImage = new Bitmap(this.Width, this.Height);
-                using (Graphics g = Graphics.FromImage(this.BackgroundImage))
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 4,
+                BackColor = CanvasColor,
+                Padding = new Padding(0),
+                Margin = new Padding(0)
+            };
+            root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 86F));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 64F));
+            root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 34F));
+            Controls.Add(root);
+
+            root.Controls.Add(BuildHeader(), 0, 0);
+            root.Controls.Add(BuildToolbar(), 0, 1);
+            root.Controls.Add(BuildContent(), 0, 2);
+            root.Controls.Add(BuildStatusBar(), 0, 3);
+        }
+
+        private Control BuildHeader()
+        {
+            var header = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = HeaderColor,
+                Padding = new Padding(24, 12, 24, 10),
+                Margin = new Padding(0)
+            };
+
+            var title = new Label
+            {
+                Text = "جستجو و حذف پرسنل",
+                Dock = DockStyle.Top,
+                Height = 34,
+                Font = new Font(FontSettings.FontFamilyName, 17F, FontStyle.Bold),
+                ForeColor = Color.White,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            var subtitle = new Label
+            {
+                Text = "جستجوی سریع بر اساس نام، مشخصات و موقعیت سازمانی — به‌همراه حذف پرسنل انتخابی",
+                Dock = DockStyle.Fill,
+                Font = new Font(FontSettings.FontFamilyName, 9.5F),
+                ForeColor = Color.FromArgb(203, 213, 225),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            var accent = new Panel
+            {
+                Dock = DockStyle.Right,
+                Width = 5,
+                BackColor = HeaderAccent,
+                Margin = new Padding(0, 6, 0, 6)
+            };
+
+            header.Controls.Add(subtitle);
+            header.Controls.Add(title);
+            header.Controls.Add(accent);
+            return header;
+        }
+
+        private Control BuildToolbar()
+        {
+            var toolbar = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = CardColor,
+                Padding = new Padding(12, 8, 12, 8),
+                Margin = new Padding(0)
+            };
+
+            txtFreeSearch.Dock = DockStyle.Fill;
+            txtFreeSearch.Font = new Font(FontSettings.FontFamilyName, 9.5F);
+            txtFreeSearch.PlaceholderText = "جستجوی آزاد (نام، نام خانوادگی، شماره پرسنلی، کد ملی)...";
+            txtFreeSearch.KeyDown += (_, e) =>
+            {
+                if (e.KeyCode == Keys.Enter)
                 {
-                    g.FillRectangle(brush, this.ClientRectangle);
+                    ApplyResults();
+                    e.SuppressKeyPress = true;
                 }
-            }
+            };
 
-            // گرید نمایش
-            dgvResults = new DataGridView
-            {
-                Name = "dgvResults",
-                Location = new Point(50, 50),
-                Size = new Size(this.ClientSize.Width - 100, 300),
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None, // غیرفعال کردن AutoSize برای اسکرول افقی
-                ScrollBars = ScrollBars.Both, // فعال کردن اسکرول افقی و عمودی
-                AllowUserToAddRows = false,
-                ReadOnly = true,
-                BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.None,
-                ColumnHeadersHeight = 40,
-                RowTemplate = { Height = 30 },
-                AllowUserToResizeColumns = true,
-                AllowUserToResizeRows = true,
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom
-            };
-            ApplyRoundedCorners(dgvResults, 20);
-            dgvResults.MouseClick += (s, e) => { if (e.Button == MouseButtons.Left) dgvResults.BackColor = Color.LightYellow; else dgvResults.BackColor = Color.White; };
+            var btnSearch = CreateToolButton("🔎 جستجو", PrimaryColor);
+            btnSearch.Click += (_, _) => ApplyResults();
 
-            // جستجوی آزاد
-            txtFreeSearch = new TextBox
-            {
-                Location = new Point(50, 360),
-                Size = new Size(300, 40),
-                Font = FontSettings.TextBoxFont,
-                PlaceholderText = "جستجوی آزاد (نام، نام خانوادگی، شماره پرسنلی، کد ملی)...",
-                BorderStyle = BorderStyle.None
-            };
-            ApplyRoundedCorners(txtFreeSearch, 15);
-            txtFreeSearch.BackColor = Color.WhiteSmoke;
-            btnFreeSearch = new Button
-            {
-                Text = "جستجو",
-                Location = new Point(360, 360),
-                Size = new Size(150, 40),
-                Font = FontSettings.ButtonFont,
-                BackColor = Color.LightBlue,
-                ForeColor = Color.White
-            };
-            ApplyRoundedCorners(btnFreeSearch, 15);
-            btnFreeSearch.MouseClick += (s, e) => { if (e.Button == MouseButtons.Left) btnFreeSearch.BackColor = Color.RoyalBlue; else btnFreeSearch.BackColor = Color.LightBlue; };
+            var btnClear = CreateToolButton("🧹 پاک کردن فیلترها", Color.FromArgb(71, 85, 105));
+            btnClear.Click += (_, _) => ClearFilters();
 
-            // جستجوی انتخابی با لیبل‌ها
-            Label lblProvinces = new Label
-            {
-                Text = "استان‌ها:",
-                Location = new Point(50, 410),
-                Size = new Size(200, 30),
-                Font = FontSettings.SubtitleFont,
-                ForeColor = Color.DarkBlue
-            };
-            clbProvinces = new CheckedListBox { Location = new Point(50, 440), Size = new Size(200, 150), BorderStyle = BorderStyle.None };
-            Label lblCities = new Label
-            {
-                Text = "شهرها:",
-                Location = new Point(260, 410),
-                Size = new Size(200, 30),
-                Font = FontSettings.SubtitleFont,
-                ForeColor = Color.DarkBlue
-            };
-            clbCities = new CheckedListBox { Location = new Point(260, 440), Size = new Size(200, 150), BorderStyle = BorderStyle.None, Enabled = false };
-            Label lblAffairs = new Label
-            {
-                Text = "امور:",
-                Location = new Point(470, 410),
-                Size = new Size(200, 30),
-                Font = FontSettings.SubtitleFont,
-                ForeColor = Color.DarkBlue
-            };
-            clbAffairs = new CheckedListBox { Location = new Point(470, 440), Size = new Size(200, 150), BorderStyle = BorderStyle.None, Enabled = false };
-            Label lblDepartments = new Label
-            {
-                Text = "ادارات:",
-                Location = new Point(680, 410),
-                Size = new Size(200, 30),
-                Font = FontSettings.SubtitleFont,
-                ForeColor = Color.DarkBlue
-            };
-            clbDepartments = new CheckedListBox { Location = new Point(680, 440), Size = new Size(200, 150), BorderStyle = BorderStyle.None, Enabled = false };
-            Label lblDistricts = new Label
-            {
-                Text = "نواحی:",
-                Location = new Point(890, 410),
-                Size = new Size(200, 30),
-                Font = FontSettings.SubtitleFont,
-                ForeColor = Color.DarkBlue
-            };
-            clbDistricts = new CheckedListBox { Location = new Point(890, 440), Size = new Size(200, 150), BorderStyle = BorderStyle.None, Enabled = false };
-            Label lblPosts = new Label
-            {
-                Text = "پست‌ها:",
-                Location = new Point(1100, 410),
-                Size = new Size(200, 30),
-                Font = FontSettings.SubtitleFont,
-                ForeColor = Color.DarkBlue
-            };
-            clbPosts = new CheckedListBox { Location = new Point(1100, 440), Size = new Size(200, 150), BorderStyle = BorderStyle.None, Enabled = false };
+            var btnExport = CreateToolButton("📥 خروجی CSV", Color.FromArgb(20, 184, 166));
+            btnExport.Click += (_, _) => ExportCsv();
 
-            ApplyRoundedCorners(clbProvinces, 15);
-            ApplyRoundedCorners(clbCities, 15);
-            ApplyRoundedCorners(clbAffairs, 15);
-            ApplyRoundedCorners(clbDepartments, 15);
-            ApplyRoundedCorners(clbDistricts, 15);
-            ApplyRoundedCorners(clbPosts, 15);
-            clbProvinces.BackColor = Color.WhiteSmoke;
-            clbCities.BackColor = Color.WhiteSmoke;
-            clbAffairs.BackColor = Color.WhiteSmoke;
-            clbDepartments.BackColor = Color.WhiteSmoke;
-            clbDistricts.BackColor = Color.WhiteSmoke;
-            clbPosts.BackColor = Color.WhiteSmoke;
+            var btnDelete = CreateToolButton("🗑️ حذف پرسنل انتخابی", DangerColor);
+            btnDelete.Click += (_, _) => DeleteSelected();
 
-            // دکمه‌ها
-            btnShow = new Button
+            var btnRefresh = CreateToolButton("🔄 به‌روزرسانی", Color.FromArgb(139, 92, 246));
+            btnRefresh.Click += (_, _) =>
             {
-                Text = "نمایش نتایج",
-                Location = new Point(this.ClientSize.Width - 250, 600),
-                Size = new Size(200, 50),
-                Font = FontSettings.ButtonFont,
-                BackColor = Color.LightGreen,
-                ForeColor = Color.White
+                LoadData();
+                CreateSearchTable();
+                LoadProvinces();
+                ApplyResults();
             };
-            ApplyRoundedCorners(btnShow, 20);
-            btnShow.MouseClick += (s, e) => { if (e.Button == MouseButtons.Left) btnShow.BackColor = Color.ForestGreen; else btnShow.BackColor = Color.LightGreen; };
 
-            btnExport = new Button
+            var layout = new TableLayoutPanel
             {
-                Text = "اکسپورت به CSV",
-                Location = new Point(this.ClientSize.Width - 460, 600),
-                Size = new Size(200, 50),
-                Font = FontSettings.ButtonFont,
-                BackColor = Color.LightBlue,
-                ForeColor = Color.White
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 1,
+                BackColor = CardColor,
+                Margin = new Padding(0)
             };
-            ApplyRoundedCorners(btnExport, 20);
-            btnExport.MouseClick += (s, e) => { if (e.Button == MouseButtons.Left) btnExport.BackColor = Color.RoyalBlue; else btnExport.BackColor = Color.LightBlue; };
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 830F));
 
-            btnBack = new Button
+            var actions = new FlowLayoutPanel
             {
-                Text = "برگشت به صفحه اصلی",
-                Location = new Point(50, 600),
-                Size = new Size(200, 50),
-                Font = FontSettings.ButtonFont,
-                BackColor = Color.LightCoral,
-                ForeColor = Color.White
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.RightToLeft,
+                WrapContents = false,
+                BackColor = CardColor,
+                Margin = new Padding(0)
             };
-            ApplyRoundedCorners(btnBack, 20);
-            btnBack.MouseClick += (s, e) => { if (e.Button == MouseButtons.Left) btnBack.BackColor = Color.Red; else btnBack.BackColor = Color.LightCoral; };
-            btnBack.Click += (s, e) => { this.Close(); };
+            actions.Controls.Add(btnRefresh);
+            actions.Controls.Add(btnDelete);
+            actions.Controls.Add(btnExport);
+            actions.Controls.Add(btnClear);
+            actions.Controls.Add(btnSearch);
 
-            this.Controls.Add(dgvResults);
-            this.Controls.Add(txtFreeSearch);
-            this.Controls.Add(btnFreeSearch);
-            this.Controls.Add(lblProvinces);
-            this.Controls.Add(clbProvinces);
-            this.Controls.Add(lblCities);
-            this.Controls.Add(clbCities);
-            this.Controls.Add(lblAffairs);
-            this.Controls.Add(clbAffairs);
-            this.Controls.Add(lblDepartments);
-            this.Controls.Add(clbDepartments);
-            this.Controls.Add(lblDistricts);
-            this.Controls.Add(clbDistricts);
-            this.Controls.Add(lblPosts);
-            this.Controls.Add(clbPosts);
-            this.Controls.Add(btnShow);
-            this.Controls.Add(btnExport);
-            this.Controls.Add(btnBack);
-
-            btnFreeSearch.Click += BtnFreeSearch_Click;
-            btnShow.Click += BtnShow_Click;
-            btnExport.Click += BtnExport_Click;
-            clbProvinces.ItemCheck += ClbProvinces_ItemCheck;
-            clbCities.ItemCheck += ClbCities_ItemCheck;
-            clbAffairs.ItemCheck += ClbAffairs_ItemCheck;
-            clbDepartments.ItemCheck += ClbDepartments_ItemCheck;
-            clbDistricts.ItemCheck += ClbDistricts_ItemCheck;
+            layout.Controls.Add(txtFreeSearch, 0, 0);
+            layout.Controls.Add(actions, 1, 0);
+            toolbar.Controls.Add(layout);
+            return toolbar;
         }
 
-        private void ApplyRoundedCorners(Control control, int radius)
+        private static Button CreateToolButton(string text, Color backColor)
         {
-            GraphicsPath path = new GraphicsPath();
-            path.AddArc(0, 0, radius, radius, 180, 90);
-            path.AddArc(control.Width - radius, 0, radius, radius, 270, 90);
-            path.AddArc(control.Width - radius, control.Height - radius, radius, radius, 0, 90);
-            path.AddArc(0, control.Height - radius, radius, radius, 90, 90);
-            path.CloseFigure();
-            control.Region = new Region(path);
+            var button = new Button
+            {
+                Text = text,
+                AutoSize = false,
+                Width = 160,
+                Height = 36,
+                BackColor = backColor,
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font(FontSettings.FontFamilyName, 9.5F, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                Margin = new Padding(4, 0, 0, 0)
+            };
+            button.FlatAppearance.BorderSize = 0;
+            return button;
         }
 
+        private Control BuildContent()
+        {
+            var content = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 1,
+                BackColor = CanvasColor,
+                Padding = new Padding(12),
+                Margin = new Padding(0)
+            };
+            content.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 320F));
+            content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            content.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+
+            content.Controls.Add(BuildFilterPanel(), 0, 0);
+            content.Controls.Add(BuildGridPanel(), 1, 0);
+            return content;
+        }
+
+        private Control BuildFilterPanel()
+        {
+            var panel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = CardColor,
+                Padding = new Padding(12, 10, 12, 10),
+                Margin = new Padding(0, 0, 10, 0),
+                BorderStyle = BorderStyle.FixedSingle
+            };
+
+            var title = new Label
+            {
+                Text = "فیلترهای سازمانی",
+                Dock = DockStyle.Top,
+                Height = 30,
+                Font = new Font(FontSettings.FontFamilyName, 11F, FontStyle.Bold),
+                ForeColor = PrimaryColor,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            var scroll = new Panel
+            {
+                Dock = DockStyle.Fill,
+                AutoScroll = true,
+                BackColor = CardColor
+            };
+
+            var flow = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                BackColor = CardColor,
+                Padding = new Padding(0),
+                Margin = new Padding(0)
+            };
+
+            AddFilterGroup(flow, "استان‌ها", clbProvinces, true, ClbProvinces_ItemCheck);
+            AddFilterGroup(flow, "شهرها", clbCities, false, ClbCities_ItemCheck);
+            AddFilterGroup(flow, "امور", clbAffairs, false, ClbAffairs_ItemCheck);
+            AddFilterGroup(flow, "ادارات", clbDepartments, false, ClbDepartments_ItemCheck);
+            AddFilterGroup(flow, "نواحی", clbDistricts, false, ClbDistricts_ItemCheck);
+            AddFilterGroup(flow, "پست‌ها", clbPosts, false, null);
+
+            scroll.Controls.Add(flow);
+            panel.Controls.Add(scroll);
+            panel.Controls.Add(title);
+            return panel;
+        }
+
+        private static void AddFilterGroup(FlowLayoutPanel flow, string caption, CheckedListBox list,
+            bool enabled, ItemCheckEventHandler? onCheck)
+        {
+            var group = new Panel
+            {
+                Width = 258,
+                Height = 140,
+                Margin = new Padding(0, 0, 0, 10),
+                Padding = new Padding(8, 4, 8, 4),
+                BackColor = Color.FromArgb(248, 250, 252),
+                BorderStyle = BorderStyle.FixedSingle
+            };
+
+            var header = new Label
+            {
+                Text = caption,
+                Dock = DockStyle.Top,
+                Height = 24,
+                Font = new Font(FontSettings.FontFamilyName, 9.5F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(30, 64, 175),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            list.Dock = DockStyle.Fill;
+            list.CheckOnClick = true;
+            list.BorderStyle = BorderStyle.None;
+            list.BackColor = Color.FromArgb(248, 250, 252);
+            list.Font = new Font(FontSettings.FontFamilyName, 8.5F);
+            list.IntegralHeight = false;
+            list.Enabled = enabled;
+            if (onCheck != null)
+                list.ItemCheck += onCheck;
+
+            group.Controls.Add(list);
+            group.Controls.Add(header);
+            flow.Controls.Add(group);
+        }
+
+        private Control BuildGridPanel()
+        {
+            var panel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = CardColor,
+                Margin = new Padding(0)
+            };
+
+            dgvResults.Dock = DockStyle.Fill;
+            dgvResults.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvResults.AllowUserToAddRows = false;
+            dgvResults.ReadOnly = true;
+            dgvResults.BackgroundColor = Color.White;
+            dgvResults.BorderStyle = BorderStyle.None;
+            dgvResults.ColumnHeadersHeight = 40;
+            dgvResults.RowTemplate.Height = 30;
+            dgvResults.RowHeadersVisible = false;
+            dgvResults.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvResults.MultiSelect = false;
+            dgvResults.RightToLeft = RightToLeft.Yes;
+            dgvResults.EnableHeadersVisualStyles = false;
+            dgvResults.GridColor = BorderColor;
+            dgvResults.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(30, 64, 175);
+            dgvResults.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            dgvResults.ColumnHeadersDefaultCellStyle.Font = new Font(FontSettings.FontFamilyName, 9F, FontStyle.Bold);
+            dgvResults.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            dgvResults.DefaultCellStyle.Font = new Font(FontSettings.FontFamilyName, 9F);
+            dgvResults.DefaultCellStyle.ForeColor = TextColor;
+            dgvResults.DefaultCellStyle.SelectionBackColor = Color.FromArgb(219, 234, 254);
+            dgvResults.DefaultCellStyle.SelectionForeColor = TextColor;
+            dgvResults.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
+
+            panel.Controls.Add(dgvResults);
+            return panel;
+        }
+
+        private Control BuildStatusBar()
+        {
+            var statusPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.FromArgb(248, 250, 252),
+                Margin = new Padding(0)
+            };
+            statusPanel.Paint += (_, e) =>
+            {
+                using var pen = new Pen(BorderColor);
+                e.Graphics.DrawLine(pen, 0, 0, statusPanel.Width, 0);
+            };
+
+            lblStatus.Dock = DockStyle.Fill;
+            lblStatus.Font = new Font(FontSettings.FontFamilyName, 8.5F);
+            lblStatus.ForeColor = Color.FromArgb(71, 85, 105);
+            lblStatus.TextAlign = ContentAlignment.MiddleLeft;
+            lblStatus.Padding = new Padding(18, 0, 18, 0);
+            lblStatus.Text = "در حال بارگذاری...";
+
+            lblCount.Dock = DockStyle.Right;
+            lblCount.Width = 220;
+            lblCount.Font = new Font(FontSettings.FontFamilyName, 9F, FontStyle.Bold);
+            lblCount.ForeColor = PrimaryColor;
+            lblCount.TextAlign = ContentAlignment.MiddleRight;
+            lblCount.Padding = new Padding(0, 0, 12, 0);
+            lblCount.Text = "۰ پرسنل";
+
+            statusPanel.Controls.Add(lblStatus);
+            statusPanel.Controls.Add(lblCount);
+            return statusPanel;
+        }
+
+        // ─────────────────────────────────────────────
+        // داده‌ها
+        // ─────────────────────────────────────────────
         private void LoadData()
         {
             try
             {
                 provincesTable = db.GetProvinces();
-                citiesTable = db.GetCitiesByProvince(0); // دریافت همه شهرها
-                transferAffairsTable = db.GetAffairsByProvince(0); // دریافت همه امور
-                operationDepartmentsTable = db.GetDeptsByAffair(0); // دریافت همه ادارات
-                districtsTable = db.GetDistrictsByDept(0); // دریافت همه نواحی
-                postsNamesTable = db.GetPostNamesByDistrict(0); // دریافت همه نام‌های پست
-                personnelTable = db.ExecuteQuery("SELECT PersonnelID, ProvinceID, CityID, AffairID, DeptID, DistrictID, PostNameID, VoltageID, " +
-                                                "WorkShiftID, GenderID, FirstName, LastName, FatherName, PersonnelNumber, NationalID, " +
-                                                "MobileNumber, BirthDate, HireDate, StartDateOperation, ContractTypeID, JobLevelID, " +
-                                                "CompanyID, DegreeID, DegreeFieldID, MainJobTitle, CurrentActivity, Inconsistency, " +
-                                                "Description, StatusID FROM Personnel");
+                citiesTable = db.GetCitiesByProvince(0);
+                transferAffairsTable = db.GetAffairsByProvince(0);
+                operationDepartmentsTable = db.GetDeptsByAffair(0);
+                districtsTable = db.GetDistrictsByDept(0);
+                postsNamesTable = db.GetPostNamesByDistrict(0);
+                personnelTable = db.ExecuteQuery(
+                    "SELECT PersonnelID, ProvinceID, CityID, AffairID, DeptID, DistrictID, PostNameID, VoltageID, " +
+                    "WorkShiftID, GenderID, FirstName, LastName, FatherName, PersonnelNumber, NationalID, " +
+                    "MobileNumber, BirthDate, HireDate, StartDateOperation, ContractTypeID, JobLevelID, " +
+                    "CompanyID, DegreeID, DegreeFieldID, MainJobTitle, CurrentActivity, Inconsistency, " +
+                    "Description, StatusID FROM Personnel");
 
-                MessageBox.Show($"Personnel: {personnelTable.Rows.Count} ردیف\nProvinces: {provincesTable.Rows.Count} ردیف");
+                if (personnelTable == null)
+                    personnelTable = new DataTable("Personnel");
+
+                lblStatus.Text = $"✅ {personnelTable.Rows.Count} پرسنل بارگذاری شد.";
             }
             catch (Exception ex)
             {
-                MessageBox.Show("خطا در بارگذاری داده‌ها: " + ex.Message);
+                ErrorLogger.Log("FormPersonnelSearch.LoadData", ex);
+                lblStatus.Text = "❌ خطا در بارگذاری داده‌ها.";
+                MessageBox.Show(this, $"خطا در بارگذاری داده‌ها:\n{ex.Message}", "خطا",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
         private void CreateSearchTable()
         {
             searchTablePersonnel = new DataTable("SearchTablePersonnel");
-            searchTablePersonnel.Columns.Add("PersonnelID", typeof(int)).ColumnName = "شناسه پرسنل";
-            searchTablePersonnel.Columns.Add("FirstName", typeof(string)).ColumnName = "نام";
-            searchTablePersonnel.Columns.Add("LastName", typeof(string)).ColumnName = "نام خانوادگی";
-            searchTablePersonnel.Columns.Add("FatherName", typeof(string)).ColumnName = "نام پدر";
-            searchTablePersonnel.Columns.Add("PersonnelNumber", typeof(string)).ColumnName = "شماره پرسنلی";
-            searchTablePersonnel.Columns.Add("NationalID", typeof(string)).ColumnName = "کد ملی";
-            searchTablePersonnel.Columns.Add("MobileNumber", typeof(string)).ColumnName = "شماره موبایل";
-            searchTablePersonnel.Columns.Add("ProvinceName", typeof(string)).ColumnName = "استان";
-            searchTablePersonnel.Columns.Add("CityName", typeof(string)).ColumnName = "شهر";
-            searchTablePersonnel.Columns.Add("AffairName", typeof(string)).ColumnName = "امور";
-            searchTablePersonnel.Columns.Add("DeptName", typeof(string)).ColumnName = "اداره";
-            searchTablePersonnel.Columns.Add("DistrictName", typeof(string)).ColumnName = "ناحیه";
-            searchTablePersonnel.Columns.Add("PostName", typeof(string)).ColumnName = "نام پست";
-            searchTablePersonnel.Columns.Add("VoltageName", typeof(string)).ColumnName = "سطح ولتاژ";
-            searchTablePersonnel.Columns.Add("WorkShiftName", typeof(string)).ColumnName = "شیفت کاری";
-            searchTablePersonnel.Columns.Add("GenderName", typeof(string)).ColumnName = "جنسیت";
-            searchTablePersonnel.Columns.Add("ContractTypeName", typeof(string)).ColumnName = "نوع قرارداد";
-            searchTablePersonnel.Columns.Add("JobLevelName", typeof(string)).ColumnName = "سطح شغل";
-            searchTablePersonnel.Columns.Add("CompanyName", typeof(string)).ColumnName = "شرکت";
-            searchTablePersonnel.Columns.Add("DegreeName", typeof(string)).ColumnName = "مدرک تحصیلی";
-            searchTablePersonnel.Columns.Add("DegreeFieldName", typeof(string)).ColumnName = "رشته تحصیلی";
-            searchTablePersonnel.Columns.Add("MainJobTitle", typeof(string)).ColumnName = "عنوان شغلی اصلی";
-            searchTablePersonnel.Columns.Add("CurrentActivity", typeof(string)).ColumnName = "فعالیت فعلی";
-            searchTablePersonnel.Columns.Add("Inconsistency", typeof(bool)).ColumnName = "مغایرت";
-            searchTablePersonnel.Columns.Add("Description", typeof(string)).ColumnName = "توضیحات";
-            searchTablePersonnel.Columns.Add("StatusName", typeof(string)).ColumnName = "وضعیت حضور";
-            searchTablePersonnel.Columns.Add("BirthDate", typeof(string)).ColumnName = "تاریخ تولد";
-            searchTablePersonnel.Columns.Add("HireDate", typeof(string)).ColumnName = "تاریخ استخدام";
-            searchTablePersonnel.Columns.Add("StartDateOperation", typeof(string)).ColumnName = "تاریخ شروع بکار";
+            searchTablePersonnel.Columns.Add("شناسه پرسنل", typeof(int));
+            searchTablePersonnel.Columns.Add("نام", typeof(string));
+            searchTablePersonnel.Columns.Add("نام خانوادگی", typeof(string));
+            searchTablePersonnel.Columns.Add("نام پدر", typeof(string));
+            searchTablePersonnel.Columns.Add("شماره پرسنلی", typeof(string));
+            searchTablePersonnel.Columns.Add("کد ملی", typeof(string));
+            searchTablePersonnel.Columns.Add("شماره موبایل", typeof(string));
+            searchTablePersonnel.Columns.Add("استان", typeof(string));
+            searchTablePersonnel.Columns.Add("شهر", typeof(string));
+            searchTablePersonnel.Columns.Add("امور", typeof(string));
+            searchTablePersonnel.Columns.Add("اداره", typeof(string));
+            searchTablePersonnel.Columns.Add("ناحیه", typeof(string));
+            searchTablePersonnel.Columns.Add("نام پست", typeof(string));
+            searchTablePersonnel.Columns.Add("سطح ولتاژ", typeof(string));
+            searchTablePersonnel.Columns.Add("شیفت کاری", typeof(string));
+            searchTablePersonnel.Columns.Add("جنسیت", typeof(string));
+            searchTablePersonnel.Columns.Add("نوع قرارداد", typeof(string));
+            searchTablePersonnel.Columns.Add("سطح شغل", typeof(string));
+            searchTablePersonnel.Columns.Add("شرکت", typeof(string));
+            searchTablePersonnel.Columns.Add("مدرک تحصیلی", typeof(string));
+            searchTablePersonnel.Columns.Add("رشته تحصیلی", typeof(string));
+            searchTablePersonnel.Columns.Add("عنوان شغلی اصلی", typeof(string));
+            searchTablePersonnel.Columns.Add("فعالیت فعلی", typeof(string));
+            searchTablePersonnel.Columns.Add("مغایرت", typeof(string));
+            searchTablePersonnel.Columns.Add("توضیحات", typeof(string));
+            searchTablePersonnel.Columns.Add("وضعیت حضور", typeof(string));
+            searchTablePersonnel.Columns.Add("تاریخ تولد", typeof(string));
+            searchTablePersonnel.Columns.Add("تاریخ استخدام", typeof(string));
+            searchTablePersonnel.Columns.Add("تاریخ شروع بکار", typeof(string));
 
-            var voltageLevelsTable = db.GetVoltageLevels();
-            var workShiftsTable = db.GetWorkShifts();
-            var gendersTable = db.GetGenders();
-            var contractTypesTable = db.GetContractTypes();
-            var jobLevelsTable = db.GetJobLevels();
-            var companiesTable = db.GetCompanies();
-            var degreesTable = db.GetDegrees();
-            var degreeFieldsTable = db.GetDegreeFields();
-            var chartAffairsTable = db.GetChartAffairs();
-            var statusPresenceTable = db.GetStatusPresence();
+            DataTable? voltageLevelsTable = db.GetVoltageLevels();
+            DataTable? workShiftsTable = db.GetWorkShifts();
+            DataTable? gendersTable = db.GetGenders();
+            DataTable? contractTypesTable = db.GetContractTypes();
+            DataTable? jobLevelsTable = db.GetJobLevels();
+            DataTable? companiesTable = db.GetCompanies();
+            DataTable? degreesTable = db.GetDegrees();
+            DataTable? degreeFieldsTable = db.GetDegreeFields();
+            DataTable? chartAffairsTable = db.GetChartAffairs();
+            DataTable? statusPresenceTable = db.GetStatusPresence();
 
-            foreach (DataRow personnelRow in personnelTable.Rows)
+            foreach (DataRow p in personnelTable!.Rows)
             {
-                DataRow newRow = searchTablePersonnel.NewRow();
-                newRow["شناسه پرسنل"] = personnelRow["PersonnelID"];
-                newRow["نام"] = personnelRow["FirstName"];
-                newRow["نام خانوادگی"] = personnelRow["LastName"];
-                newRow["نام پدر"] = personnelRow["FatherName"];
-                newRow["شماره پرسنلی"] = personnelRow["PersonnelNumber"];
-                newRow["کد ملی"] = personnelRow["NationalID"];
-                newRow["شماره موبایل"] = personnelRow["MobileNumber"];
-                newRow["تاریخ تولد"] = personnelRow["BirthDate"];
-                newRow["تاریخ استخدام"] = personnelRow["HireDate"];
-                newRow["تاریخ شروع بکار"] = personnelRow["StartDateOperation"];
+                DataRow r = searchTablePersonnel.NewRow();
+                r["شناسه پرسنل"] = p["PersonnelID"];
+                r["نام"] = p["FirstName"];
+                r["نام خانوادگی"] = p["LastName"];
+                r["نام پدر"] = p["FatherName"];
+                r["شماره پرسنلی"] = p["PersonnelNumber"];
+                r["کد ملی"] = p["NationalID"];
+                r["شماره موبایل"] = p["MobileNumber"];
+                r["تاریخ تولد"] = p["BirthDate"];
+                r["تاریخ استخدام"] = p["HireDate"];
+                r["تاریخ شروع بکار"] = p["StartDateOperation"];
 
-                int? provinceId = personnelRow["ProvinceID"] as int?;
-                if (provinceId.HasValue)
-                {
-                    DataRow[] provinceRows = provincesTable.Select($"ProvinceID = {provinceId.Value}");
-                    newRow["استان"] = provinceRows.Length > 0 ? provinceRows[0]["ProvinceName"] : "نامشخص";
-                }
+                r["استان"] = LookupName(provincesTable, "ProvinceID", "ProvinceName", p["ProvinceID"]);
+                r["شهر"] = LookupName(citiesTable, "CityID", "CityName", p["CityID"]);
+                r["امور"] = LookupName(transferAffairsTable, "AffairID", "AffairName", p["AffairID"]);
+                r["اداره"] = LookupName(operationDepartmentsTable, "DeptID", "DeptName", p["DeptID"]);
+                r["ناحیه"] = LookupName(districtsTable, "DistrictID", "DistrictName", p["DistrictID"]);
+                r["نام پست"] = LookupName(postsNamesTable, "PostNameID", "PostName", p["PostNameID"]);
+                r["سطح ولتاژ"] = LookupName(voltageLevelsTable, "VoltageID", "VoltageName", p["VoltageID"]);
+                r["شیفت کاری"] = LookupName(workShiftsTable, "WorkShiftID", "WorkShiftName", p["WorkShiftID"]);
+                r["جنسیت"] = LookupName(gendersTable, "GenderID", "GenderName", p["GenderID"]);
+                r["نوع قرارداد"] = LookupName(contractTypesTable, "ContractTypeID", "ContractTypeName", p["ContractTypeID"]);
+                r["سطح شغل"] = LookupName(jobLevelsTable, "JobLevelID", "JobLevelName", p["JobLevelID"]);
+                r["شرکت"] = LookupName(companiesTable, "CompanyID", "CompanyName", p["CompanyID"]);
+                r["مدرک تحصیلی"] = LookupName(degreesTable, "DegreeID", "DegreeName", p["DegreeID"]);
+                r["رشته تحصیلی"] = LookupName(degreeFieldsTable, "DegreeFieldID", "DegreeFieldName", p["DegreeFieldID"]);
+                r["عنوان شغلی اصلی"] = LookupName(chartAffairsTable, "ChartID", "ChartName", p["MainJobTitle"]);
+                r["فعالیت فعلی"] = LookupName(chartAffairsTable, "ChartID", "ChartName", p["CurrentActivity"]);
+                r["وضعیت حضور"] = LookupName(statusPresenceTable, "StatusID", "StatusName", p["StatusID"]);
 
-                int? cityId = personnelRow["CityID"] as int?;
-                if (cityId.HasValue)
-                {
-                    DataRow[] cityRows = citiesTable.Select($"CityID = {cityId.Value}");
-                    newRow["شهر"] = cityRows.Length > 0 ? cityRows[0]["CityName"] : "نامشخص";
-                }
+                r["مغایرت"] = Convert.ToInt32(p["Inconsistency"]) == 1 ? "دارد" : "ندارد";
+                r["توضیحات"] = p["Description"];
 
-                int? affairId = personnelRow["AffairID"] as int?;
-                if (affairId.HasValue)
-                {
-                    DataRow[] affairRows = transferAffairsTable.Select($"AffairID = {affairId.Value}");
-                    newRow["امور"] = affairRows.Length > 0 ? affairRows[0]["AffairName"] : "نامشخص";
-                }
-
-                int? deptId = personnelRow["DeptID"] as int?;
-                if (deptId.HasValue)
-                {
-                    DataRow[] deptRows = operationDepartmentsTable.Select($"DeptID = {deptId.Value}");
-                    newRow["اداره"] = deptRows.Length > 0 ? deptRows[0]["DeptName"] : "نامشخص";
-                }
-
-                int? districtId = personnelRow["DistrictID"] as int?;
-                if (districtId.HasValue)
-                {
-                    DataRow[] districtRows = districtsTable.Select($"DistrictID = {districtId.Value}");
-                    newRow["ناحیه"] = districtRows.Length > 0 ? districtRows[0]["DistrictName"] : "نامشخص";
-                }
-
-                int? postNameId = personnelRow["PostNameID"] as int?;
-                if (postNameId.HasValue)
-                {
-                    DataRow[] postNameRows = postsNamesTable.Select($"PostNameID = {postNameId.Value}");
-                    newRow["نام پست"] = postNameRows.Length > 0 ? postNameRows[0]["PostName"] : "نامشخص";
-                }
-
-                int? voltageId = personnelRow["VoltageID"] as int?;
-                if (voltageId.HasValue)
-                {
-                    DataRow[] voltageRows = voltageLevelsTable.Select($"VoltageID = {voltageId.Value}");
-                    newRow["سطح ولتاژ"] = voltageRows.Length > 0 ? voltageRows[0]["VoltageName"] : "نامشخص";
-                }
-
-                int? workShiftId = personnelRow["WorkShiftID"] as int?;
-                if (workShiftId.HasValue)
-                {
-                    DataRow[] workShiftRows = workShiftsTable.Select($"WorkShiftID = {workShiftId.Value}");
-                    newRow["شیفت کاری"] = workShiftRows.Length > 0 ? workShiftRows[0]["WorkShiftName"] : "نامشخص";
-                }
-
-                int? genderId = personnelRow["GenderID"] as int?;
-                if (genderId.HasValue)
-                {
-                    DataRow[] genderRows = gendersTable.Select($"GenderID = {genderId.Value}");
-                    newRow["جنسیت"] = genderRows.Length > 0 ? genderRows[0]["GenderName"] : "نامشخص";
-                }
-
-                int? contractTypeId = personnelRow["ContractTypeID"] as int?;
-                if (contractTypeId.HasValue)
-                {
-                    DataRow[] contractTypeRows = contractTypesTable.Select($"ContractTypeID = {contractTypeId.Value}");
-                    newRow["نوع قرارداد"] = contractTypeRows.Length > 0 ? contractTypeRows[0]["ContractTypeName"] : "نامشخص";
-                }
-
-                int? jobLevelId = personnelRow["JobLevelID"] as int?;
-                if (jobLevelId.HasValue)
-                {
-                    DataRow[] jobLevelRows = jobLevelsTable.Select($"JobLevelID = {jobLevelId.Value}");
-                    newRow["سطح شغل"] = jobLevelRows.Length > 0 ? jobLevelRows[0]["JobLevelName"] : "نامشخص";
-                }
-
-                int? companyId = personnelRow["CompanyID"] as int?;
-                if (companyId.HasValue)
-                {
-                    DataRow[] companyRows = companiesTable.Select($"CompanyID = {companyId.Value}");
-                    newRow["شرکت"] = companyRows.Length > 0 ? companyRows[0]["CompanyName"] : "نامشخص";
-                }
-
-                int? degreeId = personnelRow["DegreeID"] as int?;
-                if (degreeId.HasValue)
-                {
-                    DataRow[] degreeRows = degreesTable.Select($"DegreeID = {degreeId.Value}");
-                    newRow["مدرک تحصیلی"] = degreeRows.Length > 0 ? degreeRows[0]["DegreeName"] : "نامشخص";
-                }
-
-                int? degreeFieldId = personnelRow["DegreeFieldID"] as int?;
-                if (degreeFieldId.HasValue)
-                {
-                    DataRow[] degreeFieldRows = degreeFieldsTable.Select($"DegreeFieldID = {degreeFieldId.Value}");
-                    newRow["رشته تحصیلی"] = degreeFieldRows.Length > 0 ? degreeFieldRows[0]["DegreeFieldName"] : "نامشخص";
-                }
-
-                int? mainJobTitleId = personnelRow["MainJobTitle"] as int?;
-                if (mainJobTitleId.HasValue)
-                {
-                    DataRow[] mainJobTitleRows = chartAffairsTable.Select($"ChartID = {mainJobTitleId.Value}");
-                    newRow["عنوان شغلی اصلی"] = mainJobTitleRows.Length > 0 ? mainJobTitleRows[0]["ChartName"] : "نامشخص";
-                }
-
-                int? currentActivityId = personnelRow["CurrentActivity"] as int?;
-                if (currentActivityId.HasValue)
-                {
-                    DataRow[] currentActivityRows = chartAffairsTable.Select($"ChartID = {currentActivityId.Value}");
-                    newRow["فعالیت فعلی"] = currentActivityRows.Length > 0 ? currentActivityRows[0]["ChartName"] : "نامشخص";
-                }
-
-                newRow["مغایرت"] = personnelRow["Inconsistency"];
-                newRow["توضیحات"] = personnelRow["Description"];
-                int? statusId = personnelRow["StatusID"] as int?;
-                if (statusId.HasValue)
-                {
-                    DataRow[] statusRows = statusPresenceTable.Select($"StatusID = {statusId.Value}");
-                    newRow["وضعیت حضور"] = statusRows.Length > 0 ? statusRows[0]["StatusName"] : "نامشخص";
-                }
-
-                searchTablePersonnel.Rows.Add(newRow);
+                searchTablePersonnel.Rows.Add(r);
             }
+        }
 
-            MessageBox.Show($"SearchTablePersonnel ساخته شد با {searchTablePersonnel.Rows.Count} ردیف.");
+        private static string LookupName(DataTable? table, string idColumn, string nameColumn, object? idValue)
+        {
+            if (table == null || idValue == null || idValue == DBNull.Value)
+                return "نامشخص";
+
+            int id = Convert.ToInt32(idValue);
+            if (id <= 0)
+                return "نامشخص";
+
+            DataRow[] rows = table.Select($"{idColumn} = {id}");
+            return rows.Length > 0 ? Convert.ToString(rows[0][nameColumn]) ?? "نامشخص" : "نامشخص";
         }
 
         private void LoadProvinces()
         {
             clbProvinces.Items.Clear();
+            if (provincesTable == null)
+                return;
+
             foreach (DataRow row in provincesTable.Rows)
-                clbProvinces.Items.Add(row["ProvinceName"].ToString(), false);
+                clbProvinces.Items.Add(Convert.ToString(row["ProvinceName"]) ?? "", false);
         }
 
-        private void ClbProvinces_ItemCheck(object sender, ItemCheckEventArgs e)
+        // ─────────────────────────────────────────────
+        // فیلترهای وابسته
+        // ─────────────────────────────────────────────
+        private void ClbProvinces_ItemCheck(object? sender, ItemCheckEventArgs e)
         {
-            this.BeginInvoke((MethodInvoker)delegate
+            BeginInvoke((MethodInvoker)(() =>
             {
-                // پاک کردن آیتم‌های وابسته
+                if (_loading)
+                    return;
+
                 clbCities.Items.Clear();
                 clbAffairs.Items.Clear();
                 clbDepartments.Items.Clear();
                 clbDistricts.Items.Clear();
                 clbPosts.Items.Clear();
 
-                // فعال کردن شهرها و امور
-                bool hasSelectedProvinces = clbProvinces.CheckedItems.Count > 0 || e.NewValue == CheckState.Checked;
-                clbCities.Enabled = hasSelectedProvinces;
-                clbAffairs.Enabled = hasSelectedProvinces;
+                bool hasSelected = clbProvinces.CheckedItems.Count > 0 || e.NewValue == CheckState.Checked;
+                clbCities.Enabled = hasSelected;
+                clbAffairs.Enabled = hasSelected;
                 clbDepartments.Enabled = false;
                 clbDistricts.Enabled = false;
                 clbPosts.Enabled = false;
 
-                if (hasSelectedProvinces)
-                {
-                    var selectedProvinces = clbProvinces.CheckedItems.Cast<string>().ToList();
-                    if (e.NewValue == CheckState.Checked)
-                        selectedProvinces.Add(clbProvinces.Items[e.Index].ToString());
-                    else
-                        selectedProvinces.Remove(clbProvinces.Items[e.Index].ToString());
+                if (!hasSelected)
+                    return;
 
-                    // بارگذاری شهرها
-                    var cities = searchTablePersonnel.AsEnumerable()
-                        .Where(r => selectedProvinces.Contains(r["استان"].ToString()))
-                        .Select(r => r["شهر"].ToString())
-                        .Distinct()
-                        .OrderBy(c => c);
-                    foreach (var city in cities)
-                        clbCities.Items.Add(city, false);
+                List<string> selected = clbProvinces.CheckedItems.Cast<string>().ToList();
+                if (e.NewValue == CheckState.Checked)
+                    selected.Add(Convert.ToString(clbProvinces.Items[e.Index])!);
+                else
+                    selected.Remove(Convert.ToString(clbProvinces.Items[e.Index])!);
 
-                    // بارگذاری امور
-                    var affairs = searchTablePersonnel.AsEnumerable()
-                        .Where(r => selectedProvinces.Contains(r["استان"].ToString()))
-                        .Select(r => r["امور"].ToString())
-                        .Distinct()
-                        .OrderBy(a => a);
-                    foreach (var affair in affairs)
-                        clbAffairs.Items.Add(affair, false);
-                }
-            });
+                foreach (string city in DistinctValues("شهر", selected, "استان"))
+                    clbCities.Items.Add(city, false);
+                foreach (string affair in DistinctValues("امور", selected, "استان"))
+                    clbAffairs.Items.Add(affair, false);
+            }));
         }
 
-        private void ClbCities_ItemCheck(object sender, ItemCheckEventArgs e)
+        private void ClbCities_ItemCheck(object? sender, ItemCheckEventArgs e)
         {
-            this.BeginInvoke((MethodInvoker)delegate
+            BeginInvoke((MethodInvoker)(() =>
             {
-                // پاک کردن آیتم‌های وابسته
+                if (_loading)
+                    return;
+
                 clbDepartments.Items.Clear();
                 clbDistricts.Items.Clear();
                 clbPosts.Items.Clear();
 
-                // فعال کردن ادارات فقط اگر شهر یا امور انتخاب شده باشد
-                bool hasSelectedCities = clbCities.CheckedItems.Count > 0 || e.NewValue == CheckState.Checked;
-                bool hasSelectedAffairs = clbAffairs.CheckedItems.Count > 0;
-                clbDepartments.Enabled = hasSelectedCities || hasSelectedAffairs;
+                bool hasSelected = clbCities.CheckedItems.Count > 0 || e.NewValue == CheckState.Checked;
+                bool hasAffairs = clbAffairs.CheckedItems.Count > 0;
+                clbDepartments.Enabled = hasSelected || hasAffairs;
                 clbDistricts.Enabled = false;
                 clbPosts.Enabled = false;
 
-                if (hasSelectedCities)
-                {
-                    var selectedProvinces = clbProvinces.CheckedItems.Cast<string>().ToList();
-                    var selectedCities = clbCities.CheckedItems.Cast<string>().ToList();
-                    var selectedAffairs = clbAffairs.CheckedItems.Cast<string>().ToList();
-                    if (e.NewValue == CheckState.Checked)
-                        selectedCities.Add(clbCities.Items[e.Index].ToString());
-                    else
-                        selectedCities.Remove(clbCities.Items[e.Index].ToString());
+                if (!clbDepartments.Enabled)
+                    return;
 
-                    // بارگذاری ادارات با در نظر گرفتن شهرها و امور انتخاب‌شده
-                    var depts = searchTablePersonnel.AsEnumerable()
-                        .Where(r => selectedProvinces.Contains(r["استان"].ToString()) &&
-                                    (selectedCities.Count == 0 || selectedCities.Contains(r["شهر"].ToString())) &&
-                                    (selectedAffairs.Count == 0 || selectedAffairs.Contains(r["امور"].ToString())))
-                        .Select(r => r["اداره"].ToString())
-                        .Distinct()
-                        .OrderBy(d => d);
-                    foreach (var dept in depts)
-                        clbDepartments.Items.Add(dept, false);
-                }
-            });
+                foreach (string dept in DistinctDepts())
+                    clbDepartments.Items.Add(dept, false);
+            }));
         }
 
-        private void ClbAffairs_ItemCheck(object sender, ItemCheckEventArgs e)
+        private void ClbAffairs_ItemCheck(object? sender, ItemCheckEventArgs e)
         {
-            this.BeginInvoke((MethodInvoker)delegate
+            BeginInvoke((MethodInvoker)(() =>
             {
-                // پاک کردن آیتم‌های وابسته
+                if (_loading)
+                    return;
+
                 clbDepartments.Items.Clear();
                 clbDistricts.Items.Clear();
                 clbPosts.Items.Clear();
 
-                // فعال کردن ادارات فقط اگر شهر یا امور انتخاب شده باشد
-                bool hasSelectedCities = clbCities.CheckedItems.Count > 0;
-                bool hasSelectedAffairs = clbAffairs.CheckedItems.Count > 0 || e.NewValue == CheckState.Checked;
-                clbDepartments.Enabled = hasSelectedCities || hasSelectedAffairs;
+                bool hasSelected = clbAffairs.CheckedItems.Count > 0 || e.NewValue == CheckState.Checked;
+                bool hasCities = clbCities.CheckedItems.Count > 0;
+                clbDepartments.Enabled = hasSelected || hasCities;
                 clbDistricts.Enabled = false;
                 clbPosts.Enabled = false;
 
-                if (hasSelectedAffairs)
-                {
-                    var selectedProvinces = clbProvinces.CheckedItems.Cast<string>().ToList();
-                    var selectedCities = clbCities.CheckedItems.Cast<string>().ToList();
-                    var selectedAffairs = clbAffairs.CheckedItems.Cast<string>().ToList();
-                    if (e.NewValue == CheckState.Checked)
-                        selectedAffairs.Add(clbAffairs.Items[e.Index].ToString());
-                    else
-                        selectedAffairs.Remove(clbAffairs.Items[e.Index].ToString());
+                if (!clbDepartments.Enabled)
+                    return;
 
-                    // بارگذاری ادارات با در نظر گرفتن شهرها و امور انتخاب‌شده
-                    var depts = searchTablePersonnel.AsEnumerable()
-                        .Where(r => selectedProvinces.Contains(r["استان"].ToString()) &&
-                                    (selectedCities.Count == 0 || selectedCities.Contains(r["شهر"].ToString())) &&
-                                    (selectedAffairs.Count == 0 || selectedAffairs.Contains(r["امور"].ToString())))
-                        .Select(r => r["اداره"].ToString())
-                        .Distinct()
-                        .OrderBy(d => d);
-                    foreach (var dept in depts)
-                        clbDepartments.Items.Add(dept, false);
-                }
-            });
+                foreach (string dept in DistinctDepts())
+                    clbDepartments.Items.Add(dept, false);
+            }));
         }
 
-        private void ClbDepartments_ItemCheck(object sender, ItemCheckEventArgs e)
+        private void ClbDepartments_ItemCheck(object? sender, ItemCheckEventArgs e)
         {
-            this.BeginInvoke((MethodInvoker)delegate
+            BeginInvoke((MethodInvoker)(() =>
             {
-                // پاک کردن آیتم‌های وابسته
+                if (_loading)
+                    return;
+
                 clbDistricts.Items.Clear();
                 clbPosts.Items.Clear();
 
-                // فعال کردن نواحی
-                bool hasSelectedDepartments = clbDepartments.CheckedItems.Count > 0 || e.NewValue == CheckState.Checked;
-                clbDistricts.Enabled = hasSelectedDepartments;
+                bool hasSelected = clbDepartments.CheckedItems.Count > 0 || e.NewValue == CheckState.Checked;
+                clbDistricts.Enabled = hasSelected;
                 clbPosts.Enabled = false;
 
-                if (hasSelectedDepartments)
-                {
-                    var selectedProvinces = clbProvinces.CheckedItems.Cast<string>().ToList();
-                    var selectedCities = clbCities.CheckedItems.Cast<string>().ToList();
-                    var selectedAffairs = clbAffairs.CheckedItems.Cast<string>().ToList();
-                    var selectedDepts = clbDepartments.CheckedItems.Cast<string>().ToList();
-                    if (e.NewValue == CheckState.Checked)
-                        selectedDepts.Add(clbDepartments.Items[e.Index].ToString());
-                    else
-                        selectedDepts.Remove(clbDepartments.Items[e.Index].ToString());
+                if (!hasSelected)
+                    return;
 
-                    // بارگذاری نواحی
-                    var districts = searchTablePersonnel.AsEnumerable()
-                        .Where(r => selectedProvinces.Contains(r["استان"].ToString()) &&
-                                    (selectedCities.Count == 0 || selectedCities.Contains(r["شهر"].ToString())) &&
-                                    (selectedAffairs.Count == 0 || selectedAffairs.Contains(r["امور"].ToString())) &&
-                                    selectedDepts.Contains(r["اداره"].ToString()))
-                        .Select(r => r["ناحیه"].ToString())
-                        .Distinct()
-                        .OrderBy(d => d);
-                    foreach (var district in districts)
-                        clbDistricts.Items.Add(district, false);
-                }
-            });
+                List<string> selected = clbDepartments.CheckedItems.Cast<string>().ToList();
+                if (e.NewValue == CheckState.Checked)
+                    selected.Add(Convert.ToString(clbDepartments.Items[e.Index])!);
+                else
+                    selected.Remove(Convert.ToString(clbDepartments.Items[e.Index])!);
+
+                foreach (string district in DistinctValues("ناحیه", selected, "اداره"))
+                    clbDistricts.Items.Add(district, false);
+            }));
         }
 
-        private void ClbDistricts_ItemCheck(object sender, ItemCheckEventArgs e)
+        private void ClbDistricts_ItemCheck(object? sender, ItemCheckEventArgs e)
         {
-            this.BeginInvoke((MethodInvoker)delegate
+            BeginInvoke((MethodInvoker)(() =>
             {
-                // پاک کردن آیتم‌های وابسته
+                if (_loading)
+                    return;
+
                 clbPosts.Items.Clear();
 
-                // فعال کردن پست‌ها
-                bool hasSelectedDistricts = clbDistricts.CheckedItems.Count > 0 || e.NewValue == CheckState.Checked;
-                clbPosts.Enabled = hasSelectedDistricts;
+                bool hasSelected = clbDistricts.CheckedItems.Count > 0 || e.NewValue == CheckState.Checked;
+                clbPosts.Enabled = hasSelected;
 
-                if (hasSelectedDistricts)
-                {
-                    var selectedProvinces = clbProvinces.CheckedItems.Cast<string>().ToList();
-                    var selectedCities = clbCities.CheckedItems.Cast<string>().ToList();
-                    var selectedAffairs = clbAffairs.CheckedItems.Cast<string>().ToList();
-                    var selectedDepts = clbDepartments.CheckedItems.Cast<string>().ToList();
-                    var selectedDistricts = clbDistricts.CheckedItems.Cast<string>().ToList();
-                    if (e.NewValue == CheckState.Checked)
-                        selectedDistricts.Add(clbDistricts.Items[e.Index].ToString());
-                    else
-                        selectedDistricts.Remove(clbDistricts.Items[e.Index].ToString());
+                if (!hasSelected)
+                    return;
 
-                    // بارگذاری پست‌ها
-                    var posts = searchTablePersonnel.AsEnumerable()
-                        .Where(r => selectedProvinces.Contains(r["استان"].ToString()) &&
-                                    (selectedCities.Count == 0 || selectedCities.Contains(r["شهر"].ToString())) &&
-                                    (selectedAffairs.Count == 0 || selectedAffairs.Contains(r["امور"].ToString())) &&
-                                    selectedDepts.Contains(r["اداره"].ToString()) &&
-                                    selectedDistricts.Contains(r["ناحیه"].ToString()))
-                        .Select(r => r["نام پست"].ToString())
-                        .Distinct()
-                        .OrderBy(p => p);
-                    foreach (var post in posts)
-                        clbPosts.Items.Add(post, false);
-                }
-            });
+                List<string> selected = clbDistricts.CheckedItems.Cast<string>().ToList();
+                if (e.NewValue == CheckState.Checked)
+                    selected.Add(Convert.ToString(clbDistricts.Items[e.Index])!);
+                else
+                    selected.Remove(Convert.ToString(clbDistricts.Items[e.Index])!);
+
+                foreach (string post in DistinctValues("نام پست", selected, "ناحیه"))
+                    clbPosts.Items.Add(post, false);
+            }));
         }
 
-        private void BtnFreeSearch_Click(object sender, EventArgs e)
+        private IEnumerable<string> DistinctValues(string column, IEnumerable<string> parents, string parentColumn)
         {
+            if (searchTablePersonnel == null)
+                return Array.Empty<string>();
+
+            return searchTablePersonnel.AsEnumerable()
+                .Where(r => parents.Contains(Convert.ToString(r[parentColumn])))
+                .Select(r => Convert.ToString(r[column]) ?? "")
+                .Where(v => !string.IsNullOrWhiteSpace(v))
+                .Distinct(StringComparer.CurrentCultureIgnoreCase)
+                .OrderBy(v => v, StringComparer.CurrentCulture);
+        }
+
+        private IEnumerable<string> DistinctDepts()
+        {
+            if (searchTablePersonnel == null)
+                return Array.Empty<string>();
+
+            List<string> provinces = clbProvinces.CheckedItems.Cast<string>().ToList();
+            List<string> cities = clbCities.CheckedItems.Cast<string>().ToList();
+            List<string> affairs = clbAffairs.CheckedItems.Cast<string>().ToList();
+
+            return searchTablePersonnel.AsEnumerable()
+                .Where(r => (provinces.Count == 0 || provinces.Contains(Convert.ToString(r["استان"]))) &&
+                            (cities.Count == 0 || cities.Contains(Convert.ToString(r["شهر"]))) &&
+                            (affairs.Count == 0 || affairs.Contains(Convert.ToString(r["امور"]))))
+                .Select(r => Convert.ToString(r["اداره"]) ?? "")
+                .Where(v => !string.IsNullOrWhiteSpace(v))
+                .Distinct(StringComparer.CurrentCultureIgnoreCase)
+                .OrderBy(v => v, StringComparer.CurrentCulture);
+        }
+
+        // ─────────────────────────────────────────────
+        // نتایج
+        // ─────────────────────────────────────────────
+        private void ApplyResults()
+        {
+            if (searchTablePersonnel == null)
+                return;
+
+            string search = txtFreeSearch.Text.Trim();
+            List<string> provinces = clbProvinces.CheckedItems.Cast<string>().ToList();
+            List<string> cities = clbCities.CheckedItems.Cast<string>().ToList();
+            List<string> affairs = clbAffairs.CheckedItems.Cast<string>().ToList();
+            List<string> depts = clbDepartments.CheckedItems.Cast<string>().ToList();
+            List<string> districts = clbDistricts.CheckedItems.Cast<string>().ToList();
+            List<string> posts = clbPosts.CheckedItems.Cast<string>().ToList();
+
+            IEnumerable<DataRow> rows = searchTablePersonnel.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                rows = rows.Where(r =>
+                    (Convert.ToString(r["نام"]) ?? "").Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
+                    (Convert.ToString(r["نام خانوادگی"]) ?? "").Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
+                    (Convert.ToString(r["نام پدر"]) ?? "").Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
+                    (Convert.ToString(r["شماره پرسنلی"]) ?? "").Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
+                    (Convert.ToString(r["کد ملی"]) ?? "").Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
+                    (Convert.ToString(r["شماره موبایل"]) ?? "").Contains(search, StringComparison.CurrentCultureIgnoreCase));
+            }
+
+            if (provinces.Count > 0)
+                rows = rows.Where(r => provinces.Contains(Convert.ToString(r["استان"])));
+            if (cities.Count > 0)
+                rows = rows.Where(r => cities.Contains(Convert.ToString(r["شهر"])));
+            if (affairs.Count > 0)
+                rows = rows.Where(r => affairs.Contains(Convert.ToString(r["امور"])));
+            if (depts.Count > 0)
+                rows = rows.Where(r => depts.Contains(Convert.ToString(r["اداره"])));
+            if (districts.Count > 0)
+                rows = rows.Where(r => districts.Contains(Convert.ToString(r["ناحیه"])));
+            if (posts.Count > 0)
+                rows = rows.Where(r => posts.Contains(Convert.ToString(r["نام پست"])));
+
+            DataTable filtered = searchTablePersonnel.Clone();
+            foreach (DataRow row in rows)
+                filtered.ImportRow(row);
+
+            dgvResults.DataSource = filtered;
+            foreach (DataGridViewColumn column in dgvResults.Columns)
+            {
+                column.SortMode = DataGridViewColumnSortMode.Automatic;
+                column.MinimumWidth = 70;
+            }
+
+            lblCount.Text = $"{filtered.Rows.Count:N0} پرسنل";
+            lblStatus.Text = $"نمایش {filtered.Rows.Count} از {searchTablePersonnel.Rows.Count} پرسنل  |  " +
+                             $"آخرین بروزرسانی: {DateTime.Now:HH:mm:ss}";
+        }
+
+        private void ClearFilters()
+        {
+            _loading = true;
             try
             {
-                string searchText = txtFreeSearch.Text.Trim().ToLower();
-                var filteredTable = searchTablePersonnel.Clone();
-                foreach (DataRow row in searchTablePersonnel.Rows)
+                foreach (var list in new[] { clbProvinces, clbCities, clbAffairs, clbDepartments, clbDistricts, clbPosts })
                 {
-                    if (row["نام"].ToString().ToLower().Contains(searchText) ||
-                        row["نام خانوادگی"].ToString().ToLower().Contains(searchText) ||
-                        row["شماره پرسنلی"].ToString().ToLower().Contains(searchText) ||
-                        row["کد ملی"].ToString().ToLower().Contains(searchText))
-                    {
-                        filteredTable.ImportRow(row);
-                    }
+                    for (int i = 0; i < list.Items.Count; i++)
+                        list.SetItemChecked(i, false);
+                    list.Items.Clear();
                 }
 
-                dgvResults.DataSource = filteredTable;
-                foreach (DataGridViewColumn column in dgvResults.Columns)
+                clbCities.Enabled = false;
+                clbAffairs.Enabled = false;
+                clbDepartments.Enabled = false;
+                clbDistricts.Enabled = false;
+                clbPosts.Enabled = false;
+            }
+            finally
+            {
+                _loading = false;
+            }
+
+            LoadProvinces();
+            ApplyResults();
+        }
+
+        private void ExportCsv()
+        {
+            if (dgvResults.DataSource is not DataTable dt || dt.Rows.Count == 0)
+            {
+                MessageBox.Show(this, "هیچ داده‌ای برای خروجی وجود ندارد.", "هشدار",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            using var dialog = new SaveFileDialog
+            {
+                Filter = "CSV Files (*.csv)|*.csv",
+                Title = "ذخیره نتایج جستجو",
+                FileName = $"پرسنل_{DateTime.Now:yyyyMMdd_HHmmss}.csv",
+                AddExtension = true
+            };
+            if (dialog.ShowDialog(this) != DialogResult.OK)
+                return;
+
+            try
+            {
+                db.ExportToCsv(dt, dialog.FileName);
+                MessageBox.Show(this, "✅ فایل CSV با موفقیت ذخیره شد.", "خروجی",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                ErrorLogger.Log("FormPersonnelSearch.ExportCsv", ex);
+                MessageBox.Show(this, $"خطا در ذخیره CSV:\n{ex.Message}", "خطا",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void DeleteSelected()
+        {
+            if (dgvResults.CurrentRow == null || dgvResults.CurrentRow.Cells["شناسه پرسنل"].Value == null)
+            {
+                MessageBox.Show(this, "ابتدا یک پرسنل را از جدول نتایج انتخاب کنید.", "هشدار",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            int personnelId = Convert.ToInt32(dgvResults.CurrentRow.Cells["شناسه پرسنل"].Value);
+            string fullName = $"{dgvResults.CurrentRow.Cells["نام"].Value} {dgvResults.CurrentRow.Cells["نام خانوادگی"].Value}".Trim();
+
+            if (MessageBox.Show(this,
+                    $"آیا مطمئن هستید که می‌خواهید پرسنل «{fullName}» را حذف کنید؟\n\nاین عملیات قابل بازگشت نیست.",
+                    "تأیید حذف", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+            {
+                return;
+            }
+
+            try
+            {
+                int affected = db.ExecuteNonQuery("DELETE FROM Personnel WHERE PersonnelID = ?",
+                    new[] { new System.Data.OleDb.OleDbParameter("?", personnelId) });
+
+                if (affected > 0)
                 {
-                    column.Width = 150; // عرض ثابت برای ایجاد اسکرول افقی
-                    column.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
+                    MessageBox.Show(this, "✅ پرسنل با موفقیت حذف شد.", "موفقیت",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    LoadData();
+                    CreateSearchTable();
+                    LoadProvinces();
+                    ApplyResults();
+                }
+                else
+                {
+                    MessageBox.Show(this, "هیچ پرسنلی حذف نشد!", "هشدار",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("خطا در جستجوی آزاد: " + ex.Message);
-            }
-        }
-
-        private void BtnShow_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                var selectedProvinces = clbProvinces.CheckedItems.Cast<string>().ToList();
-                var selectedCities = clbCities.CheckedItems.Cast<string>().ToList();
-                var selectedAffairs = clbAffairs.CheckedItems.Cast<string>().ToList();
-                var selectedDepts = clbDepartments.CheckedItems.Cast<string>().ToList();
-                var selectedDistricts = clbDistricts.CheckedItems.Cast<string>().ToList();
-                var selectedPosts = clbPosts.CheckedItems.Cast<string>().ToList();
-
-                var filteredTable = searchTablePersonnel.Clone();
-                var filteredRows = searchTablePersonnel.AsEnumerable();
-
-                if (selectedProvinces.Any())
-                    filteredRows = filteredRows.Where(r => selectedProvinces.Contains(r["استان"].ToString()));
-                if (selectedCities.Any())
-                    filteredRows = filteredRows.Where(r => selectedCities.Contains(r["شهر"].ToString()));
-                if (selectedAffairs.Any())
-                    filteredRows = filteredRows.Where(r => selectedAffairs.Contains(r["امور"].ToString()));
-                if (selectedDepts.Any())
-                    filteredRows = filteredRows.Where(r => selectedDepts.Contains(r["اداره"].ToString()));
-                if (selectedDistricts.Any())
-                    filteredRows = filteredRows.Where(r => selectedDistricts.Contains(r["ناحیه"].ToString()));
-                if (selectedPosts.Any())
-                    filteredRows = filteredRows.Where(r => selectedPosts.Contains(r["نام پست"].ToString()));
-
-                foreach (var row in filteredRows)
-                    filteredTable.ImportRow(row);
-
-                dgvResults.DataSource = filteredTable;
-                foreach (DataGridViewColumn column in dgvResults.Columns)
-                {
-                    column.Width = 150; // عرض ثابت برای ایجاد اسکرول افقی
-                    column.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("خطا در نمایش نتایج: " + ex.Message);
-            }
-        }
-
-        private void BtnExport_Click(object sender, EventArgs e)
-        {
-            if (dgvResults.DataSource is DataTable dt && dt.Rows.Count > 0)
-            {
-                SaveFileDialog sfd = new SaveFileDialog
-                {
-                    Filter = "CSV Files (*.csv)|*.csv",
-                    FileName = "PersonnelSearchResults.csv"
-                };
-                if (sfd.ShowDialog() == DialogResult.OK)
-                {
-                    db.ExportToCsv(dt, sfd.FileName);
-                }
-            }
-            else
-            {
-                MessageBox.Show("هیچ داده‌ای برای اکسپورت وجود ندارد!", "هشدار", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ErrorLogger.Log("FormPersonnelSearch.DeleteSelected", ex);
+                MessageBox.Show(this, $"خطا در حذف پرسنل:\n{ex.Message}", "خطا",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }

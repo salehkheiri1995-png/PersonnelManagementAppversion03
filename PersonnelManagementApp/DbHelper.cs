@@ -8,68 +8,133 @@ namespace PersonnelManagementApp
 {
     public class DbHelper
     {
-        private readonly string connectionString;
+        private string? connectionString;
+        private string? lastError;
 
         public DbHelper()
         {
-            connectionString = GetConnectionString();
+            TryBuildConnectionString(out _);
         }
 
-        private string GetConnectionString()
+        /// <summary>
+        /// نام provider فعال (ACE 16 یا ACE 12) یا null در صورت نبود پیش‌نیاز.
+        /// </summary>
+        public static string? ActiveProvider => DatabaseProvider.ProviderName;
+
+        public string ProviderName => DatabaseProvider.ProviderName ?? "نصب نشده";
+
+        public string DatabasePath => AppSettings.DatabasePath;
+
+        public string? LastError => lastError;
+
+        public bool IsReady => EnsureReady(showError: false);
+
+        private bool TryBuildConnectionString(out string error)
         {
+            error = string.Empty;
+
             try
             {
-                // ⭐ استفاده از AppSettings برای مسیر دیتابیس
                 string dbPath = AppSettings.DatabasePath;
-
-                if (string.IsNullOrEmpty(dbPath) || !File.Exists(dbPath))
+                if (string.IsNullOrWhiteSpace(dbPath) || !File.Exists(dbPath))
                 {
-                    dbPath = SelectDatabasePath();
-                    if (string.IsNullOrEmpty(dbPath))
-                    {
-                        throw new FileNotFoundException("پایگاه داده انتخاب نشد.");
-                    }
+                    error = "فایل پایگاه داده پیدا نشد.";
+                    return false;
                 }
 
-                return $@"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Persist Security Info=False;";
+                connectionString = DatabaseProvider.BuildConnectionString(dbPath);
+                return true;
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"خطا در یافتن مسیر پایگاه داده: {ex.Message}",
-                                "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                throw;
+                error = ex.Message;
+                connectionString = null;
+                return false;
             }
         }
 
-        private string SelectDatabasePath()
+        private bool EnsureReady(bool showError)
         {
-            using (OpenFileDialog openFileDialog = new OpenFileDialog())
-            {
-                openFileDialog.Title = "انتخاب فایل پایگاه داده";
-                openFileDialog.Filter = "Access Database (*.accdb)|*.accdb|Access Database (*.mdb)|*.mdb|All Files (*.*)|*.*";
-                openFileDialog.InitialDirectory = AppDomain.CurrentDomain.BaseDirectory;
+            lastError = null;
 
-                if (openFileDialog.ShowDialog() == DialogResult.OK)
+            if (!DatabaseProvider.IsAvailable)
+            {
+                lastError = "موتور پایگاه‌داده Microsoft Access (ACE OLE DB) نصب نیست.";
+                if (showError)
+                    DatabaseProvider.ShowMissingProviderDialog(ActiveFormOrNull());
+                return false;
+            }
+
+            if (connectionString == null || !connectionString.Contains(AppSettings.DatabasePath, StringComparison.OrdinalIgnoreCase))
+            {
+                if (!TryBuildConnectionString(out string buildError))
                 {
-                    string selectedPath = openFileDialog.FileName;
-                    // ⭐ ذخیره در AppSettings
-                    AppSettings.DatabasePath = selectedPath;
-                    MessageBox.Show($"پایگاه داده انتخاب شد:\n{selectedPath}\n\nاین مسیر برای استفاده‌های بعدی ذخیره شد.",
-                                    "موفقیت", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    return selectedPath;
+                    lastError = buildError;
+                    if (showError)
+                        ShowDatabaseMissingHelp();
+                    return false;
                 }
             }
 
-            return null;
+            return true;
+        }
+
+        private static IWin32Window? ActiveFormOrNull()
+        {
+            Form? active = Form.ActiveForm;
+            return active;
+        }
+
+        private void ShowDatabaseMissingHelp()
+        {
+            string path = AppSettings.DatabasePath;
+            string message =
+                "فایل پایگاه‌داده پیدا نشد:\n" +
+                path + "\n\n" +
+                "می‌خواهید فایل دیگری را انتخاب کنید؟";
+
+            DialogResult result = MessageBox.Show(
+                message,
+                "پایگاه‌داده پیدا نشد",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
+
+            if (result == DialogResult.Yes)
+                PromptForDatabase();
+        }
+
+        /// <summary>
+        /// انتخاب دستی فایل پایگاه‌داده و ذخیره مسیر.
+        /// </summary>
+        public bool PromptForDatabase()
+        {
+            using var dialog = new OpenFileDialog
+            {
+                Title = "انتخاب فایل پایگاه داده",
+                Filter = "Access Database (*.accdb)|*.accdb|Access Database (*.mdb)|*.mdb|All Files (*.*)|*.*",
+                InitialDirectory = Directory.Exists(Path.GetDirectoryName(AppSettings.DatabasePath))
+                    ? Path.GetDirectoryName(AppSettings.DatabasePath)!
+                    : AppDomain.CurrentDomain.BaseDirectory
+            };
+
+            if (dialog.ShowDialog() != DialogResult.OK)
+                return false;
+
+            AppSettings.DatabasePath = dialog.FileName;
+            TryBuildConnectionString(out _);
+            return true;
         }
 
         public string GetConnectionString_Public()
         {
-            return connectionString;
+            return connectionString ?? string.Empty;
         }
 
-        public DataTable? ExecuteQuery(string query, OleDbParameter[]? parameters = null)
+        public DataTable? ExecuteQuery(string query, OleDbParameter[]? parameters = null, bool showError = true)
         {
+            if (!EnsureReady(showError))
+                return null;
+
             DataTable dt = new DataTable();
             try
             {
@@ -92,14 +157,16 @@ namespace PersonnelManagementApp
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"خطا در اتصال به پایگاه داده: {ex.Message}\nInner Exception: {ex.InnerException?.Message}\nConnection String: {connectionString}\nQuery: {query}",
-                                "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                HandleException("خطا در خواندن اطلاعات", ex, query, showError);
                 return null;
             }
         }
 
-        public int ExecuteNonQuery(string query, OleDbParameter[]? parameters = null)
+        public int ExecuteNonQuery(string query, OleDbParameter[]? parameters = null, bool showError = true)
         {
+            if (!EnsureReady(showError))
+                return 0;
+
             try
             {
                 using (OleDbConnection connection = new OleDbConnection(connectionString))
@@ -117,14 +184,43 @@ namespace PersonnelManagementApp
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"خطا در اجرای عملیات: {ex.Message}\nInner Exception: {ex.InnerException?.Message}\nConnection String: {connectionString}\nQuery: {query}",
-                                "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                HandleException("خطا در اجرای عملیات", ex, query, showError);
                 return 0;
             }
         }
 
-        public bool TestConnection()
+        /// <summary>
+        /// اجرای کوئری تک‌مقداری (COUNT، MAX، ...).
+        /// </summary>
+        public object? ExecuteScalar(string query, OleDbParameter[]? parameters = null, bool showError = true)
         {
+            if (!EnsureReady(showError))
+                return null;
+
+            try
+            {
+                using (OleDbConnection connection = new OleDbConnection(connectionString))
+                using (OleDbCommand command = new OleDbCommand(query, connection))
+                {
+                    if (parameters != null)
+                        command.Parameters.AddRange(parameters);
+
+                    connection.Open();
+                    return command.ExecuteScalar();
+                }
+            }
+            catch (Exception ex)
+            {
+                HandleException("خطا در اجرای کوئری", ex, query, showError);
+                return null;
+            }
+        }
+
+        public bool TestConnection(bool showError = true)
+        {
+            if (!EnsureReady(showError))
+                return false;
+
             try
             {
                 using (OleDbConnection conn = new OleDbConnection(connectionString))
@@ -135,10 +231,74 @@ namespace PersonnelManagementApp
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"تست اتصال ناموفق بود: {ex.Message}\nInner Exception: {ex.InnerException?.Message}\nConnection String: {connectionString}",
-                                "خطای اتصال", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                HandleException("تست اتصال ناموفق بود", ex, null, showError);
                 return false;
             }
+        }
+
+        public bool TestConnectionSilent() => TestConnection(showError: false);
+
+        /// <summary>
+        /// تست یک مسیر دیتابیس بدون تغییر تنظیمات ذخیره‌شده.
+        /// </summary>
+        public static bool TestDatabasePath(string databasePath, out string error)
+        {
+            error = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(databasePath) || !File.Exists(databasePath))
+            {
+                error = "فایل پایگاه‌داده پیدا نشد.";
+                return false;
+            }
+
+            try
+            {
+                if (!DatabaseProvider.IsAvailable)
+                {
+                    error = "موتور پایگاه‌داده Access نصب نیست.";
+                    return false;
+                }
+
+                string connection = DatabaseProvider.BuildConnectionString(databasePath);
+                using var conn = new OleDbConnection(connection);
+                conn.Open();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+                ErrorLogger.Log("DbHelper.TestDatabasePath", ex);
+                return false;
+            }
+        }
+
+        private void HandleException(string context, Exception ex, string? query, bool showError)
+        {
+            lastError = ex.Message;
+            ErrorLogger.Log(context, ex);
+
+            if (!showError)
+                return;
+
+            string message = ex.Message;
+            if (message.Contains("provider is not registered", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("provider cannot be found", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("not registered", StringComparison.OrdinalIgnoreCase))
+            {
+                DatabaseProvider.Invalidate();
+                DatabaseProvider.ShowMissingProviderDialog(ActiveFormOrNull());
+                return;
+            }
+
+            string details = message;
+            if (ex.InnerException != null && !string.IsNullOrWhiteSpace(ex.InnerException.Message))
+                details += "\n\n" + ex.InnerException.Message;
+
+            string friendly = context + ":\n" + details;
+            if (query != null && System.Diagnostics.Debugger.IsAttached)
+                friendly += "\n\nQuery:\n" + query;
+
+            MessageBox.Show(friendly, "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
         public DataTable? SearchByPostName(string searchTerm)
