@@ -82,7 +82,26 @@ namespace PersonnelManagementApp
                     case "lookup": start = pnlLookupTablesContent; break;
                 }
                 ShowContent(start, FindMenuByContent(start));
+                DumpLayout();
             };
+        }
+
+        private void DumpLayout()
+        {
+            try
+            {
+                string file = Environment.GetEnvironmentVariable("SC_LAYOUT_DUMP") ?? string.Empty;
+                if (string.IsNullOrEmpty(file)) return;
+                var sb = new System.Text.StringBuilder();
+                void Walk(Control c, int depth)
+                {
+                    sb.AppendLine($"{new string(' ', depth * 2)}{c.GetType().Name} '{c.Text}' bounds=({c.Left},{c.Top},{c.Width}x{c.Height}) visible={c.Visible} dock={c.Dock}");
+                    foreach (Control child in c.Controls) Walk(child, depth + 1);
+                }
+                Walk(this, 0);
+                System.IO.File.WriteAllText(file, sb.ToString());
+            }
+            catch { }
         }
 
         private Font SafeFont(string family, float size, FontStyle style = FontStyle.Regular)
