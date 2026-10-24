@@ -1,121 +1,67 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using System.Windows.Forms.DataVisualization.Charting;
-using System.Linq;
-using System.Drawing;
+using ClosedXML.Excel;
 
 namespace PersonnelManagementApp
 {
     public partial class FormPostsAnalytics : Form
     {
         private readonly DbHelper dbHelper;
-        private readonly TabControl tabControl;
+        private readonly PostsDataService postsService;
 
-        // ====== Charts ======
-        private readonly Chart chartProvincePie;
-        private readonly Chart chartDeptPie;
-        private readonly Chart chartVoltagePie;
-        private readonly Chart chartTypePie;
-        private readonly Chart chartStandardPie;
-        private readonly Chart chartCircuitPie;
-        private readonly Chart chartFMPie;
-        private readonly Chart chartConnPie;
-        private readonly Chart chartInsPie;
-        private readonly Chart chartPT2Pie;
-        private readonly Chart chartDieselPie;
-        private readonly Chart chartOperationYearPie;
-        private readonly Chart chartCapacityHVChart;
-        private readonly Chart chartCapacityMVChart;
-        private readonly Chart chartFeedPie;
-        private readonly Chart chartGuestPie;
-        private readonly Chart chartDistributedCapacityChart;
+        private readonly List<FilterBinding> filters = new();
+        private readonly Dictionary<string, Chart> charts = new();
+        private readonly Dictionary<string, PostChartSpec> specs = new();
 
-        // ====== DataGridViews ======
-        private readonly DataGridView dgvPostStats;
-        private readonly DataGridView dgvDeptDetails;
+        private readonly TabControl tabControl = new();
+        private readonly TabControl tablesTabControl = new();
 
-        // ====== Filter CheckedListBoxes ======
-        private readonly CheckedListBox clbProvincesFilter;
-        private readonly CheckedListBox clbCitiesFilter;
-        private readonly CheckedListBox clbAffairsFilter;
-        private readonly CheckedListBox clbDepartmentsFilter;
-        private readonly CheckedListBox clbDistrictsFilter;
-        private readonly CheckedListBox clbVoltageFilter;
-        private readonly CheckedListBox clbTypeFilter;
-        private readonly CheckedListBox clbStandardFilter;
-        private readonly CheckedListBox clbCircuitFilter;
-        private readonly CheckedListBox clbFMFilter;
-        private readonly CheckedListBox clbDieselFilter;
-        private readonly CheckedListBox clbWaterFilter;
+        private readonly DataGridView dgvSummary = new();
+        private readonly DataGridView dgvDeptDetails = new();
+        private readonly DataGridView dgvPosts = new();
+        private readonly TextBox txtPostSearch = new();
 
-        private readonly Button btnClearFilters;
-        private readonly Label lblFilterInfo;
+        private readonly RadioButton rbShowSummary = new();
+        private readonly RadioButton rbShowFullStats = new();
+        private readonly Label lblFilterInfo = new();
+        private readonly Button btnClearFilters = new();
+        private readonly Button btnExportExcel = new();
+
         private ContextMenuStrip? chartTypeMenu;
 
-        // ====== Cached Data ======
         private DataTable? allPostsData;
+        private bool suppressEvents;
+        private bool loading;
 
-        // ====== Cascading Filter Guard ======
-        // Prevents recursive event loops when updating dependent filter options
-        private bool _updatingFilters = false;
+        // ترتیب تب‌های نمودار
+        private static readonly string[] ChartKeys =
+        {
+            "province", "city", "affair", "department", "district", "postname",
+            "voltage", "standard", "type", "circuit", "diesel", "water",
+            "operationyear", "capacityhv", "capacitymv"
+        };
 
         public FormPostsAnalytics()
         {
             dbHelper = new DbHelper();
-            tabControl = new TabControl();
-
-            chartProvincePie      = new Chart();
-            chartDeptPie          = new Chart();
-            chartVoltagePie       = new Chart();
-            chartTypePie          = new Chart();
-            chartStandardPie      = new Chart();
-            chartCircuitPie       = new Chart();
-            chartFMPie            = new Chart();
-            chartConnPie          = new Chart();
-            chartInsPie           = new Chart();
-            chartPT2Pie           = new Chart();
-            chartDieselPie        = new Chart();
-            chartOperationYearPie = new Chart();
-            chartCapacityHVChart  = new Chart();
-            chartCapacityMVChart  = new Chart();
-            chartFeedPie          = new Chart();
-            chartGuestPie         = new Chart();
-            chartDistributedCapacityChart = new Chart();
-
-            dgvPostStats   = new DataGridView();
-            dgvDeptDetails = new DataGridView();
-
-            clbProvincesFilter   = new CheckedListBox();
-            clbCitiesFilter      = new CheckedListBox();
-            clbAffairsFilter     = new CheckedListBox();
-            clbDepartmentsFilter = new CheckedListBox();
-            clbDistrictsFilter   = new CheckedListBox();
-            clbVoltageFilter     = new CheckedListBox();
-            clbTypeFilter        = new CheckedListBox();
-            clbStandardFilter    = new CheckedListBox();
-            clbCircuitFilter     = new CheckedListBox();
-            clbFMFilter          = new CheckedListBox();
-            clbDieselFilter      = new CheckedListBox();
-            clbWaterFilter       = new CheckedListBox();
-
-            btnClearFilters = new Button();
-            lblFilterInfo   = new Label();
+            postsService = new PostsDataService(dbHelper);
 
             InitializeComponent();
             BuildUI();
             InitializeChartTypeMenu();
             FontSettings.ApplyFontToForm(this);
+
             LoadData();
         }
 
-        // ╔══════════════════════════════════════╗
-        // ║           BUILD UI                   ║
-        // ╚══════════════════════════════════════╝
         private void BuildUI()
         {
-            Text = "⚡ تحلیل داده‌های پست‌ها - سیستم پیشرفته";
+            Text = "🎯 تحلیل داده‌های پست‌ها - سیستم پیشرفته";
             WindowState = FormWindowState.Maximized;
             RightToLeft = RightToLeft.Yes;
             RightToLeftLayout = true;
@@ -123,12 +69,12 @@ namespace PersonnelManagementApp
             MinimumSize = new Size(1200, 700);
             Font = FontSettings.BodyFont;
 
-            // ── Filter Panel ──────────────────────────────
+            // ── پنل فیلترها (بالا) ──
             Panel panelFilter = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 260,
-                BackColor = Color.FromArgb(225, 240, 255),
+                Height = 300,
+                BackColor = Color.FromArgb(230, 240, 250),
                 BorderStyle = BorderStyle.FixedSingle,
                 AutoScroll = true,
                 Padding = new Padding(6, 6, 6, 4)
@@ -137,7 +83,7 @@ namespace PersonnelManagementApp
             TableLayoutPanel filterGrid = new TableLayoutPanel
             {
                 Dock = DockStyle.Top,
-                Height = 210,
+                Height = 200,
                 ColumnCount = 6,
                 RowCount = 2,
                 RightToLeft = RightToLeft.Yes,
@@ -150,65 +96,77 @@ namespace PersonnelManagementApp
             filterGrid.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
             filterGrid.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
 
-            // Row 0
-            filterGrid.Controls.Add(CreateFilterBox("استانها 🗺️",     clbProvincesFilter,   ClbProvincesFilter_ItemCheck), 0, 0);
-            filterGrid.Controls.Add(CreateFilterBox("شهرها 🏙️",       clbCitiesFilter,      ClbCitiesFilter_ItemCheck),    1, 0);
-            filterGrid.Controls.Add(CreateFilterBox("امور 📋",         clbAffairsFilter,     ClbAffairsFilter_ItemCheck),   2, 0);
-            filterGrid.Controls.Add(CreateFilterBox("ادارات 🏛️",      clbDepartmentsFilter, ClbDeptFilter_ItemCheck),      3, 0);
-            filterGrid.Controls.Add(CreateFilterBox("نواحی 🔺",        clbDistrictsFilter,   ClbDistrictFilter_ItemCheck),  4, 0);
-            filterGrid.Controls.Add(CreateFilterBox("سطح ولتاژ ⚡",    clbVoltageFilter,     ClbVoltageFilter_ItemCheck),   5, 0);
-            // Row 1
-            filterGrid.Controls.Add(CreateFilterBox("نوع پست 🏗️",     clbTypeFilter,        ClbTypeFilter_ItemCheck),      0, 1);
-            filterGrid.Controls.Add(CreateFilterBox("استاندارد 📐",    clbStandardFilter,    ClbStandardFilter_ItemCheck),  1, 1);
-            filterGrid.Controls.Add(CreateFilterBox("وضعیت مدار 🔌",   clbCircuitFilter,     ClbCircuitFilter_ItemCheck),   2, 1);
-            filterGrid.Controls.Add(CreateFilterBox("ثابت / سیار 🚗",  clbFMFilter,          ClbFMFilter_ItemCheck),        3, 1);
-            filterGrid.Controls.Add(CreateFilterBox("دیزل ژنراتور 🔋", clbDieselFilter,      ClbDieselFilter_ItemCheck),    4, 1);
-            filterGrid.Controls.Add(CreateFilterBox("وضعیت آب 💧",     clbWaterFilter,       ClbWaterFilter_ItemCheck),     5, 1);
+            filterGrid.Controls.Add(CreateFilterBox("استانها 🗺️", "ProvinceName"), 0, 0);
+            filterGrid.Controls.Add(CreateFilterBox("شهرها 🏙️", "CityName"), 1, 0);
+            filterGrid.Controls.Add(CreateFilterBox("امور 📋", "AffairName"), 2, 0);
+            filterGrid.Controls.Add(CreateFilterBox("ادارات 🏛️", "DeptName"), 3, 0);
+            filterGrid.Controls.Add(CreateFilterBox("نواحی 🔺", "DistrictName"), 4, 0);
+            filterGrid.Controls.Add(CreateFilterBox("پستها ⚡", "PostName"), 5, 0);
+
+            filterGrid.Controls.Add(CreateFilterBox("سطح ولتاژ 🔌", "VoltageName"), 0, 1);
+            filterGrid.Controls.Add(CreateFilterBox("استاندارد 📐", "StandardName"), 1, 1);
+            filterGrid.Controls.Add(CreateFilterBox("نوع پست 🏗️", "TypeName"), 2, 1);
+            filterGrid.Controls.Add(CreateFilterBox("وضعیت مدار 🔄", "CircuitName"), 3, 1);
+            filterGrid.Controls.Add(CreateFilterBox("دیزل ⚙️", "DieselName"), 4, 1);
+            filterGrid.Controls.Add(CreateFilterBox("وضعیت آب 💧", "WaterName"), 5, 1);
 
             panelFilter.Controls.Add(filterGrid);
 
-            // Bottom row of filter panel
+            // نوار پایین فیلترها
             Panel filterBottomPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 42,
-                BackColor = Color.Transparent
+                Height = 82,
+                BackColor = Color.Transparent,
+                Padding = new Padding(0)
             };
 
             FlowLayoutPanel rowActions = new FlowLayoutPanel
             {
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Top,
+                Height = 46,
                 RightToLeft = RightToLeft.Yes,
                 FlowDirection = FlowDirection.RightToLeft,
                 WrapContents = true,
                 BackColor = Color.Transparent,
-                Padding = new Padding(0, 4, 0, 0)
+                Padding = new Padding(0, 2, 0, 0)
             };
 
             btnClearFilters.Text = "🔄 غیرفعال کردن فیلترها";
-            btnClearFilters.Size = new Size(190, 34);
+            btnClearFilters.Size = new Size(185, 34);
             btnClearFilters.BackColor = Color.FromArgb(220, 53, 69);
             btnClearFilters.ForeColor = Color.White;
             btnClearFilters.Font = new Font(FontSettings.ButtonFont.FontFamily, 9.5F, FontStyle.Bold);
             btnClearFilters.FlatStyle = FlatStyle.Flat;
             btnClearFilters.FlatAppearance.BorderSize = 0;
-            btnClearFilters.Margin = new Padding(4, 2, 4, 2);
-            btnClearFilters.Click += BtnClearFilters_Click;
+            btnClearFilters.Margin = new Padding(4, 6, 4, 4);
+            btnClearFilters.Click += (_, _) => ClearAllFilters();
 
+            btnExportExcel.Text = "📥 خروجی اکسل پست‌ها";
+            btnExportExcel.Size = new Size(210, 34);
+            btnExportExcel.BackColor = Color.FromArgb(40, 167, 69);
+            btnExportExcel.ForeColor = Color.White;
+            btnExportExcel.Font = new Font(FontSettings.ButtonFont.FontFamily, 9.5F, FontStyle.Bold);
+            btnExportExcel.FlatStyle = FlatStyle.Flat;
+            btnExportExcel.FlatAppearance.BorderSize = 0;
+            btnExportExcel.Margin = new Padding(4, 6, 4, 4);
+            btnExportExcel.Click += (_, _) => ExportFilteredPostsToExcel();
+
+            rowActions.Controls.Add(btnExportExcel);
             rowActions.Controls.Add(btnClearFilters);
-            filterBottomPanel.Controls.Add(rowActions);
 
             lblFilterInfo.Text = "✓ فیلتری فعال نیست";
             lblFilterInfo.Dock = DockStyle.Bottom;
-            lblFilterInfo.Height = 28;
+            lblFilterInfo.Height = 30;
             lblFilterInfo.Font = new Font(FontSettings.SubtitleFont.FontFamily, 9.5F, FontStyle.Bold);
             lblFilterInfo.ForeColor = Color.FromArgb(0, 102, 204);
             lblFilterInfo.TextAlign = ContentAlignment.MiddleLeft;
 
+            filterBottomPanel.Controls.Add(lblFilterInfo);
+            filterBottomPanel.Controls.Add(rowActions);
             panelFilter.Controls.Add(filterBottomPanel);
-            panelFilter.Controls.Add(lblFilterInfo);
 
-            // ── Main 66/34 split ──────────────────────────
+            // ── چیدمان اصلی ──
             TableLayoutPanel mainLayout = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
@@ -217,63 +175,51 @@ namespace PersonnelManagementApp
                 RightToLeft = RightToLeft.No,
                 BackColor = Color.Transparent
             };
-            mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 75f));
-            mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25f));
+            mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 66f));
+            mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 34f));
             mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
-            // Charts panel
-            Panel chartsPanel = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(4) };
+            Panel chartsPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
+                Padding = new Padding(4)
+            };
 
             tabControl.Dock = DockStyle.Fill;
             tabControl.RightToLeft = RightToLeft.Yes;
             tabControl.RightToLeftLayout = true;
-            tabControl.ItemSize = new Size(130, 30);
+            tabControl.ItemSize = new Size(120, 30);
             tabControl.Font = FontSettings.BodyFont;
 
-            AddChartTab(tabControl, "🗺️ استان",          chartProvincePie);
-            AddChartTab(tabControl, "🏛️ ادارات",         chartDeptPie);
-            AddChartTab(tabControl, "⚡ ولتاژ",           chartVoltagePie);
-            AddChartTab(tabControl, "🏗️ نوع پست",        chartTypePie);
-            AddChartTab(tabControl, "📐 استاندارد",       chartStandardPie);
-            AddChartTab(tabControl, "🔌 مدار",            chartCircuitPie);
-            AddChartTab(tabControl, "🚗 ثابت/سیار",       chartFMPie);
-            AddChartTab(tabControl, "🔗 اتصال توزیع",     chartConnPie);
-            AddChartTab(tabControl, "🔆 نوع عایق",        chartInsPie);
-            AddChartTab(tabControl, "📋 نوع پست ۲",       chartPT2Pie);
-            AddChartTab(tabControl, "🔋 دیزل",            chartDieselPie);
-            AddChartTab(tabControl, "📅 سال بهره‌برداری", chartOperationYearPie);
-            AddChartTab(tabControl, "⚡ ظرفیت HV",        chartCapacityHVChart);
-            AddChartTab(tabControl, "⚡ ظرفیت MV",        chartCapacityMVChart);
-            AddChartTab(tabControl, "🔗 توزیع",           chartFeedPie);
-            AddChartTab(tabControl, "👥 میهمان‌سرا",       chartGuestPie);
-            AddChartTab(tabControl, "📊 ظرفیت توزیع",     chartDistributedCapacityChart);
+            foreach (string key in ChartKeys)
+            {
+                PostChartSpec? spec = PostChartCatalog.Find(key);
+                if (spec == null)
+                    continue;
+                specs[key] = spec;
+                AddChartTab(key, spec);
+            }
 
             chartsPanel.Controls.Add(tabControl);
 
-            // Tables panel
-            Panel tablesPanel = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(4) };
-
-            TabControl tablesTabControl = new TabControl
+            Panel tablesPanel = new Panel
             {
                 Dock = DockStyle.Fill,
-                RightToLeft = RightToLeft.Yes,
-                RightToLeftLayout = true,
-                Font = FontSettings.BodyFont,
-                ItemSize = new Size(145, 30)
+                BackColor = Color.White,
+                Padding = new Padding(4)
             };
 
-            TabPage tabStats = new TabPage("📋 آمار کلی") { Padding = new Padding(0) };
-            dgvPostStats.Dock = DockStyle.Fill;
-            ConfigureDgv(dgvPostStats);
-            tabStats.Controls.Add(dgvPostStats);
+            tablesTabControl.Dock = DockStyle.Fill;
+            tablesTabControl.RightToLeft = RightToLeft.Yes;
+            tablesTabControl.RightToLeftLayout = true;
+            tablesTabControl.Font = FontSettings.BodyFont;
+            tablesTabControl.ItemSize = new Size(130, 30);
 
-            TabPage tabDept = new TabPage("🏛️ جزئیات ادارات") { Padding = new Padding(0) };
-            dgvDeptDetails.Dock = DockStyle.Fill;
-            ConfigureDgv(dgvDeptDetails);
-            tabDept.Controls.Add(dgvDeptDetails);
+            tablesTabControl.TabPages.Add(BuildStatsTab());
+            tablesTabControl.TabPages.Add(BuildDeptTab());
+            tablesTabControl.TabPages.Add(BuildPostsTab());
 
-            tablesTabControl.TabPages.Add(tabStats);
-            tablesTabControl.TabPages.Add(tabDept);
             tablesPanel.Controls.Add(tablesTabControl);
 
             mainLayout.Controls.Add(chartsPanel, 0, 0);
@@ -283,27 +229,10 @@ namespace PersonnelManagementApp
             Controls.Add(panelFilter);
         }
 
-        // ╔══════════════════════════════════════╗
-        // ║         HELPERS                      ║
-        // ╚══════════════════════════════════════╝
-        private void ConfigureDgv(DataGridView dgv)
-        {
-            dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
-            dgv.ReadOnly = true;
-            dgv.RightToLeft = RightToLeft.Yes;
-            dgv.BackgroundColor = Color.White;
-            dgv.EnableHeadersVisualStyles = false;
-            dgv.AllowUserToAddRows = false;
-            dgv.AllowUserToDeleteRows = false;
-            dgv.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 120, 212);
-            dgv.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            dgv.ColumnHeadersDefaultCellStyle.Font = FontSettings.SubtitleFont;
-            dgv.ColumnHeadersHeight = 35;
-            dgv.DefaultCellStyle.Font = FontSettings.BodyFont;
-            dgv.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(240, 248, 255);
-        }
-
-        private Panel CreateFilterBox(string title, CheckedListBox clb, ItemCheckEventHandler handler)
+        // ─────────────────────────────────────────────
+        // فیلترها
+        // ─────────────────────────────────────────────
+        private Panel CreateFilterBox(string title, string column)
         {
             Panel box = new Panel
             {
@@ -313,6 +242,7 @@ namespace PersonnelManagementApp
                 BackColor = Color.FromArgb(245, 252, 255),
                 BorderStyle = BorderStyle.FixedSingle
             };
+
             Label lbl = new Label
             {
                 Text = title,
@@ -323,27 +253,311 @@ namespace PersonnelManagementApp
                 ForeColor = Color.FromArgb(0, 102, 204),
                 TextAlign = ContentAlignment.MiddleLeft
             };
-            clb.RightToLeft = RightToLeft.Yes;
-            clb.CheckOnClick = true;
-            clb.BackColor = Color.White;
-            clb.Font = new Font(FontSettings.BodyFont.FontFamily, 9F);
-            clb.IntegralHeight = false;
-            clb.BorderStyle = BorderStyle.FixedSingle;
-            clb.HorizontalScrollbar = false;
-            clb.ScrollAlwaysVisible = false;
-            clb.ItemHeight = 18;
-            clb.Dock = DockStyle.Fill;
-            clb.ItemCheck -= handler;
-            clb.ItemCheck += handler;
+
+            var clb = new CheckedListBox
+            {
+                Dock = DockStyle.Fill,
+                RightToLeft = RightToLeft.Yes,
+                CheckOnClick = true,
+                BackColor = Color.White,
+                Font = new Font(FontSettings.BodyFont.FontFamily, 9F),
+                IntegralHeight = false,
+                BorderStyle = BorderStyle.FixedSingle,
+                HorizontalScrollbar = false,
+                ScrollAlwaysVisible = false,
+                ItemHeight = 18
+            };
+            clb.ItemCheck += Filter_ItemCheck;
+
+            filters.Add(new FilterBinding(clb, lbl, column, title));
             box.Controls.Add(clb);
             box.Controls.Add(lbl);
             return box;
         }
 
-        private void AddChartTab(TabControl tc, string title, Chart chart)
+        private void Filter_ItemCheck(object? sender, ItemCheckEventArgs e)
         {
-            TabPage tab = new TabPage(title);
+            if (suppressEvents || loading)
+                return;
 
+            if (!IsHandleCreated || IsDisposed)
+                return;
+
+            try
+            {
+                BeginInvoke((MethodInvoker)ApplyFilterChange);
+            }
+            catch (InvalidOperationException)
+            {
+                // فرم در حال بسته شدن است
+            }
+        }
+
+        private void ApplyFilterChange()
+        {
+            if (suppressEvents || IsDisposed || loading || allPostsData == null)
+                return;
+
+            suppressEvents = true;
+            try
+            {
+                UpdateDependentFilters();
+            }
+            finally
+            {
+                suppressEvents = false;
+            }
+
+            UpdateFilterTitles();
+            DataTable filtered = GetFilteredData();
+            RefreshAllCharts();
+            UpdateTables(filtered);
+        }
+
+        private void ClearAllFilters()
+        {
+            if (allPostsData == null)
+                return;
+
+            suppressEvents = true;
+            try
+            {
+                foreach (FilterBinding binding in filters)
+                {
+                    for (int i = 0; i < binding.List.Items.Count; i++)
+                        binding.List.SetItemChecked(i, false);
+                }
+            }
+            finally
+            {
+                suppressEvents = false;
+            }
+
+            FillAllFilterOptions();
+            UpdateFilterTitles();
+            DataTable filtered = GetFilteredData();
+            RefreshAllCharts();
+            UpdateTables(filtered);
+        }
+
+        private void UpdateDependentFilters()
+        {
+            if (allPostsData == null)
+                return;
+
+            var allRows = allPostsData.AsEnumerable();
+            List<string> provinces = GetChecked(FindFilter("ProvinceName"));
+
+            var afterProvince = provinces.Count == 0
+                ? allRows
+                : allRows.Where(row => provinces.Contains(Value(row, "ProvinceName")));
+
+            RefreshFilterOptions(FindFilter("CityName"), afterProvince, "CityName");
+            RefreshFilterOptions(FindFilter("AffairName"), afterProvince, "AffairName");
+
+            List<string> cities = GetChecked(FindFilter("CityName"));
+            List<string> affairs = GetChecked(FindFilter("AffairName"));
+
+            var afterAffair = afterProvince;
+            if (cities.Count > 0)
+                afterAffair = afterAffair.Where(row => cities.Contains(Value(row, "CityName")));
+            if (affairs.Count > 0)
+                afterAffair = afterAffair.Where(row => affairs.Contains(Value(row, "AffairName")));
+
+            RefreshFilterOptions(FindFilter("DeptName"), afterAffair, "DeptName");
+
+            List<string> departments = GetChecked(FindFilter("DeptName"));
+            var afterDepartment = departments.Count == 0
+                ? afterAffair
+                : afterAffair.Where(row => departments.Contains(Value(row, "DeptName")));
+
+            RefreshFilterOptions(FindFilter("DistrictName"), afterDepartment, "DistrictName");
+        }
+
+        private CheckedListBox FindFilter(string column)
+            => filters.First(filter => string.Equals(filter.Column, column, StringComparison.OrdinalIgnoreCase)).List;
+
+        private static List<string> GetChecked(CheckedListBox list)
+            => list.CheckedItems.Cast<object>()
+                .Select(item => item?.ToString() ?? string.Empty)
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Distinct(StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
+
+        private void RefreshFilterOptions(CheckedListBox list, IEnumerable<DataRow> rows, string column)
+        {
+            List<string> kept = GetChecked(list);
+            List<string> options = rows
+                .Select(row => Value(row, column))
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Distinct(StringComparer.CurrentCultureIgnoreCase)
+                .OrderBy(value => value, StringComparer.CurrentCulture)
+                .ToList();
+
+            list.BeginUpdate();
+            try
+            {
+                list.Items.Clear();
+                foreach (string option in options)
+                    list.Items.Add(option, kept.Contains(option, StringComparer.CurrentCultureIgnoreCase));
+            }
+            finally
+            {
+                list.EndUpdate();
+            }
+        }
+
+        private void FillAllFilterOptions()
+        {
+            if (allPostsData == null)
+                return;
+
+            suppressEvents = true;
+            try
+            {
+                foreach (FilterBinding binding in filters)
+                {
+                    List<string> options = allPostsData.AsEnumerable()
+                        .Select(row => Value(row, binding.Column))
+                        .Where(value => !string.IsNullOrWhiteSpace(value))
+                        .Distinct(StringComparer.CurrentCultureIgnoreCase)
+                        .OrderBy(value => value, StringComparer.CurrentCulture)
+                        .ToList();
+
+                    binding.List.BeginUpdate();
+                    try
+                    {
+                        binding.List.Items.Clear();
+                        foreach (string option in options)
+                            binding.List.Items.Add(option, false);
+                    }
+                    finally
+                    {
+                        binding.List.EndUpdate();
+                    }
+                }
+            }
+            finally
+            {
+                suppressEvents = false;
+            }
+        }
+
+        private void UpdateFilterTitles()
+        {
+            foreach (FilterBinding binding in filters)
+            {
+                int selected = binding.List.CheckedItems.Count;
+                binding.Title.Text = selected > 0
+                    ? $"{binding.DisplayName} ({selected})"
+                    : binding.DisplayName;
+
+                binding.Title.ForeColor = selected > 0
+                    ? Color.FromArgb(220, 53, 69)
+                    : Color.FromArgb(0, 102, 204);
+            }
+
+            int active = filters.Sum(filter => filter.List.CheckedItems.Count);
+            lblFilterInfo.Text = active == 0
+                ? "✓ فیلتری فعال نیست"
+                : $"🔎 {active} فیلتر فعال است  |  {GetFilteredData().Rows.Count} پست از {allPostsData?.Rows.Count ?? 0}";
+        }
+
+        private DataTable GetFilteredData()
+        {
+            if (allPostsData == null)
+                return new DataTable();
+
+            var selected = filters.ToDictionary(
+                filter => filter.Column,
+                filter => GetChecked(filter.List),
+                StringComparer.OrdinalIgnoreCase);
+
+            DataTable result = allPostsData.Clone();
+            foreach (DataRow row in allPostsData.Rows)
+            {
+                bool match = true;
+                foreach (var pair in selected)
+                {
+                    if (pair.Value.Count == 0)
+                        continue;
+
+                    if (!pair.Value.Contains(Value(row, pair.Key), StringComparer.CurrentCultureIgnoreCase))
+                    {
+                        match = false;
+                        break;
+                    }
+                }
+
+                if (match)
+                    result.ImportRow(row);
+            }
+
+            return result;
+        }
+
+        // ─────────────────────────────────────────────
+        // نمودارها
+        // ─────────────────────────────────────────────
+        private void InitializeChartTypeMenu()
+        {
+            chartTypeMenu = new ContextMenuStrip
+            {
+                RightToLeft = RightToLeft.Yes,
+                ShowImageMargin = false
+            };
+
+            AddChartTypeMenuItem("نمودار دایره‌ای (Pie)", SeriesChartType.Pie);
+            AddChartTypeMenuItem("نمودار حلقه‌ای (Doughnut)", SeriesChartType.Doughnut);
+            AddChartTypeMenuItem("نمودار میله‌ای افقی (Bar)", SeriesChartType.Bar);
+            AddChartTypeMenuItem("نمودار ستونی عمودی (Column)", SeriesChartType.Column);
+            AddChartTypeMenuItem("نمودار راداری (Radar)", SeriesChartType.Radar);
+            AddChartTypeMenuItem("نمودار قطبی (Polar)", SeriesChartType.Polar);
+            AddChartTypeMenuItem("میله‌ای انباشته (StackedBar)", SeriesChartType.StackedBar);
+            AddChartTypeMenuItem("ستونی انباشته (StackedColumn)", SeriesChartType.StackedColumn);
+
+            chartTypeMenu.ItemClicked += ChartTypeMenu_ItemClicked;
+        }
+
+        private void AddChartTypeMenuItem(string text, SeriesChartType type)
+        {
+            var item = new ToolStripMenuItem(text) { Tag = type };
+            if (chartTypeMenu != null)
+                chartTypeMenu.Items.Add(item);
+        }
+
+        private void ChartTypeMenu_ItemClicked(object? sender, ToolStripItemClickedEventArgs e)
+        {
+            chartTypeMenu?.Hide();
+
+            if (e.ClickedItem?.Tag is not SeriesChartType type)
+                return;
+
+            if ((sender as ContextMenuStrip)?.SourceControl is not Chart chart)
+                return;
+
+            chart.Tag = type;
+            if (chart.Tag is string key && specs.TryGetValue(key, out PostChartSpec? spec))
+            {
+                PostChartRenderer.Render(chart, GetFilteredData(), spec, type, true, true);
+            }
+        }
+
+        private void AddChartTab(string key, PostChartSpec spec)
+        {
+            TabPage tab = new TabPage(GetTabTitle(key));
+
+            var chart = new Chart
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
+                MinimumSize = new Size(100, 100),
+                Tag = key
+            };
+            chart.ContextMenuStrip = chartTypeMenu;
+            chart.MouseClick += (_, e) => Chart_MouseClick(key, e);
+
+            // دکمه خروجی نمودار جاری
             Button btnExport = new Button
             {
                 Text = "📤",
@@ -357,693 +571,146 @@ namespace PersonnelManagementApp
             };
             btnExport.FlatAppearance.BorderSize = 0;
             btnExport.Location = new Point(10, 10);
-            btnExport.Click += (s, e) => new FormExportPostCharts().ShowDialog();
-
-            chart.Dock = DockStyle.Fill;
-            chart.BackColor = Color.White;
-            chart.MinimumSize = new Size(100, 100);
-            chart.ChartAreas.Add(new ChartArea("ChartArea1")
-            {
-                BackColor = Color.White,
-                Area3DStyle = { Enable3D = true, Inclination = 15, Rotation = 45 }
-            });
-            chart.MouseClick += Chart_MouseClick;
+            btnExport.Click += (_, _) => ExportThisChart(key, chart);
 
             tab.Controls.Add(chart);
             tab.Controls.Add(btnExport);
             btnExport.BringToFront();
-            tc.TabPages.Add(tab);
+
+            charts[key] = chart;
+            tabControl.TabPages.Add(tab);
         }
 
-        // ╔══════════════════════════════════════╗
-        // ║        CHART TYPE MENU               ║
-        // ╚══════════════════════════════════════╝
-        private void InitializeChartTypeMenu()
+        private static string GetTabTitle(string key)
         {
-            chartTypeMenu = new ContextMenuStrip { RightToLeft = RightToLeft.Yes, ShowImageMargin = false };
-
-            void Add(string text, SeriesChartType type)
-                => chartTypeMenu.Items.Add(new ToolStripMenuItem(text) { Tag = type });
-
-            Add("نمودار دایره‌ای (Pie)",         SeriesChartType.Pie);
-            Add("نمودار حلقه‌ای (Doughnut)",      SeriesChartType.Doughnut);
-            Add("نمودار میله‌ای افقی (Bar)",       SeriesChartType.Bar);
-            Add("نمودار ستونی عمودی (Column)",     SeriesChartType.Column);
-            Add("نمودار راداری (Radar)",           SeriesChartType.Radar);
-            Add("نمودار قطبی (Polar)",             SeriesChartType.Polar);
-            Add("میله‌ای انباشته (StackedBar)",    SeriesChartType.StackedBar);
-            Add("ستونی انباشته (StackedColumn)",   SeriesChartType.StackedColumn);
-
-            chartTypeMenu.ItemClicked += ChartTypeMenu_ItemClicked;
-
-            foreach (var c in AllCharts())
-                c.ContextMenuStrip = chartTypeMenu;
-        }
-
-        private IEnumerable<Chart> AllCharts() => new[]
-        {
-            chartProvincePie, chartDeptPie, chartVoltagePie, chartTypePie, chartStandardPie,
-            chartCircuitPie, chartFMPie, chartConnPie, chartInsPie, chartPT2Pie,
-            chartDieselPie, chartOperationYearPie, chartCapacityHVChart, chartCapacityMVChart,
-            chartFeedPie, chartGuestPie, chartDistributedCapacityChart
-        };
-
-        private void ChartTypeMenu_ItemClicked(object? sender, ToolStripItemClickedEventArgs e)
-        {
-            chartTypeMenu?.Hide();
-            if (e.ClickedItem?.Tag is SeriesChartType type)
+            return key switch
             {
-                var chart = (sender as ContextMenuStrip)?.SourceControl as Chart;
-                if (chart != null) { chart.Tag = type; ApplyChartTypeToChart(chart, type); }
+                "province" => "🗺️ استان",
+                "city" => "🏙️ شهر",
+                "affair" => "📋 امور",
+                "department" => "🏛️ ادارات",
+                "district" => "🔺 نواحی",
+                "postname" => "⚡ پستها",
+                "voltage" => "🔌 ولتاژ",
+                "standard" => "📐 استاندارد",
+                "type" => "🏗️ نوع پست",
+                "circuit" => "🔄 مدار",
+                "diesel" => "⚙️ دیزل",
+                "water" => "💧 آب",
+                "operationyear" => "📅 سال بهره‌برداری",
+                "capacityhv" => "📊 ظرفیت HV",
+                "capacitymv" => "📊 ظرفیت MV",
+                _ => key
+            };
+        }
+
+        private void RefreshAllCharts()
+        {
+            if (allPostsData == null)
+                return;
+
+            DataTable filtered = GetFilteredData();
+            foreach (string key in charts.Keys)
+            {
+                Chart chart = charts[key];
+                if (!specs.TryGetValue(key, out PostChartSpec? spec))
+                    continue;
+
+                SeriesChartType type = chart.Tag is SeriesChartType t ? t : SeriesChartType.Pie;
+                PostChartRenderer.Render(chart, filtered, spec, type, true, true);
             }
         }
 
-        private static bool IsPieType(SeriesChartType t)
-            => t == SeriesChartType.Pie || t == SeriesChartType.Doughnut;
-
-        private SeriesChartType GetChartTypeOrDefault(Chart c)
-            => c?.Tag is SeriesChartType t ? t : SeriesChartType.Pie;
-
-        private void ConfigureChartAreaForType(Chart chart, SeriesChartType type)
+        private void Chart_MouseClick(string key, MouseEventArgs e)
         {
-            if (chart == null || chart.ChartAreas.Count == 0) return;
-            var area = chart.ChartAreas[0];
-            bool pie = IsPieType(type);
-            area.Area3DStyle.Enable3D = pie;
-            if (pie) { area.Area3DStyle.Inclination = 15; area.Area3DStyle.Rotation = 45; }
-            area.AxisX.Enabled = pie ? AxisEnabled.False : AxisEnabled.True;
-            area.AxisY.Enabled = pie ? AxisEnabled.False : AxisEnabled.True;
-            area.AxisX.MajorGrid.Enabled = !pie;
-            area.AxisY.MajorGrid.Enabled = !pie;
-            area.AxisX.MajorGrid.LineColor = Color.Gainsboro;
-            area.AxisY.MajorGrid.LineColor = Color.Gainsboro;
-            if (!pie)
-            {
-                if (type == SeriesChartType.Bar || type == SeriesChartType.StackedBar)
-                    { area.AxisY.Interval = 1; area.AxisX.LabelStyle.Angle = 0; }
-                else
-                    { area.AxisX.Interval = 1; area.AxisX.LabelStyle.Angle = -45; }
-            }
-        }
+            if (allPostsData == null || !charts.TryGetValue(key, out Chart? chart))
+                return;
 
-        private void ConfigureSeriesForType(Series series, SeriesChartType type)
-        {
-            if (series == null) return;
-            series.ChartType = type;
-            series.XValueType = ChartValueType.String;
-            series.YValueType = ChartValueType.Int32;
-            series.IsXValueIndexed = true;
-            series.Font = FontSettings.ChartLabelFont ?? new Font("Tahoma", 9F);
-            series.IsValueShownAsLabel = true;
-            if (IsPieType(type)) series["PieLabelStyle"] = "Outside";
-        }
+            if (!specs.TryGetValue(key, out PostChartSpec? spec))
+                return;
 
-        private void ApplyChartTypeToChart(Chart chart, SeriesChartType type)
-        {
-            if (chart == null) return;
-            ConfigureChartAreaForType(chart, type);
-            foreach (Series s in chart.Series) ConfigureSeriesForType(s, type);
-        }
-
-        // ╔══════════════════════════════════════╗
-        // ║           DATA LOADING               ║
-        // ╚══════════════════════════════════════╝
-        private void LoadData()
-        {
             try
             {
-                if (!dbHelper.TestConnection())
+                HitTestResult result = chart.HitTest(e.X, e.Y);
+                if (result.ChartElementType != ChartElementType.DataPoint || result.PointIndex < 0)
+                    return;
+
+                string clickedLabel = result.Series.Points[result.PointIndex].AxisLabel;
+                if (string.IsNullOrWhiteSpace(clickedLabel))
+                    clickedLabel = result.Series.Points[result.PointIndex].Label;
+
+                DataTable filtered = GetFilteredData();
+                if (filtered.Rows.Count == 0)
+                    return;
+
+                List<PostStat> stats = PostChartRenderer.BuildStats(filtered, spec,
+                    PostChartRenderer.IsPie(PostChartRenderer.GetChartType(chart)) ? 12 : 0);
+                List<string> topLabels = stats
+                    .Where(stat => !stat.IsOther)
+                    .Select(stat => stat.Label)
+                    .ToList();
+
+                List<DataRow> rows;
+                if (clickedLabel == "سایر")
                 {
-                    MessageBox.Show("❌ اتصال به دیتابیس ناموفق بود.", "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    rows = filtered.AsEnumerable()
+                        .Where(row => !topLabels.Contains(PostChartRenderer.GetLabel(spec, row), StringComparer.CurrentCultureIgnoreCase))
+                        .ToList();
+                }
+                else
+                {
+                    rows = filtered.AsEnumerable()
+                        .Where(row => string.Equals(PostChartRenderer.GetLabel(spec, row), clickedLabel, StringComparison.CurrentCultureIgnoreCase))
+                        .ToList();
+                }
+
+                if (rows.Count == 0)
+                {
+                    MessageBox.Show(this, "داده‌ای برای نمایش این دسته وجود ندارد.", "اطلاع",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
 
-                // MS Access (ACE.OLEDB) requires nested parentheses for multiple INNER JOINs
-                string query = @"
-                    SELECT Posts.[PostID], Posts.[OperationYear], Posts.[DistributedCapacity], 
-                    Posts.[CapacityHV], Posts.[CapacityMV],
-                    Provinces.[ProvinceName], Cities.[CityName], TransferAffairs.[AffairName], 
-                    OperationDepartments.[DeptName], Districts.[DistrictName], PostsNames.[PostName], 
-                    VoltageLevels.[VoltageName], PostStandards.[StandardName], PostTypes.[TypeName], 
-                    DistributedConnections.[ConnName], InsulationTypes.[InsName], PostTypeTwos.[PT2Name], 
-                    FixedMobiles.[FMName], CircuitStatuses.[CircuitName], DieselGenerators.[DieselName], 
-                    DistributionFeeds.[FeedName], WaterStatuses.[WaterName], GuestHouses.[GuestName] 
-                    FROM (((((((((((((((((Posts 
-                    INNER JOIN Provinces ON Posts.[ProvinceID] = Provinces.[ProvinceID])
-                    INNER JOIN Cities ON Posts.[CityID] = Cities.[CityID])
-                    INNER JOIN TransferAffairs ON Posts.[AffairID] = TransferAffairs.[AffairID])
-                    INNER JOIN OperationDepartments ON Posts.[DeptID] = OperationDepartments.[DeptID])
-                    INNER JOIN Districts ON Posts.[DistrictID] = Districts.[DistrictID])
-                    INNER JOIN PostsNames ON Posts.[PostNameID] = PostsNames.[PostNameID])
-                    INNER JOIN VoltageLevels ON Posts.[VoltageID] = VoltageLevels.[VoltageID])
-                    INNER JOIN PostStandards ON Posts.[StandardID] = PostStandards.[StandardID])
-                    INNER JOIN PostTypes ON Posts.[TypeID] = PostTypes.[TypeID])
-                    INNER JOIN DistributedConnections ON Posts.[ConnID] = DistributedConnections.[ConnID])
-                    INNER JOIN InsulationTypes ON Posts.[InsID] = InsulationTypes.[InsID])
-                    INNER JOIN PostTypeTwos ON Posts.[PT2ID] = PostTypeTwos.[PT2ID])
-                    INNER JOIN FixedMobiles ON Posts.[FMID] = FixedMobiles.[FMID])
-                    INNER JOIN CircuitStatuses ON Posts.[CircuitID] = CircuitStatuses.[CircuitID])
-                    INNER JOIN DieselGenerators ON Posts.[DieselID] = DieselGenerators.[DieselID])
-                    INNER JOIN DistributionFeeds ON Posts.[FeedID] = DistributionFeeds.[FeedID])
-                    INNER JOIN WaterStatuses ON Posts.[WaterID] = WaterStatuses.[WaterID])
-                    INNER JOIN GuestHouses ON Posts.[GuestID] = GuestHouses.[GuestID]
-                ";
+                DataTable details = filtered.Clone();
+                foreach (DataRow row in rows)
+                    details.ImportRow(row);
 
-                allPostsData = dbHelper.ExecuteQuery(query);
-
-                if (allPostsData == null || allPostsData.Rows.Count == 0)
+                if (ShowPostDetails(clickedLabel, details))
                 {
-                    MessageBox.Show("⚠️ داده‌ای در جدول پست‌ها یافت نشد.", "هشدار", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
+                    allPostsData = postsService.LoadAllPosts(showError: false);
+                    if (allPostsData != null)
+                    {
+                        FillAllFilterOptions();
+                        UpdateFilterTitles();
+                        RefreshAllCharts();
+                        UpdateTables(GetFilteredData());
+                    }
                 }
-
-                LoadFilterOptions();
-                RefreshAllCharts();
-                MessageBox.Show(
-                    $"✅ داده‌ها با موفقیت بارگذاری شدند.\n⚡ تعداد پست‌ها: {allPostsData.Rows.Count}",
-                    "موفق", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"❌ خطا: {ex.Message}", "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.Log("FormPostsAnalytics.Chart_MouseClick", ex);
+                MessageBox.Show(this, $"خطا در نمایش جزئیات:\n{ex.Message}", "خطا",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void LoadFilterOptions()
+        private void ExportThisChart(string key, Chart chart)
         {
-            if (allPostsData == null) return;
-            // Reload ALL options for every filter (used on initial load and after clear)
-            FillFilter(clbProvincesFilter,   "ProvinceName");
-            FillFilter(clbCitiesFilter,      "CityName");
-            FillFilter(clbAffairsFilter,     "AffairName");
-            FillFilter(clbDepartmentsFilter, "DeptName");
-            FillFilter(clbDistrictsFilter,   "DistrictName");
-            FillFilter(clbVoltageFilter,     "VoltageName");
-            FillFilter(clbTypeFilter,        "TypeName");
-            FillFilter(clbStandardFilter,    "StandardName");
-            FillFilter(clbCircuitFilter,     "CircuitName");
-            FillFilter(clbFMFilter,          "FMName");
-            FillFilter(clbDieselFilter,      "DieselName");
-            FillFilter(clbWaterFilter,       "WaterName");
+            if (!specs.TryGetValue(key, out PostChartSpec? spec))
+                return;
+
+            SeriesChartType type = chart.Tag is SeriesChartType t ? t : SeriesChartType.Pie;
+            using var form = new FormExportPostCharts(GetFilteredData(), key, type);
+            form.ShowDialog(this);
         }
 
-        private void FillFilter(CheckedListBox clb, string col)
+        private bool ShowPostDetails(string category, DataTable postData)
         {
-            clb.Items.Clear();
-            if (allPostsData == null) return;
-            foreach (var v in allPostsData.AsEnumerable()
-                .Select(r => r[col]?.ToString() ?? "")
-                .Where(v => !string.IsNullOrWhiteSpace(v))
-                .Distinct().OrderBy(v => v))
-                clb.Items.Add(v, false);
-        }
-
-        // ── Cascading Filter Helpers ────────────────────
-        // Refreshes one CLB's items based on a filtered row set,
-        // preserving currently-checked items that are still valid.
-        private void RefreshClb(CheckedListBox clb, IEnumerable<DataRow> rows, string col)
-        {
-            var kept = clb.CheckedItems.Cast<string>().ToList();
-            var opts = rows
-                .Select(r => r[col]?.ToString() ?? "")
-                .Where(v => !string.IsNullOrWhiteSpace(v))
-                .Distinct().OrderBy(v => v).ToList();
-            clb.Items.Clear();
-            foreach (var item in opts)
-                clb.Items.Add(item, kept.Contains(item));
-        }
-
-        // Cascade chain:
-        //   Province  -->  Cities, Affairs
-        //   Province + Cities + Affairs  -->  Departments
-        //   Province + Cities + Affairs + Departments  -->  Districts
-        private void UpdateDependentFilters()
-        {
-            if (allPostsData == null || _updatingFilters) return;
-            _updatingFilters = true;
-            try
+            bool changed = false;
+            using var detailsForm = new Form
             {
-                var allRows = allPostsData.AsEnumerable();
-
-                // --- Level 1: Province narrows Cities and Affairs ---
-                var selProv = clbProvincesFilter.CheckedItems.Cast<string>().ToList();
-                var afterProv = selProv.Count > 0
-                    ? allRows.Where(r => selProv.Contains(r["ProvinceName"]?.ToString() ?? ""))
-                    : allRows;
-
-                RefreshClb(clbCitiesFilter,  afterProv, "CityName");
-                RefreshClb(clbAffairsFilter, afterProv, "AffairName");
-
-                // --- Level 2: Province + Cities + Affairs narrows Departments ---
-                var selCity = clbCitiesFilter.CheckedItems.Cast<string>().ToList();
-                var selAff  = clbAffairsFilter.CheckedItems.Cast<string>().ToList();
-                var afterAff = afterProv;
-                if (selCity.Count > 0)
-                    afterAff = afterAff.Where(r => selCity.Contains(r["CityName"]?.ToString()  ?? ""));
-                if (selAff.Count > 0)
-                    afterAff = afterAff.Where(r => selAff.Contains(r["AffairName"]?.ToString() ?? ""));
-
-                RefreshClb(clbDepartmentsFilter, afterAff, "DeptName");
-
-                // --- Level 3: + Departments narrows Districts ---
-                var selDept  = clbDepartmentsFilter.CheckedItems.Cast<string>().ToList();
-                var afterDept = afterAff;
-                if (selDept.Count > 0)
-                    afterDept = afterDept.Where(r => selDept.Contains(r["DeptName"]?.ToString() ?? ""));
-
-                RefreshClb(clbDistrictsFilter, afterDept, "DistrictName");
-            }
-            finally
-            {
-                _updatingFilters = false;
-            }
-        }
-
-        // ── Filtered DataTable ──────────────────
-        private DataTable GetFilteredData()
-        {
-            if (allPostsData == null) return new DataTable();
-
-            var p   = clbProvincesFilter.CheckedItems.Cast<string>().ToList();
-            var ci  = clbCitiesFilter.CheckedItems.Cast<string>().ToList();
-            var af  = clbAffairsFilter.CheckedItems.Cast<string>().ToList();
-            var d   = clbDepartmentsFilter.CheckedItems.Cast<string>().ToList();
-            var di  = clbDistrictsFilter.CheckedItems.Cast<string>().ToList();
-            var v   = clbVoltageFilter.CheckedItems.Cast<string>().ToList();
-            var ty  = clbTypeFilter.CheckedItems.Cast<string>().ToList();
-            var st  = clbStandardFilter.CheckedItems.Cast<string>().ToList();
-            var cr  = clbCircuitFilter.CheckedItems.Cast<string>().ToList();
-            var fm  = clbFMFilter.CheckedItems.Cast<string>().ToList();
-            var di2 = clbDieselFilter.CheckedItems.Cast<string>().ToList();
-            var w   = clbWaterFilter.CheckedItems.Cast<string>().ToList();
-
-            string S(DataRow r, string col) => r[col]?.ToString() ?? "";
-
-            var filtered = allPostsData.AsEnumerable().Where(r =>
-                (p.Count   == 0 || p.Contains(S(r, "ProvinceName")))   &&
-                (ci.Count  == 0 || ci.Contains(S(r, "CityName")))      &&
-                (af.Count  == 0 || af.Contains(S(r, "AffairName")))    &&
-                (d.Count   == 0 || d.Contains(S(r, "DeptName")))       &&
-                (di.Count  == 0 || di.Contains(S(r, "DistrictName")))  &&
-                (v.Count   == 0 || v.Contains(S(r, "VoltageName")))    &&
-                (ty.Count  == 0 || ty.Contains(S(r, "TypeName")))      &&
-                (st.Count  == 0 || st.Contains(S(r, "StandardName")))  &&
-                (cr.Count  == 0 || cr.Contains(S(r, "CircuitName")))   &&
-                (fm.Count  == 0 || fm.Contains(S(r, "FMName")))        &&
-                (di2.Count == 0 || di2.Contains(S(r, "DieselName")))   &&
-                (w.Count   == 0 || w.Contains(S(r, "WaterName")))
-            ).ToList();
-
-            return filtered.Count > 0 ? filtered.CopyToDataTable() : new DataTable();
-        }
-
-        private List<(string Name, int Count)> GroupStats(DataTable dt, string col)
-        {
-            if (dt == null || dt.Rows.Count == 0) return new List<(string Name, int Count)>();
-            return dt.AsEnumerable()
-                .GroupBy(r => r[col]?.ToString() ?? "نامشخص")
-                .Select(g => (Name: g.Key, Count: g.Count()))
-                .OrderByDescending(x => x.Count)
-                .ToList();
-        }
-
-        // ╔══════════════════════════════════════╗
-        // ║          REFRESH CHARTS              ║
-        // ╚══════════════════════════════════════╝
-        private void RefreshAllCharts()
-        {
-            var dt = GetFilteredData();
-            DrawChart(chartProvincePie,      dt, "ProvinceName",  "🗺️ توزیع پست‌ها بر اساس استان");
-            DrawChart(chartDeptPie,          dt, "DeptName",      "🏛️ توزیع پست‌ها بر اساس اداره");
-            DrawChart(chartVoltagePie,       dt, "VoltageName",   "⚡ توزیع بر اساس سطح ولتاژ");
-            DrawChart(chartTypePie,          dt, "TypeName",      "🏗️ توزیع بر اساس نوع پست");
-            DrawChart(chartStandardPie,      dt, "StandardName",  "📐 توزیع بر اساس استاندارد پست");
-            DrawChart(chartCircuitPie,       dt, "CircuitName",   "🔌 توزیع بر اساس وضعیت مدار");
-            DrawChart(chartFMPie,            dt, "FMName",        "🚗 توزیع بر اساس ثابت / سیار");
-            DrawChart(chartConnPie,          dt, "ConnName",      "🔗 توزیع بر اساس اتصال توزیع");
-            DrawChart(chartInsPie,           dt, "InsName",       "🔆 توزیع بر اساس نوع عایق");
-            DrawChart(chartPT2Pie,           dt, "PT2Name",       "📋 توزیع بر اساس نوع پست ۲");
-            DrawChart(chartDieselPie,        dt, "DieselName",    "🔋 توزیع بر اساس دیزل ژنراتور");
-            DrawChart(chartFeedPie,          dt, "FeedName",      "🔗 توزیع بر اساس نوع توزیع");
-            DrawChart(chartGuestPie,         dt, "GuestName",     "👥 توزیع بر اساس میهمان‌سرا");
-            DrawCapacityChart(chartCapacityHVChart, dt, "CapacityHV", "⚡ توزیع ظرفیت HV");
-            DrawCapacityChart(chartCapacityMVChart, dt, "CapacityMV", "⚡ توزیع ظرفیت MV");
-            DrawCapacityChart(chartDistributedCapacityChart, dt, "DistributedCapacity", "📊 توزیع ظرفیت توزیع شده");
-            DrawOperationYearChart(dt);
-            LoadSummaryTable(dt);
-            LoadDeptDetailsTable(dt);
-        }
-
-        private void DrawChart(Chart chart, DataTable dt, string col, string title)
-        {
-            try
-            {
-                chart.Series.Clear();
-                Font safeFont  = FontSettings.ChartLabelFont ?? new Font("Tahoma", 9F);
-                Font titleFont = FontSettings.HeaderFont     ?? new Font("Tahoma", 11F, FontStyle.Bold);
-
-                var stats = GroupStats(dt, col);
-                int total = stats.Sum(x => x.Count);
-                var type  = GetChartTypeOrDefault(chart);
-                bool pie  = IsPieType(type);
-                ConfigureChartAreaForType(chart, type);
-
-                Series series = new Series("تعداد");
-                ConfigureSeriesForType(series, type);
-
-                foreach (var (name, count) in pie ? stats.Take(15) : (IEnumerable<(string, int)>)stats)
-                {
-                    double pct = total > 0 ? (count * 100.0) / total : 0;
-                    int idx = series.Points.AddXY(name, count);
-                    series.Points[idx].AxisLabel = name;
-                    series.Points[idx].ToolTip   = $"{name}: {count} پست ({pct:F1}%)";
-                    series.Points[idx].Font      = safeFont;
-                    series.Points[idx].Label     = pie ? $"{name}\n{count} ({pct:F1}%)" : count.ToString();
-                }
-
-                chart.Series.Add(series);
-                chart.Titles.Clear();
-                chart.Titles.Add(new Title(title) { Font = titleFont });
-            }
-            catch (Exception ex) { MessageBox.Show($"❌ خطا در نمودار: {ex.Message}"); }
-        }
-
-        private void DrawOperationYearChart(DataTable dt)
-        {
-            try
-            {
-                chartOperationYearPie.Series.Clear();
-                Font safeFont  = FontSettings.ChartLabelFont ?? new Font("Tahoma", 9F);
-                Font titleFont = FontSettings.HeaderFont     ?? new Font("Tahoma", 11F, FontStyle.Bold);
-
-                var stats = dt.AsEnumerable()
-                    .Where(r => r["OperationYear"] != DBNull.Value)
-                    .GroupBy(r =>
-                    {
-                        if (int.TryParse(r["OperationYear"]?.ToString(), out int y))
-                            return $"{(y / 10) * 10}\u2013{(y / 10) * 10 + 9}";
-                        return "نامشخص";
-                    })
-                    .Select(g => (Name: g.Key, Count: g.Count()))
-                    .OrderBy(x => x.Name)
-                    .ToList();
-
-                int total = stats.Sum(x => x.Count);
-                var type  = GetChartTypeOrDefault(chartOperationYearPie);
-                bool pie  = IsPieType(type);
-                ConfigureChartAreaForType(chartOperationYearPie, type);
-
-                Series series = new Series("تعداد");
-                ConfigureSeriesForType(series, type);
-
-                foreach (var (name, count) in stats)
-                {
-                    double pct = total > 0 ? (count * 100.0) / total : 0;
-                    int idx = series.Points.AddXY(name, count);
-                    series.Points[idx].AxisLabel = name;
-                    series.Points[idx].ToolTip   = $"{name}: {count} پست ({pct:F1}%)";
-                    series.Points[idx].Font      = safeFont;
-                    series.Points[idx].Label     = pie ? $"{name}\n{count} ({pct:F1}%)" : count.ToString();
-                }
-
-                chartOperationYearPie.Series.Add(series);
-                chartOperationYearPie.Titles.Clear();
-                chartOperationYearPie.Titles.Add(new Title("📅 توزیع بر اساس دهه بهره‌برداری") { Font = titleFont });
-            }
-            catch (Exception ex) { MessageBox.Show($"❌ خطا در نمودار سال: {ex.Message}"); }
-        }
-
-        private void DrawCapacityChart(Chart chart, DataTable dt, string col, string title)
-        {
-            try
-            {
-                chart.Series.Clear();
-                Font safeFont  = FontSettings.ChartLabelFont ?? new Font("Tahoma", 9F);
-                Font titleFont = FontSettings.HeaderFont     ?? new Font("Tahoma", 11F, FontStyle.Bold);
-
-                var stats = dt.AsEnumerable()
-                    .Where(r => r[col] != DBNull.Value)
-                    .GroupBy(r =>
-                    {
-                        if (decimal.TryParse(r[col]?.ToString(), out decimal cap))
-                            return $"{(int)(cap / 100) * 100}-{(int)(cap / 100) * 100 + 99}";
-                        return "نامشخص";
-                    })
-                    .Select(g => (Name: g.Key, Count: g.Count()))
-                    .OrderBy(x => x.Name)
-                    .ToList();
-
-                if (stats.Count == 0)
-                {
-                    chart.Titles.Clear();
-                    chart.Titles.Add(new Title($"{title}\n(داده‌های موجود نیستند)") { Font = titleFont });
-                    return;
-                }
-
-                int total = stats.Sum(x => x.Count);
-                var type  = GetChartTypeOrDefault(chart);
-                bool pie  = IsPieType(type);
-                ConfigureChartAreaForType(chart, type);
-
-                Series series = new Series("تعداد");
-                ConfigureSeriesForType(series, type);
-
-                foreach (var (name, count) in pie ? stats.Take(15) : (IEnumerable<(string, int)>)stats)
-                {
-                    double pct = total > 0 ? (count * 100.0) / total : 0;
-                    int idx = series.Points.AddXY(name, count);
-                    series.Points[idx].AxisLabel = name;
-                    series.Points[idx].ToolTip   = $"{name}: {count} پست ({pct:F1}%)";
-                    series.Points[idx].Font      = safeFont;
-                    series.Points[idx].Label     = pie ? $"{name}\n{count} ({pct:F1}%)" : count.ToString();
-                }
-
-                chart.Series.Add(series);
-                chart.Titles.Clear();
-                chart.Titles.Add(new Title(title) { Font = titleFont });
-            }
-            catch (Exception ex) { MessageBox.Show($"❌ خطا در نمودار: {ex.Message}"); }
-        }
-
-        // ── Statistics Tables ────────────────────
-        private void LoadSummaryTable(DataTable dt)
-        {
-            try
-            {
-                dgvPostStats.DataSource = null;
-                dgvPostStats.Columns.Clear();
-                dgvPostStats.Columns.Add("Metric", "معیار");
-                dgvPostStats.Columns.Add("Value",  "مقدار");
-
-                dgvPostStats.Rows.Add("⚡ کل پست‌ها",               dt.Rows.Count);
-                dgvPostStats.Rows.Add("🗺️ تعداد استان‌ها",          GroupStats(dt, "ProvinceName").Count);
-                dgvPostStats.Rows.Add("🏙️ تعداد شهرها",            GroupStats(dt, "CityName").Count);
-                dgvPostStats.Rows.Add("📋 تعداد امور",              GroupStats(dt, "AffairName").Count);
-                dgvPostStats.Rows.Add("🏛️ تعداد ادارات",           GroupStats(dt, "DeptName").Count);
-                dgvPostStats.Rows.Add("🔺 تعداد نواحی",             GroupStats(dt, "DistrictName").Count);
-                dgvPostStats.Rows.Add("⚡ سطوح ولتاژ",              GroupStats(dt, "VoltageName").Count);
-                dgvPostStats.Rows.Add("🏗️ انواع پست",              GroupStats(dt, "TypeName").Count);
-                dgvPostStats.Rows.Add("📐 تعداد استانداردها",       GroupStats(dt, "StandardName").Count);
-
-                void Section(string header, string col)
-                {
-                    dgvPostStats.Rows.Add("", "");
-                    dgvPostStats.Rows.Add($"════ {header} ════", "");
-                    foreach (var (name, count) in GroupStats(dt, col))
-                        dgvPostStats.Rows.Add($"  \u2022 {name}", count);
-                }
-
-                Section("توزیع ولتاژ",      "VoltageName");
-                Section("توزیع نوع پست",    "TypeName");
-                Section("توزیع ثابت/سیار",  "FMName");
-                Section("توزیع مدار",       "CircuitName");
-                Section("توزیع دیزل",       "DieselName");
-                Section("توزیع وضعیت آب",  "WaterName");
-            }
-            catch (Exception ex) { MessageBox.Show($"❌ خطا: {ex.Message}"); }
-        }
-
-        private void LoadDeptDetailsTable(DataTable dt)
-        {
-            try
-            {
-                dgvDeptDetails.DataSource = null;
-                dgvDeptDetails.Columns.Clear();
-                dgvDeptDetails.Columns.Add("Dept",    "اداره");
-                dgvDeptDetails.Columns.Add("Count",   "تعداد پست");
-                dgvDeptDetails.Columns.Add("Percent", "درصد");
-
-                var stats = GroupStats(dt, "DeptName");
-                int total = stats.Sum(x => x.Count);
-                foreach (var (name, count) in stats)
-                {
-                    double pct = total > 0 ? (count * 100.0) / total : 0;
-                    dgvDeptDetails.Rows.Add(name, count, $"{pct:F1}%");
-                }
-            }
-            catch (Exception ex) { MessageBox.Show($"❌ خطا: {ex.Message}"); }
-        }
-
-        // ╔══════════════════════════════════════╗
-        // ║           FILTER EVENTS              ║
-        // ╚══════════════════════════════════════╝
-        private void FilterChanged()
-        {
-            // Guard: if we are already updating dependent filters, skip to avoid recursion
-            if (_updatingFilters) return;
-
-            BeginInvoke((MethodInvoker)delegate
-            {
-                if (_updatingFilters) return;
-
-                // Step 1: cascade-update dependent filter options
-                UpdateDependentFilters();
-
-                // Step 2: count active filters
-                int n =
-                    clbProvincesFilter.CheckedItems.Count   + clbCitiesFilter.CheckedItems.Count    +
-                    clbAffairsFilter.CheckedItems.Count     + clbDepartmentsFilter.CheckedItems.Count +
-                    clbDistrictsFilter.CheckedItems.Count   + clbVoltageFilter.CheckedItems.Count   +
-                    clbTypeFilter.CheckedItems.Count        + clbStandardFilter.CheckedItems.Count  +
-                    clbCircuitFilter.CheckedItems.Count     + clbFMFilter.CheckedItems.Count        +
-                    clbDieselFilter.CheckedItems.Count      + clbWaterFilter.CheckedItems.Count;
-
-                lblFilterInfo.Text = n > 0 ? $"🔴 {n} فیلتر فعال" : "✓ فیلتری فعال نیست";
-
-                // Step 3: refresh charts and tables
-                RefreshAllCharts();
-            });
-        }
-
-        private void ClbProvincesFilter_ItemCheck(object? s, ItemCheckEventArgs e)  => FilterChanged();
-        private void ClbCitiesFilter_ItemCheck(object? s, ItemCheckEventArgs e)      => FilterChanged();
-        private void ClbAffairsFilter_ItemCheck(object? s, ItemCheckEventArgs e)     => FilterChanged();
-        private void ClbDeptFilter_ItemCheck(object? s, ItemCheckEventArgs e)        => FilterChanged();
-        private void ClbDistrictFilter_ItemCheck(object? s, ItemCheckEventArgs e)    => FilterChanged();
-        private void ClbVoltageFilter_ItemCheck(object? s, ItemCheckEventArgs e)     => FilterChanged();
-        private void ClbTypeFilter_ItemCheck(object? s, ItemCheckEventArgs e)        => FilterChanged();
-        private void ClbStandardFilter_ItemCheck(object? s, ItemCheckEventArgs e)    => FilterChanged();
-        private void ClbCircuitFilter_ItemCheck(object? s, ItemCheckEventArgs e)     => FilterChanged();
-        private void ClbFMFilter_ItemCheck(object? s, ItemCheckEventArgs e)          => FilterChanged();
-        private void ClbDieselFilter_ItemCheck(object? s, ItemCheckEventArgs e)      => FilterChanged();
-        private void ClbWaterFilter_ItemCheck(object? s, ItemCheckEventArgs e)       => FilterChanged();
-
-        private void BtnClearFilters_Click(object? sender, EventArgs e)
-        {
-            // Uncheck all items without triggering cascade loops
-            _updatingFilters = true;
-            try
-            {
-                foreach (var clb in new[] {
-                    clbProvincesFilter, clbCitiesFilter, clbAffairsFilter, clbDepartmentsFilter,
-                    clbDistrictsFilter, clbVoltageFilter, clbTypeFilter, clbStandardFilter,
-                    clbCircuitFilter, clbFMFilter, clbDieselFilter, clbWaterFilter })
-                    for (int i = 0; i < clb.Items.Count; i++) clb.SetItemChecked(i, false);
-            }
-            finally
-            {
-                _updatingFilters = false;
-            }
-
-            // Restore ALL options in all filters (cascade may have narrowed them)
-            LoadFilterOptions();
-            lblFilterInfo.Text = "✓ فیلتری فعال نیست";
-            RefreshAllCharts();
-        }
-
-        // ╔══════════════════════════════════════╗
-        // ║       CHART CLICK → DETAIL FORM      ║
-        // ╚══════════════════════════════════════╝
-        private void Chart_MouseClick(object? sender, MouseEventArgs e)
-        {
-            try
-            {
-                if (sender is not Chart chart) return;
-                var result = chart.HitTest(e.X, e.Y);
-                if (result.ChartElementType != ChartElementType.DataPoint) return;
-
-                string itemName = result.Series.Points[result.PointIndex].AxisLabel;
-                string col = ChartToColumn(chart);
-                if (string.IsNullOrEmpty(col)) return;
-
-                var dt = GetFilteredData();
-                if (dt.Rows.Count == 0) return;
-
-                var rows = dt.AsEnumerable().ToList();
-
-                // Handle range-based charts (Capacity and Year)
-                if (col.EndsWith("_Range"))
-                {
-                    string actualCol = col.Replace("_Range", "");
-
-                    if (actualCol == "OperationYear")
-                    {
-                        rows = rows.Where(r =>
-                        {
-                            if (r["OperationYear"] != DBNull.Value && 
-                                int.TryParse(r["OperationYear"]?.ToString(), out int y))
-                            {
-                                string range = $"{(y / 10) * 10}\u2013{(y / 10) * 10 + 9}";
-                                return range == itemName;
-                            }
-                            return itemName == "نامشخص";
-                        }).ToList();
-                    }
-                    else // Capacity ranges
-                    {
-                        rows = rows.Where(r =>
-                        {
-                            if (r[actualCol] != DBNull.Value && 
-                                decimal.TryParse(r[actualCol]?.ToString(), out decimal cap))
-                            {
-                                string range = $"{(int)(cap / 100) * 100}-{(int)(cap / 100) * 100 + 99}";
-                                return range == itemName;
-                            }
-                            return itemName == "نامشخص";
-                        }).ToList();
-                    }
-                }
-                else
-                {
-                    // Handle regular string-based charts
-                    rows = rows.Where(r => r[col]?.ToString() == itemName).ToList();
-                }
-
-                if (rows.Count > 0)
-                    ShowPostDetails(itemName, rows.CopyToDataTable());
-                else
-                    MessageBox.Show("❌ داده‌ای برای نمایش وجود ندارد.", "پیام", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-            catch (Exception ex) { MessageBox.Show($"❌ خطا: {ex.Message}"); }
-        }
-
-        private string ChartToColumn(Chart c)
-        {
-            if (c == chartProvincePie)  return "ProvinceName";
-            if (c == chartDeptPie)      return "DeptName";
-            if (c == chartVoltagePie)   return "VoltageName";
-            if (c == chartTypePie)      return "TypeName";
-            if (c == chartStandardPie)  return "StandardName";
-            if (c == chartCircuitPie)   return "CircuitName";
-            if (c == chartFMPie)        return "FMName";
-            if (c == chartConnPie)      return "ConnName";
-            if (c == chartInsPie)       return "InsName";
-            if (c == chartPT2Pie)       return "PT2Name";
-            if (c == chartDieselPie)    return "DieselName";
-            if (c == chartFeedPie)      return "FeedName";
-            if (c == chartGuestPie)     return "GuestName";
-            if (c == chartOperationYearPie)     return "OperationYear_Range";
-            if (c == chartCapacityHVChart)      return "CapacityHV_Range";
-            if (c == chartCapacityMVChart)      return "CapacityMV_Range";
-            if (c == chartDistributedCapacityChart) return "DistributedCapacity_Range";
-            return "";
-        }
-
-        private void ShowPostDetails(string category, DataTable postData)
-        {
-            Form detailsForm = new Form
-            {
-                Text = $"⚡ جزئیات پست‌ها \u2014 {category}",
+                Text = $"جزئیات پست‌ها — {category}",
                 StartPosition = FormStartPosition.CenterScreen,
                 WindowState = FormWindowState.Maximized,
                 RightToLeft = RightToLeft.Yes,
@@ -1052,59 +719,675 @@ namespace PersonnelManagementApp
                 Font = FontSettings.BodyFont
             };
 
-            DataGridView dgv = new DataGridView
+            var grid = new DataGridView
             {
                 Dock = DockStyle.Fill,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.DisplayedCells,
                 ReadOnly = true,
                 RightToLeft = RightToLeft.Yes,
                 BackgroundColor = Color.White,
                 EnableHeadersVisualStyles = false,
                 AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                RowHeadersVisible = false,
                 ColumnHeadersHeight = 40,
                 RowTemplate = { Height = 30 }
             };
-            dgv.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 120, 212);
-            dgv.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            dgv.ColumnHeadersDefaultCellStyle.Font = FontSettings.SubtitleFont;
-            dgv.DefaultCellStyle.Font = FontSettings.BodyFont;
-            dgv.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(240, 248, 255);
+            ConfigureGrid(grid);
 
-            string[] cols =
+            string[] columns =
             {
-                "PostName|نام پست", "ProvinceName|استان", "CityName|شهر",
-                "AffairName|امور", "DeptName|اداره", "DistrictName|ناحیه",
-                "VoltageName|سطح ولتاژ", "TypeName|نوع پست", "StandardName|استاندارد",
-                "CircuitName|وضعیت مدار", "FMName|ثابت/سیار", "OperationYear|سال بهره‌برداری"
+                "PostName|نام پست", "ProvinceName|استان", "CityName|شهر", "AffairName|امور",
+                "DeptName|اداره", "DistrictName|ناحیه", "VoltageName|سطح ولتاژ",
+                "TypeName|نوع پست", "StandardName|استاندارد", "CircuitName|وضعیت مدار",
+                "FMName|ثابت/سیار", "OperationYear|سال بهره‌برداری", "CapacityHV|ظرفیت HV",
+                "CapacityMV|ظرفیت MV", "PostalAddress|آدرس"
             };
-            foreach (var c in cols)
+
+            foreach (string column in columns)
             {
-                var parts = c.Split('|');
-                dgv.Columns.Add(parts[0], parts[1]);
+                string[] parts = column.Split('|');
+                grid.Columns.Add(parts[0], parts[1]);
             }
 
             foreach (DataRow row in postData.Rows)
-                dgv.Rows.Add(cols.Select(c => postData.Columns.Contains(c.Split('|')[0])
-                    ? row[c.Split('|')[0]]?.ToString() : "").ToArray());
+            {
+                grid.Rows.Add(columns.Select(column =>
+                {
+                    string source = column.Split('|')[0];
+                    return postData.Columns.Contains(source) ? row[source]?.ToString() ?? "" : "";
+                }).ToArray());
+            }
 
-            Panel bottom = new Panel
+            var footer = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = 55,
-                BackColor = Color.FromArgb(225, 240, 255)
+                Height = 54,
+                BackColor = Color.FromArgb(230, 240, 250)
             };
-            bottom.Controls.Add(new Label
+
+            var lblInfo = new Label
             {
-                Text = $"📊 تعداد: {postData.Rows.Count} پست  |  دسته: {category}",
-                AutoSize = true,
-                Location = new Point(20, 16),
-                Font = new Font(FontSettings.SubtitleFont.FontFamily, 10.5F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(0, 102, 204)
+                Text = $"تعداد: {postData.Rows.Count} پست  |  دسته: {category}",
+                Dock = DockStyle.Fill,
+                Font = new Font(FontSettings.FontFamilyName, 10F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 102, 204),
+                TextAlign = ContentAlignment.MiddleRight,
+                Padding = new Padding(0, 0, 16, 0)
+            };
+
+            var btnEdit = CreateSmallAction("✏️ ویرایش", Color.FromArgb(0, 102, 204));
+            var btnDelete = CreateSmallAction("🗑️ حذف", Color.FromArgb(220, 53, 69));
+            var btnClose = CreateSmallAction("❌ بستن", Color.FromArgb(108, 117, 125));
+
+            btnEdit.Click += (_, _) =>
+            {
+                if (grid.CurrentRow == null || grid.CurrentRow.Cells["PostID"].Value == null)
+                {
+                    MessageBox.Show(detailsForm, "ابتدا یک پست را از جدول انتخاب کنید.", "اطلاع",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                int postId = Convert.ToInt32(grid.CurrentRow.Cells["PostID"].Value);
+                using var editor = new FormPostsEditor(postId);
+                if (editor.ShowDialog(detailsForm) == DialogResult.OK)
+                {
+                    changed = true;
+                    MessageBox.Show(detailsForm, "✅ پست با موفقیت ویرایش شد.", "موفقیت",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    detailsForm.Close();
+                }
+            };
+
+            btnDelete.Click += (_, _) =>
+            {
+                if (grid.CurrentRow == null || grid.CurrentRow.Cells["PostID"].Value == null)
+                {
+                    MessageBox.Show(detailsForm, "ابتدا یک پست را از جدول انتخاب کنید.", "اطلاع",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                int postId = Convert.ToInt32(grid.CurrentRow.Cells["PostID"].Value);
+                string postName = grid.CurrentRow.Cells["PostName"].Value?.ToString() ?? "";
+                if (MessageBox.Show(detailsForm,
+                        $"آیا مطمئن هستید که می‌خواهید پست «{postName}» را حذف کنید؟",
+                        "تأیید حذف", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+                {
+                    return;
+                }
+
+                var crud = new PostsCrudService();
+                if (crud.DeletePost(postId))
+                {
+                    changed = true;
+                    MessageBox.Show(detailsForm, "✅ پست با موفقیت حذف شد.", "موفقیت",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    detailsForm.Close();
+                }
+                else
+                {
+                    MessageBox.Show(detailsForm, "هیچ پستی حذف نشد.", "هشدار",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            };
+
+            btnClose.Click += (_, _) => detailsForm.Close();
+
+            var actions = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Right,
+                Width = 400,
+                FlowDirection = FlowDirection.RightToLeft,
+                WrapContents = false,
+                BackColor = Color.Transparent,
+                Padding = new Padding(0, 9, 8, 0)
+            };
+            actions.Controls.Add(btnClose);
+            actions.Controls.Add(btnDelete);
+            actions.Controls.Add(btnEdit);
+
+            footer.Controls.Add(lblInfo);
+            footer.Controls.Add(actions);
+
+            detailsForm.Controls.Add(grid);
+            detailsForm.Controls.Add(footer);
+            detailsForm.ShowDialog(this);
+            return changed;
+        }
+
+        private static Button CreateSmallAction(string text, Color backColor)
+        {
+            var button = new Button
+            {
+                Text = text,
+                Size = new Size(130, 36),
+                BackColor = backColor,
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font(FontSettings.FontFamilyName, 9.5F, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                Margin = new Padding(4, 0, 0, 0)
+            };
+            button.FlatAppearance.BorderSize = 0;
+            return button;
+        }
+
+        // ─────────────────────────────────────────────
+        // جداول
+        // ─────────────────────────────────────────────
+        private TabPage BuildStatsTab()
+        {
+            TabPage tab = new TabPage("📋 آمار")
+            {
+                Padding = new Padding(0)
+            };
+
+            Panel radioPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 42,
+                BackColor = Color.FromArgb(230, 240, 250)
+            };
+
+            rbShowSummary.Text = "📊 خلاصه آماری";
+            rbShowSummary.Location = new Point(10, 10);
+            rbShowSummary.Size = new Size(150, 25);
+            rbShowSummary.Checked = true;
+            rbShowSummary.Font = FontSettings.ButtonFont;
+            rbShowSummary.CheckedChanged += (_, _) =>
+            {
+                if (rbShowSummary.Checked && allPostsData != null)
+                    LoadSummaryTable(GetFilteredData());
+            };
+
+            rbShowFullStats.Text = "📋 جدول کامل آمار";
+            rbShowFullStats.Location = new Point(170, 10);
+            rbShowFullStats.Size = new Size(170, 25);
+            rbShowFullStats.Font = FontSettings.ButtonFont;
+            rbShowFullStats.CheckedChanged += (_, _) =>
+            {
+                if (rbShowFullStats.Checked && allPostsData != null)
+                    LoadStatisticalTable(GetFilteredData());
+            };
+
+            radioPanel.Controls.Add(rbShowFullStats);
+            radioPanel.Controls.Add(rbShowSummary);
+
+            ConfigureGrid(dgvSummary);
+            dgvSummary.AutoGenerateColumns = false;
+            dgvSummary.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "SummaryLabel",
+                HeaderText = "شاخص",
+                FillWeight = 72
+            });
+            dgvSummary.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "SummaryValue",
+                HeaderText = "مقدار",
+                FillWeight = 28
             });
 
-            detailsForm.Controls.Add(dgv);
-            detailsForm.Controls.Add(bottom);
-            detailsForm.ShowDialog();
+            tab.Controls.Add(dgvSummary);
+            tab.Controls.Add(radioPanel);
+            return tab;
+        }
+
+        private TabPage BuildDeptTab()
+        {
+            TabPage tab = new TabPage("🏛️ جزئیات ادارات")
+            {
+                Padding = new Padding(0)
+            };
+
+            ConfigureGrid(dgvDeptDetails);
+            dgvDeptDetails.AutoGenerateColumns = false;
+            dgvDeptDetails.Columns.Add(new DataGridViewTextBoxColumn { Name = "DeptName", HeaderText = "اداره", FillWeight = 52 });
+            dgvDeptDetails.Columns.Add(new DataGridViewTextBoxColumn { Name = "DeptCount", HeaderText = "تعداد", FillWeight = 24 });
+            dgvDeptDetails.Columns.Add(new DataGridViewTextBoxColumn { Name = "DeptPercent", HeaderText = "درصد", FillWeight = 24 });
+
+            tab.Controls.Add(dgvDeptDetails);
+            return tab;
+        }
+
+        private TabPage BuildPostsTab()
+        {
+            TabPage tab = new TabPage("⚡ لیست پست‌ها")
+            {
+                Padding = new Padding(0)
+            };
+
+            Panel searchPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 42,
+                BackColor = Color.FromArgb(230, 240, 250)
+            };
+
+            txtPostSearch.Dock = DockStyle.Fill;
+            txtPostSearch.Margin = new Padding(6);
+            txtPostSearch.Font = FontSettings.TextBoxFont;
+            txtPostSearch.PlaceholderText = "جستجو در نام پست، شهر، اداره یا آدرس...";
+            txtPostSearch.TextChanged += (_, _) => LoadPostsTable(GetFilteredData());
+            searchPanel.Controls.Add(txtPostSearch);
+
+            ConfigureGrid(dgvPosts);
+            dgvPosts.AutoGenerateColumns = false;
+            dgvPosts.Columns.Add(new DataGridViewTextBoxColumn { Name = "PostName", HeaderText = "نام پست", DataPropertyName = "PostName", Width = 120 });
+            dgvPosts.Columns.Add(new DataGridViewTextBoxColumn { Name = "ProvinceName", HeaderText = "استان", DataPropertyName = "ProvinceName", Width = 70 });
+            dgvPosts.Columns.Add(new DataGridViewTextBoxColumn { Name = "CityName", HeaderText = "شهر", DataPropertyName = "CityName", Width = 70 });
+            dgvPosts.Columns.Add(new DataGridViewTextBoxColumn { Name = "DeptName", HeaderText = "اداره", DataPropertyName = "DeptName", Width = 110 });
+            dgvPosts.Columns.Add(new DataGridViewTextBoxColumn { Name = "VoltageName", HeaderText = "ولتاژ", DataPropertyName = "VoltageName", Width = 80 });
+            dgvPosts.Columns.Add(new DataGridViewTextBoxColumn { Name = "TypeName", HeaderText = "نوع", DataPropertyName = "TypeName", Width = 75 });
+            dgvPosts.Columns.Add(new DataGridViewTextBoxColumn { Name = "OperationYear", HeaderText = "سال", DataPropertyName = "OperationYear", Width = 55 });
+            dgvPosts.Columns.Add(new DataGridViewTextBoxColumn { Name = "CapacityHV", HeaderText = "ظرفیت HV", DataPropertyName = "CapacityHV", Width = 75 });
+            dgvPosts.Columns.Add(new DataGridViewTextBoxColumn { Name = "CapacityMV", HeaderText = "ظرفیت MV", DataPropertyName = "CapacityMV", Width = 75 });
+            dgvPosts.Columns.Add(new DataGridViewTextBoxColumn { Name = "PostalAddress", HeaderText = "آدرس", DataPropertyName = "PostalAddress", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill });
+
+            Panel gridPanel = new Panel { Dock = DockStyle.Fill };
+            gridPanel.Controls.Add(dgvPosts);
+
+            tab.Controls.Add(gridPanel);
+            tab.Controls.Add(searchPanel);
+            return tab;
+        }
+
+        private void UpdateTables(DataTable filtered)
+        {
+            if (rbShowSummary.Checked)
+                LoadSummaryTable(filtered);
+            else
+                LoadStatisticalTable(filtered);
+
+            LoadDeptDetailsTable(filtered);
+            LoadPostsTable(filtered);
+        }
+
+        private void LoadSummaryTable(DataTable filtered)
+        {
+            dgvSummary.Rows.Clear();
+
+            AddSummaryRow("کل پست‌ها", filtered.Rows.Count);
+            AddSummaryRow("تعداد استان‌ها", DistinctCount(filtered, "ProvinceName"));
+            AddSummaryRow("تعداد شهرها", DistinctCount(filtered, "CityName"));
+            AddSummaryRow("تعداد امور", DistinctCount(filtered, "AffairName"));
+            AddSummaryRow("تعداد ادارات", DistinctCount(filtered, "DeptName"));
+            AddSummaryRow("تعداد نواحی", DistinctCount(filtered, "DistrictName"));
+            AddSummaryRow("تعداد نام پست", DistinctCount(filtered, "PostName"));
+            AddSummaryRow("سطوح ولتاژ", DistinctCount(filtered, "VoltageName"));
+            AddSummaryRow("انواع پست", DistinctCount(filtered, "TypeName"));
+            AddSummaryRow("استانداردها", DistinctCount(filtered, "StandardName"));
+
+            dgvSummary.Rows.Add("", "");
+            dgvSummary.Rows.Add("کیفیت داده", "");
+            AddSummaryRow("بدون استان", CountValue(filtered, "ProvinceName", "نامشخص"));
+            AddSummaryRow("بدون اداره", CountValue(filtered, "DeptName", "نامشخص"));
+            AddSummaryRow("بدون سطح ولتاژ", CountValue(filtered, "VoltageName", "نامشخص"));
+            AddSummaryRow("بدون سال بهره‌برداری", filtered.AsEnumerable().Count(row => ToInt(row, "OperationYear") <= 0));
+            AddSummaryRow("بدون ظرفیت HV", filtered.AsEnumerable().Count(row => ToDouble(row, "CapacityHV") <= 0));
+            AddSummaryRow("بدون ظرفیت MV", filtered.AsEnumerable().Count(row => ToDouble(row, "CapacityMV") <= 0));
+
+            dgvSummary.Rows.Add("", "");
+            dgvSummary.Rows.Add("ظرفیت‌ها", "");
+            AddSummaryRow("مجموع ظرفیت HV", filtered.AsEnumerable().Sum(row => ToDouble(row, "CapacityHV")).ToString("N2"));
+            AddSummaryRow("مجموع ظرفیت MV", filtered.AsEnumerable().Sum(row => ToDouble(row, "CapacityMV")).ToString("N2"));
+            AddSummaryRow("مجموع ظرفیت توزیع‌شده", filtered.AsEnumerable().Sum(row => ToDouble(row, "DistributedCapacity")).ToString("N2"));
+        }
+
+        private void AddSummaryRow(string label, object value)
+        {
+            dgvSummary.Rows.Add(label, value);
+        }
+
+        private void LoadStatisticalTable(DataTable filtered)
+        {
+            dgvSummary.Rows.Clear();
+
+            if (!dgvSummary.Columns.Contains("SummaryLabel"))
+                return;
+
+            foreach (PostChartSpec spec in PostChartCatalog.All)
+            {
+                List<PostStat> stats = PostChartRenderer.BuildStats(filtered, spec);
+                if (stats.Count == 0)
+                    continue;
+
+                dgvSummary.Rows.Add(spec.Title, "");
+                int total = stats.Sum(stat => stat.Count);
+                foreach (PostStat stat in stats)
+                {
+                    double percent = total > 0 ? stat.Count * 100.0 / total : 0;
+                    dgvSummary.Rows.Add($"  {stat.Label}", $"{stat.Count:N0}  ({percent:F1}%)");
+                }
+            }
+        }
+
+        private void LoadDeptDetailsTable(DataTable filtered)
+        {
+            dgvDeptDetails.Rows.Clear();
+            var statsList = filtered.AsEnumerable()
+                .GroupBy(row => Value(row, "DeptName"))
+                .Select(group => new { Name = group.Key, Count = group.Count() })
+                .OrderByDescending(item => item.Count)
+                .ThenBy(item => item.Name, StringComparer.CurrentCulture)
+                .ToList();
+
+            int total = statsList.Sum(item => item.Count);
+            foreach (var item in statsList)
+            {
+                double percent = total > 0 ? item.Count * 100.0 / total : 0;
+                dgvDeptDetails.Rows.Add(item.Name, item.Count, $"{percent:F1}%");
+            }
+        }
+
+        private void LoadPostsTable(DataTable filtered)
+        {
+            dgvPosts.Rows.Clear();
+            string search = txtPostSearch?.Text?.Trim() ?? string.Empty;
+
+            IEnumerable<DataRow> rows = filtered.AsEnumerable();
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                rows = rows.Where(row =>
+                    Contains(row, "PostName", search) ||
+                    Contains(row, "ProvinceName", search) ||
+                    Contains(row, "CityName", search) ||
+                    Contains(row, "DeptName", search) ||
+                    Contains(row, "PostalAddress", search));
+            }
+
+            foreach (DataRow row in rows)
+            {
+                dgvPosts.Rows.Add(
+                    Value(row, "PostName"),
+                    Value(row, "ProvinceName"),
+                    Value(row, "CityName"),
+                    Value(row, "DeptName"),
+                    Value(row, "VoltageName"),
+                    Value(row, "TypeName"),
+                    row.Table.Columns.Contains("OperationYear") ? row["OperationYear"] : "",
+                    ToDouble(row, "CapacityHV").ToString("N2"),
+                    ToDouble(row, "CapacityMV").ToString("N2"),
+                    Value(row, "PostalAddress"));
+            }
+        }
+
+        private static bool Contains(DataRow row, string column, string search)
+            => row.Table.Columns.Contains(column) &&
+               Value(row, column).Contains(search, StringComparison.CurrentCultureIgnoreCase);
+
+        private static int DistinctCount(DataTable table, string column)
+        {
+            if (!table.Columns.Contains(column))
+                return 0;
+
+            return table.AsEnumerable()
+                .Select(row => Value(row, column))
+                .Where(value => !string.IsNullOrWhiteSpace(value) && value != "نامشخص")
+                .Distinct(StringComparer.CurrentCultureIgnoreCase)
+                .Count();
+        }
+
+        private static int CountValue(DataTable table, string column, string value)
+        {
+            if (!table.Columns.Contains(column))
+                return 0;
+
+            return table.AsEnumerable().Count(row =>
+                string.Equals(Value(row, column), value, StringComparison.CurrentCultureIgnoreCase));
+        }
+
+        private static string Value(DataRow row, string column)
+            => row.Table.Columns.Contains(column)
+                ? row[column]?.ToString()?.Trim() ?? string.Empty
+                : string.Empty;
+
+        private static double ToDouble(DataRow row, string column)
+        {
+            if (!row.Table.Columns.Contains(column))
+                return 0;
+
+            object? value = row[column];
+            if (value == null || value == DBNull.Value)
+                return 0;
+
+            return double.TryParse(value.ToString(), System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out double result)
+                ? result
+                : 0;
+        }
+
+        private static int ToInt(DataRow row, string column)
+        {
+            if (!row.Table.Columns.Contains(column))
+                return 0;
+
+            object? value = row[column];
+            if (value == null || value == DBNull.Value)
+                return 0;
+
+            return int.TryParse(value.ToString(), System.Globalization.NumberStyles.Integer,
+                System.Globalization.CultureInfo.InvariantCulture, out int result)
+                ? result
+                : 0;
+        }
+
+        // ─────────────────────────────────────────────
+        // بارگذاری داده‌ها
+        // ─────────────────────────────────────────────
+        private void LoadData()
+        {
+            if (loading)
+                return;
+
+            loading = true;
+            UseWaitCursor = true;
+            try
+            {
+                if (!dbHelper.TestConnectionSilent())
+                {
+                    MessageBox.Show(this,
+                        "❌ اتصال به پایگاه‌داده برقرار نشد.\nاز بخش تنظیمات، پیش‌نیاز Access را بررسی کنید.",
+                        "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                allPostsData = postsService.LoadAllPosts(showError: false);
+                if (allPostsData == null || allPostsData.Rows.Count == 0)
+                {
+                    MessageBox.Show(this, "⚠️ داده‌ای در جدول پست‌ها یافت نشد.", "اخطار",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                FillAllFilterOptions();
+                UpdateFilterTitles();
+                RefreshAllCharts();
+                UpdateTables(GetFilteredData());
+            }
+            catch (Exception ex)
+            {
+                ErrorLogger.Log("FormPostsAnalytics.LoadData", ex);
+                MessageBox.Show(this, $"خطا در بارگذاری داده‌ها:\n{ex.Message}", "خطا",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                loading = false;
+                UseWaitCursor = false;
+            }
+        }
+
+        // ─────────────────────────────────────────────
+        // خروجی اکسل
+        // ─────────────────────────────────────────────
+        private void ExportFilteredPostsToExcel()
+        {
+            DataTable filtered = GetFilteredData();
+            if (filtered.Rows.Count == 0)
+            {
+                MessageBox.Show(this, "داده‌ای برای خروجی وجود ندارد.", "اطلاع",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using var dialog = new SaveFileDialog
+            {
+                Filter = "Excel Workbook|*.xlsx",
+                Title = "ذخیره خروجی اکسل پست‌ها",
+                FileName = $"پست‌ها_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx",
+                AddExtension = true
+            };
+
+            if (dialog.ShowDialog(this) != DialogResult.OK)
+                return;
+
+            try
+            {
+                UseWaitCursor = true;
+                Cursor = Cursors.WaitCursor;
+                WritePostsWorkbook(filtered, dialog.FileName);
+                UseWaitCursor = false;
+                Cursor = Cursors.Default;
+
+                MessageBox.Show(this, "✅ فایل اکسل با موفقیت ذخیره شد.", "خروجی اکسل",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                UseWaitCursor = false;
+                Cursor = Cursors.Default;
+                ErrorLogger.Log("FormPostsAnalytics.ExportFilteredPostsToExcel", ex);
+                MessageBox.Show(this, $"خطا در ایجاد فایل اکسل:\n{ex.Message}", "خطا",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private static void WritePostsWorkbook(DataTable data, string path)
+        {
+            var columns = new (string Column, string Header)[]
+            {
+                ("PostName", "نام پست"),
+                ("ProvinceName", "استان"),
+                ("CityName", "شهر"),
+                ("AffairName", "امور"),
+                ("DeptName", "اداره"),
+                ("DistrictName", "ناحیه"),
+                ("VoltageName", "سطح ولتاژ"),
+                ("StandardName", "استاندارد"),
+                ("TypeName", "نوع پست"),
+                ("ConnName", "اتصال توزیع"),
+                ("InsName", "نوع عایق"),
+                ("PT2Name", "نوع پست ۲"),
+                ("FMName", "ثابت / سیار"),
+                ("CircuitName", "وضعیت مدار"),
+                ("DieselName", "دیزل ژنراتور"),
+                ("FeedName", "نوع توزیع"),
+                ("WaterName", "وضعیت آب"),
+                ("GuestName", "میهمان‌سرا"),
+                ("OperationYear", "سال بهره‌برداری"),
+                ("DistributedCapacity", "ظرفیت توزیع‌شده"),
+                ("CapacityHV", "ظرفیت HV"),
+                ("CapacityMV", "ظرفیت MV"),
+                ("TotalArea", "مساحت کل"),
+                ("BuildingsArea", "مساحت ساختمان"),
+                ("SiteArea", "مساحت محوطه"),
+                ("ParkingBays", "تعداد پارکینگ"),
+                ("DistanceToCapital", "فاصله تا مرکز"),
+                ("PostalCode", "کد پستی"),
+                ("PostalAddress", "آدرس"),
+                ("Description", "توضیحات")
+            };
+
+            using var workbook = new XLWorkbook();
+            IXLWorksheet sheet = workbook.Worksheets.Add("پست‌ها");
+            sheet.RightToLeft = true;
+
+            for (int c = 0; c < columns.Length; c++)
+                sheet.Cell(1, c + 1).Value = columns[c].Header;
+
+            IXLRange headerRange = sheet.Range(1, 1, 1, columns.Length);
+            headerRange.Style.Font.Bold = true;
+            headerRange.Style.Font.FontColor = XLColor.White;
+            headerRange.Style.Fill.BackgroundColor = XLColor.FromArgb(0, 102, 204);
+            headerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            headerRange.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+            sheet.Row(1).Height = 28;
+
+            for (int r = 0; r < data.Rows.Count; r++)
+            {
+                for (int c = 0; c < columns.Length; c++)
+                {
+                    string source = columns[c].Column;
+                    object? value = data.Columns.Contains(source) ? data.Rows[r][source] : null;
+                    IXLCell cell = sheet.Cell(r + 2, c + 1);
+
+                    if (value == null || value == DBNull.Value)
+                    {
+                        cell.Value = "";
+                    }
+                    else if (value is double or float or decimal or int or long)
+                    {
+                        cell.Value = Convert.ToDouble(value, System.Globalization.CultureInfo.InvariantCulture);
+                    }
+                    else
+                    {
+                        cell.Value = value.ToString();
+                    }
+                }
+            }
+
+            sheet.Range(1, 1, Math.Max(1, data.Rows.Count + 1), columns.Length).SetAutoFilter();
+            sheet.SheetView.FreezeRows(1);
+            sheet.Columns().AdjustToContents(10, 40);
+
+            workbook.SaveAs(path);
+        }
+
+        private void ConfigureGrid(DataGridView grid)
+        {
+            grid.Dock = DockStyle.Fill;
+            grid.ReadOnly = true;
+            grid.RightToLeft = RightToLeft.Yes;
+            grid.BackgroundColor = Color.White;
+            grid.BorderStyle = BorderStyle.None;
+            grid.EnableHeadersVisualStyles = false;
+            grid.AllowUserToAddRows = false;
+            grid.AllowUserToDeleteRows = false;
+            grid.AllowUserToResizeRows = false;
+            grid.RowHeadersVisible = false;
+            grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 102, 204);
+            grid.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            grid.ColumnHeadersDefaultCellStyle.Font = new Font(FontSettings.FontFamilyName, 9F, FontStyle.Bold);
+            grid.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            grid.ColumnHeadersHeight = 36;
+            grid.DefaultCellStyle.Font = new Font(FontSettings.FontFamilyName, 9F);
+            grid.DefaultCellStyle.BackColor = Color.White;
+            grid.DefaultCellStyle.ForeColor = Color.FromArgb(30, 41, 59);
+            grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(219, 234, 254);
+            grid.DefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 41, 59);
+            grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(240, 248, 255);
+            grid.RowTemplate.Height = 28;
+            grid.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None;
+        }
+
+        private sealed class FilterBinding
+        {
+            public FilterBinding(CheckedListBox list, Label title, string column, string displayName)
+            {
+                List = list;
+                Title = title;
+                Column = column;
+                DisplayName = displayName;
+            }
+
+            public CheckedListBox List { get; }
+            public Label Title { get; }
+            public string Column { get; }
+            public string DisplayName { get; }
         }
     }
 }

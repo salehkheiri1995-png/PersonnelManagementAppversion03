@@ -50,18 +50,7 @@ namespace PersonnelManagementApp
             this.AutoScroll = true;
             this.StartPosition = FormStartPosition.CenterScreen;
             this.RightToLeft = RightToLeft.Yes;
-            this.BackColor = Color.FromArgb(240, 248, 255);
-
-            // پس‌زمینه گرادیانت
-            using (LinearGradientBrush brush = new LinearGradientBrush(this.ClientRectangle, Color.LightBlue, Color.SkyBlue, LinearGradientMode.Vertical))
-            {
-                brush.GammaCorrection = true;
-                this.BackgroundImage = new Bitmap(this.Width, this.Height);
-                using (Graphics g = Graphics.FromImage(this.BackgroundImage))
-                {
-                    g.FillRectangle(brush, this.ClientRectangle);
-                }
-            }
+            this.BackColor = Color.FromArgb(241, 245, 249);
 
             int yHeader = 20;
             int ySearch = 100; // موقعیت بخش جستجو (زیر سرتیتر)
@@ -93,7 +82,7 @@ namespace PersonnelManagementApp
                 Location = new Point((formWidth - 400) / 2, yHeader),
                 Size = new Size(400, 50),
                 Font = FontSettings.TitleFont,
-                ForeColor = Color.Navy,
+                ForeColor = Color.FromArgb(30, 41, 59),
                 TextAlign = ContentAlignment.MiddleCenter
             };
             this.Controls.Add(lblHeader);
@@ -102,11 +91,11 @@ namespace PersonnelManagementApp
             // TextBox برای PersonnelID
             Label lblPersonnelID = new Label { Text = "شناسه پرسنل:", Location = new Point((formWidth - labelWidth) / 2 + controlWidth + 95, ySearch), Size = new Size(labelWidth, 30), Font = FontSettings.LabelFont };
             txtPersonnelID = new TextBox { Location = new Point((formWidth - controlWidth) / 2, ySearch), Size = new Size(controlWidth, controlHeight), Font = FontSettings.TextBoxFont };
-            Button btnLoad = new Button { Text = "بارگذاری", Location = new Point((formWidth - controlWidth) / 2 + controlWidth + 20, ySearch - 5), Size = new Size(100, controlHeight), Font = FontSettings.ButtonFont, BackColor = Color.LightGreen, ForeColor = Color.White };
+            Button btnLoad = new Button { Text = "بارگذاری", Location = new Point((formWidth - controlWidth) / 2 + controlWidth + 20, ySearch - 5), Size = new Size(100, controlHeight), Font = FontSettings.ButtonFont, BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White };
             btnLoad.Click += BtnLoad_Click;
             ApplyRoundedCorners(txtPersonnelID, 10);
             ApplyRoundedCorners(btnLoad, 15);
-            btnLoad.MouseClick += (s, e) => { if (e.Button == MouseButtons.Left) btnLoad.BackColor = Color.ForestGreen; else btnLoad.BackColor = Color.LightGreen; };
+            btnLoad.MouseClick += (s, e) => { if (e.Button == MouseButtons.Left) btnLoad.BackColor = Color.FromArgb(5, 150, 105); else btnLoad.BackColor = Color.FromArgb(16, 185, 129); };
             this.Controls.Add(lblPersonnelID);
             this.Controls.Add(txtPersonnelID);
             this.Controls.Add(btnLoad);
@@ -115,11 +104,11 @@ namespace PersonnelManagementApp
             // جستجوی آزاد
             Label lblFreeSearch = new Label { Text = "جستجوی آزاد:", Location = new Point((formWidth - labelWidth) / 2 + controlWidth + 95, ySearch), Size = new Size(labelWidth, 30), Font = FontSettings.LabelFont };
             txtFreeSearch = new TextBox { Location = new Point((formWidth - controlWidth) / 2, ySearch), Size = new Size(controlWidth, controlHeight), Font = FontSettings.TextBoxFont, PlaceholderText = "جستجوی پرسنل..." };
-            Button btnSearch = new Button { Text = "جستجو", Location = new Point((formWidth - controlWidth) / 2 + controlWidth + 20, ySearch - 5), Size = new Size(100, controlHeight), Font = FontSettings.ButtonFont, BackColor = Color.LightGreen, ForeColor = Color.White };
+            Button btnSearch = new Button { Text = "جستجو", Location = new Point((formWidth - controlWidth) / 2 + controlWidth + 20, ySearch - 5), Size = new Size(100, controlHeight), Font = FontSettings.ButtonFont, BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White };
             btnSearch.Click += BtnSearch_Click;
             ApplyRoundedCorners(txtFreeSearch, 10);
             ApplyRoundedCorners(btnSearch, 15);
-            btnSearch.MouseClick += (s, e) => { if (e.Button == MouseButtons.Left) btnSearch.BackColor = Color.RoyalBlue; else btnSearch.BackColor = Color.LightBlue; };
+            btnSearch.MouseClick += (s, e) => { if (e.Button == MouseButtons.Left) btnSearch.BackColor = Color.FromArgb(25, 118, 210); else btnSearch.BackColor = Color.FromArgb(0, 122, 204); };
             this.Controls.Add(lblFreeSearch);
             this.Controls.Add(txtFreeSearch);
             this.Controls.Add(btnSearch);
@@ -170,7 +159,7 @@ namespace PersonnelManagementApp
                 Location = new Point(xPhotoButtonStart, ySearch),
                 Size = new Size(btnPhotoWidth, 35),
                 Font = FontSettings.ButtonFont,
-                BackColor = Color.LightBlue,
+                BackColor = Color.FromArgb(0, 122, 204),
                 ForeColor = Color.White
             };
             ApplyRoundedCorners(btnSelectPhoto, 10);
@@ -183,7 +172,7 @@ namespace PersonnelManagementApp
                 Location = new Point(xPhotoButtonStart + btnPhotoWidth + btnPhotoSpacing, ySearch),
                 Size = new Size(btnPhotoWidth, 35),
                 Font = FontSettings.ButtonFont,
-                BackColor = Color.LightCoral,
+                BackColor = Color.FromArgb(239, 68, 68),
                 ForeColor = Color.White
             };
             ApplyRoundedCorners(btnRemovePhoto, 10);
@@ -437,11 +426,11 @@ namespace PersonnelManagementApp
                 Location = new Point(xButtonStart, maxY),
                 Size = new Size(buttonWidth, 50),
                 Font = FontSettings.ButtonFont,
-                BackColor = Color.LightGreen,
+                BackColor = Color.FromArgb(16, 185, 129),
                 ForeColor = Color.White
             };
             ApplyRoundedCorners(btnUpdate, 15);
-            btnUpdate.MouseClick += (s, e) => { if (e.Button == MouseButtons.Left) btnUpdate.BackColor = Color.ForestGreen; else btnUpdate.BackColor = Color.LightGreen; };
+            btnUpdate.MouseClick += (s, e) => { if (e.Button == MouseButtons.Left) btnUpdate.BackColor = Color.FromArgb(5, 150, 105); else btnUpdate.BackColor = Color.FromArgb(16, 185, 129); };
             btnUpdate.Click += BtnUpdate_Click;
             this.Controls.Add(btnUpdate);
 
@@ -451,11 +440,11 @@ namespace PersonnelManagementApp
                 Location = new Point(xButtonStart + buttonWidth + buttonSpace, maxY),
                 Size = new Size(buttonWidth, 50),
                 Font = FontSettings.ButtonFont,
-                BackColor = Color.LightCoral,
+                BackColor = Color.FromArgb(239, 68, 68),
                 ForeColor = Color.White
             };
             ApplyRoundedCorners(btnCancel, 15);
-            btnCancel.MouseClick += (s, e) => { if (e.Button == MouseButtons.Left) btnCancel.BackColor = Color.Red; else btnCancel.BackColor = Color.LightCoral; };
+            btnCancel.MouseClick += (s, e) => { if (e.Button == MouseButtons.Left) btnCancel.BackColor = Color.Red; else btnCancel.BackColor = Color.FromArgb(239, 68, 68); };
             btnCancel.Click += (s, e) => this.Close();
             this.Controls.Add(btnCancel);
         }

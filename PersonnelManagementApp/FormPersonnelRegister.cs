@@ -57,25 +57,7 @@ namespace PersonnelManagementApp
             this.AutoScroll = true;
             this.StartPosition = FormStartPosition.CenterScreen;
             this.RightToLeft = RightToLeft.Yes;
-            this.BackColor = Color.FromArgb(240, 248, 255);
-
-            // پس‌زمینه گرادیانت
-            try
-            {
-                using (LinearGradientBrush brush = new LinearGradientBrush(this.ClientRectangle, Color.LightBlue, Color.SkyBlue, LinearGradientMode.Vertical))
-                {
-                    brush.GammaCorrection = true;
-                    this.BackgroundImage = new Bitmap(this.Width, this.Height);
-                    using (Graphics g = Graphics.FromImage(this.BackgroundImage))
-                    {
-                        g.FillRectangle(brush, this.ClientRectangle);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"خطا در رسم پس‌زمینه: {ex.Message}", "خطا", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
+            this.BackColor = Color.FromArgb(241, 245, 249);
 
             int yHeader = 20;
             int controlWidth = 300;
@@ -104,7 +86,7 @@ namespace PersonnelManagementApp
                 Location = new Point((formWidth - 400) / 2, yHeader),
                 Size = new Size(400, 50),
                 Font = FontSettings.TitleFont,
-                ForeColor = Color.Navy,
+                ForeColor = Color.FromArgb(30, 41, 59),
                 TextAlign = ContentAlignment.MiddleCenter
             };
             this.Controls.Add(lblHeader);
@@ -137,7 +119,7 @@ namespace PersonnelManagementApp
                 Location = new Point(xPhotoButtonStart, yHeader),
                 Size = new Size(btnPhotoWidth, 35),
                 Font = FontSettings.ButtonFont,
-                BackColor = Color.LightBlue,
+                BackColor = Color.FromArgb(0, 122, 204),
                 ForeColor = Color.White
             };
             ApplyRoundedCorners(btnSelectPhoto, 10);
@@ -150,7 +132,7 @@ namespace PersonnelManagementApp
                 Location = new Point(xPhotoButtonStart + btnPhotoWidth + btnPhotoSpacing, yHeader),
                 Size = new Size(btnPhotoWidth, 35),
                 Font = FontSettings.ButtonFont,
-                BackColor = Color.LightCoral,
+                BackColor = Color.FromArgb(239, 68, 68),
                 ForeColor = Color.White
             };
             ApplyRoundedCorners(btnRemovePhoto, 10);
@@ -378,7 +360,7 @@ namespace PersonnelManagementApp
                 Location = new Point(xButtonStart, maxY),
                 Size = new Size(buttonWidth, 50),
                 Font = FontSettings.ButtonFont,
-                BackColor = Color.LightGreen,
+                BackColor = Color.FromArgb(16, 185, 129),
                 ForeColor = Color.White
             };
             ApplyRoundedCorners(btnSave, 15);
@@ -391,7 +373,7 @@ namespace PersonnelManagementApp
                 Location = new Point(xButtonStart + buttonWidth + buttonSpace, maxY),
                 Size = new Size(buttonWidth, 50),
                 Font = FontSettings.ButtonFont,
-                BackColor = Color.LightCoral,
+                BackColor = Color.FromArgb(239, 68, 68),
                 ForeColor = Color.White
             };
             ApplyRoundedCorners(btnCancel, 15);
