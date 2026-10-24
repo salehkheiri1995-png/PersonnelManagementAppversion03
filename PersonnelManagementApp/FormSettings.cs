@@ -83,6 +83,18 @@ namespace PersonnelManagementApp
                 }
                 ShowContent(start, FindMenuByContent(start));
                 DumpLayout();
+                KeyPreview = true;
+                KeyDown += (_, e) =>
+                {
+                    if (e.KeyCode == Keys.F12)
+                    {
+                        string dir = Environment.GetEnvironmentVariable("SC_SHOT_DIR") ?? @"C:\Users\CynetAdmin\AppData\Local\Temp\1\opencode";
+                        string file = Path.Combine(dir, "selfshot_" + Environment.GetEnvironmentVariable("SC_SETTINGS_PAGE") ?? "db" + ".png");
+                        using var bmp = new Bitmap(Width, Height);
+                        DrawToBitmap(bmp, new Rectangle(0, 0, Width, Height));
+                        bmp.Save(file);
+                    }
+                };
             };
         }
 
