@@ -34,13 +34,6 @@ namespace PersonnelManagementApp
             // برنامه در هر حال اجرا می‌شود تا کاربر بتواند تنظیمات و مسیر فایل را بررسی کند.
             DatabaseProvider.CheckProvider(null, offerInstall: true);
 
-            string? debugPage = Environment.GetEnvironmentVariable("SC_SETTINGS_PAGE");
-            if (!string.IsNullOrEmpty(debugPage))
-            {
-                Application.Run(new FormSettings());
-                return;
-            }
-
             Application.Run(new MainForm());
         }
 

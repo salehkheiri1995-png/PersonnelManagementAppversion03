@@ -70,56 +70,7 @@ namespace PersonnelManagementApp
             BuildUi();
             FontSettings.ApplyFontToForm(this);
             LoadCurrentSettings();
-            Shown += (_, _) =>
-            {
-                Panel start = pnlDatabaseContent;
-                switch (Environment.GetEnvironmentVariable("SC_SETTINGS_PAGE"))
-                {
-                    case "photos": start = pnlPhotosContent; break;
-                    case "font": start = pnlFontContent; break;
-                    case "missing": start = pnlMissingPhotosContent; break;
-                    case "excel": start = pnlExcelImportContent; break;
-                    case "lookup": start = pnlLookupTablesContent; break;
-                }
-                ShowContent(start, FindMenuByContent(start));
-                DumpLayout();
-                if (Environment.GetEnvironmentVariable("SC_SHOT_DIR") is string shotDir)
-                {
-                    var timer = new System.Windows.Forms.Timer { Interval = 600 };
-                    timer.Tick += (_, _) =>
-                    {
-                        timer.Stop();
-                        try
-                        {
-                            string page = Environment.GetEnvironmentVariable("SC_SETTINGS_PAGE") ?? "db";
-                            string file = Path.Combine(shotDir, $"selfshot_{page}.png");
-                            using var bmp = new Bitmap(Width, Height);
-                            DrawToBitmap(bmp, new Rectangle(0, 0, Width, Height));
-                            bmp.Save(file);
-                        }
-                        catch (Exception ex) { ErrorLogger.Log("FormSettings.SelfShot", ex); }
-                    };
-                    timer.Start();
-                }
-            };
-        }
-
-        private void DumpLayout()
-        {
-            try
-            {
-                string file = Environment.GetEnvironmentVariable("SC_LAYOUT_DUMP") ?? string.Empty;
-                if (string.IsNullOrEmpty(file)) return;
-                var sb = new System.Text.StringBuilder();
-                void Walk(Control c, int depth)
-                {
-                    sb.AppendLine($"{new string(' ', depth * 2)}{c.GetType().Name} '{c.Text}' bounds=({c.Left},{c.Top},{c.Width}x{c.Height}) visible={c.Visible} dock={c.Dock}");
-                    foreach (Control child in c.Controls) Walk(child, depth + 1);
-                }
-                Walk(this, 0);
-                System.IO.File.WriteAllText(file, sb.ToString());
-            }
-            catch { }
+            Shown += (_, _) => ShowContent(pnlDatabaseContent, FindMenuByContent(pnlDatabaseContent));
         }
 
         private Font SafeFont(string family, float size, FontStyle style = FontStyle.Regular)
@@ -1017,6 +968,7 @@ namespace PersonnelManagementApp
             AddFontRow(layout, 8, "نمودارها:", out numChartLabelSize, out chkBoldChartLabel, 10);
 
             card.Controls.Add(layout);
+            card.Controls.Add(CreateCardTitle("فونت برنامه", FlatIconKind.Settings));
             AddCards(body, card);
             return CreatePageShell(header, body, CreateFooterRow());
         }
@@ -1082,7 +1034,6 @@ namespace PersonnelManagementApp
 
             var card = CreateCard();
             card.Height = 268;
-            card.Controls.Add(CreateCardTitle("بررسی پرسنل بدون عکس", FlatIconKind.Personnel));
 
             var layout = new TableLayoutPanel
             {
@@ -1128,6 +1079,7 @@ namespace PersonnelManagementApp
             layout.Controls.Add(btnOpen, 0, 2);
 
             card.Controls.Add(layout);
+            card.Controls.Add(CreateCardTitle("بررسی پرسنل بدون عکس", FlatIconKind.Personnel));
             AddCards(body, card);
             return CreatePageShell(header, body, CreateFooterRow());
         }
@@ -1142,7 +1094,6 @@ namespace PersonnelManagementApp
 
             var card = CreateCard();
             card.Height = 366;
-            card.Controls.Add(CreateCardTitle("راهنمای وارد کردن", FlatIconKind.Chart));
 
             var layout = new TableLayoutPanel
             {
@@ -1205,6 +1156,7 @@ namespace PersonnelManagementApp
             layout.Controls.Add(btnOpen, 0, 3);
 
             card.Controls.Add(layout);
+            card.Controls.Add(CreateCardTitle("راهنمای وارد کردن", FlatIconKind.Chart));
             AddCards(body, card);
             return CreatePageShell(header, body, CreateFooterRow());
         }
@@ -1218,7 +1170,6 @@ namespace PersonnelManagementApp
             var body = CreateScrollBody();
 
             var card = CreateCard();
-            card.Controls.Add(CreateCardTitle("جداول مرجع", FlatIconKind.Chart));
 
             var grid = new TableLayoutPanel
             {
@@ -1264,6 +1215,7 @@ namespace PersonnelManagementApp
                          ("چارت امور", "ChartAffairs", "ChartID", "ChartName", "چارت امور", "", "", "", "") }
             };
 
+            grid.RowCount = rows.Length;
             for (int r = 0; r < rows.Length; r++)
             {
                 grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 52F));
@@ -1301,7 +1253,8 @@ namespace PersonnelManagementApp
             }
 
             card.Controls.Add(grid);
-            card.Height = rows.Length * 52 + 96;
+            card.Controls.Add(CreateCardTitle("جداول مرجع", FlatIconKind.Chart));
+            card.Height = rows.Length * 52 + 74;
             AddCards(body, card);
             return CreatePageShell(header, body, CreateFooterRow());
         }
