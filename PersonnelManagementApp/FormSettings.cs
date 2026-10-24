@@ -83,18 +83,24 @@ namespace PersonnelManagementApp
                 }
                 ShowContent(start, FindMenuByContent(start));
                 DumpLayout();
-                KeyPreview = true;
-                KeyDown += (_, e) =>
+                if (Environment.GetEnvironmentVariable("SC_SHOT_DIR") is string shotDir)
                 {
-                    if (e.KeyCode == Keys.F12)
+                    var timer = new System.Windows.Forms.Timer { Interval = 600 };
+                    timer.Tick += (_, _) =>
                     {
-                        string dir = Environment.GetEnvironmentVariable("SC_SHOT_DIR") ?? @"C:\Users\CynetAdmin\AppData\Local\Temp\1\opencode";
-                        string file = Path.Combine(dir, "selfshot_" + Environment.GetEnvironmentVariable("SC_SETTINGS_PAGE") ?? "db" + ".png");
-                        using var bmp = new Bitmap(Width, Height);
-                        DrawToBitmap(bmp, new Rectangle(0, 0, Width, Height));
-                        bmp.Save(file);
-                    }
-                };
+                        timer.Stop();
+                        try
+                        {
+                            string page = Environment.GetEnvironmentVariable("SC_SETTINGS_PAGE") ?? "db";
+                            string file = Path.Combine(shotDir, $"selfshot_{page}.png");
+                            using var bmp = new Bitmap(Width, Height);
+                            DrawToBitmap(bmp, new Rectangle(0, 0, Width, Height));
+                            bmp.Save(file);
+                        }
+                        catch (Exception ex) { ErrorLogger.Log("FormSettings.SelfShot", ex); }
+                    };
+                    timer.Start();
+                }
             };
         }
 
@@ -536,7 +542,7 @@ namespace PersonnelManagementApp
             {
                 lbl.Paint += (_, e) =>
                 {
-                    using var pen = new Pen(PrimaryColor, 1.8f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+                    using var pen = new Pen(TextSecondary, 1.6f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
                     int s = 18;
                     var iconRect = new Rectangle(lbl.Width - 30, (lbl.Height - s) / 2, s, s);
                     FlatIcons.Draw(icon.Value, e.Graphics, iconRect, pen);
@@ -717,9 +723,9 @@ namespace PersonnelManagementApp
             lbl.Padding = new Padding(0, 0, 30, 0);
             lbl.Paint += (_, e) =>
             {
-                using var pen = new Pen(PrimaryColor, 1.8f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
-                int s = 18;
-                var iconRect = new Rectangle(lbl.Width - 26, (lbl.Height - s) / 2, s, s);
+                using var pen = new Pen(TextSecondary, 1.6f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+                int s = 16;
+                var iconRect = new Rectangle(lbl.Width - 25, (lbl.Height - s) / 2, s, s);
                 FlatIcons.Draw(icon, e.Graphics, iconRect, pen);
             };
             return lbl;
@@ -735,8 +741,7 @@ namespace PersonnelManagementApp
 
             // کارت ۱: فایل پایگاه داده
             var fileCard = CreateCard();
-            fileCard.Height = 208;
-            fileCard.Controls.Add(CreateCardTitle("فایل پایگاه داده", FlatIconKind.Folder));
+            fileCard.Height = 220;
             toolTip.SetToolTip(fileCard, "مسیر فایل Access مورد استفاده برنامه");
 
             var fileLayout = new TableLayoutPanel
@@ -787,6 +792,7 @@ namespace PersonnelManagementApp
             fileLayout.SetColumnSpan(lblCurrentDatabase, 2);
 
             fileCard.Controls.Add(fileLayout);
+            fileCard.Controls.Add(CreateCardTitle("فایل پایگاه داده", FlatIconKind.Folder));
 
             // کارت ۲: موتور پایگاه داده
             var providerCard = CreateCard();
